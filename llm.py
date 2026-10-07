@@ -122,33 +122,76 @@ CHART_TOOL = {
 }
 
 
-def _structured_call(system: list, tool: dict, user_text: str) -> dict:
+MAX_CHECK_ROUNDS = 5  # rounds of data checks (tool calls) before Claude must answer
+
+CHECK_RULES = """Before writing the query, check the data with your tools (at most 5 rounds of checks):
+- For every word or name in the question that refers to a value (a status, market, country, channel,
+  customer, supplier, product...), call find_values to see which columns contain it, the exact value and
+  how much data it has. Look up several words in the same turn.
+- If a phrase matches values in more than one column with different meanings (e.g. a market and a
+  country), or matches only a value with no data, ask: set needs_clarification and give the real values
+  as options, e.g. "Market = UAE". Don't ask if an Agreed glossary entry or the business notes settle
+  it; a Draft glossary entry does not settle which values to filter on. If several things are unclear,
+  ask about the most important one first.
+- If you are unsure a filter returns data, check with preview_query before answering.
+- Filter only on exact values you found."""
+
+
+def _structured_call(system: list, tool: dict, user_text: str, tools: list | None = None,
+                     run_tool=None, on_step=None) -> dict:
     """Ask Claude for JSON matching the tool's schema. (Forcing a tool call with tool_choice
-    is not supported on current Claude models, so this uses structured outputs instead.)"""
+    is not supported on current Claude models, so this uses structured outputs instead.)
+    With tools, Claude may first call them (e.g. to look up values); run_tool(name, input) answers."""
     schema = {**tool["input_schema"], "additionalProperties": False}
-    response = _get_client().messages.create(
-        model=config.CLAUDE_MODEL,
-        max_tokens=16000,  # Claude thinks before answering, and thinking counts toward this limit
-        system=system,
-        output_config={"format": {"type": "json_schema", "schema": schema}},
-        messages=[{"role": "user", "content": user_text}],
-    )
-    if response.stop_reason == "refusal":
-        raise RuntimeError("Claude declined to answer this question. Try rephrasing it.")
-    if response.stop_reason == "max_tokens":
-        raise RuntimeError("Claude's answer was cut off. Try a simpler or narrower question.")
-    for block in response.content:
-        if block.type == "text":
-            return json.loads(block.text)
-    raise RuntimeError("Claude did not return a result. Try rephrasing the question.")
+    messages = [{"role": "user", "content": user_text}]
+    for check_round in range(MAX_CHECK_ROUNDS + 1):
+        extra = {}
+        if tools and run_tool:
+            extra["tools"] = tools
+            if check_round == MAX_CHECK_ROUNDS:
+                extra["tool_choice"] = {"type": "none"}  # enough checking: answer now
+        response = _get_client().messages.create(
+            model=config.CLAUDE_MODEL,
+            max_tokens=16000,  # Claude thinks before answering, and thinking counts toward this limit
+            system=system,
+            output_config={"format": {"type": "json_schema", "schema": schema}},
+            messages=messages,
+            **extra,
+        )
+        if response.stop_reason == "refusal":
+            raise RuntimeError("Claude declined to answer this question. Try rephrasing it.")
+        if response.stop_reason == "max_tokens":
+            raise RuntimeError("Claude's answer was cut off. Try a simpler or narrower question.")
+        calls = [b for b in response.content if b.type == "tool_use"]
+        if response.stop_reason == "tool_use" and calls:
+            messages.append({"role": "assistant", "content": response.content})  # keep thinking blocks
+            results = []
+            for call in calls:
+                if on_step:
+                    on_step(call.name, call.input)
+                try:
+                    results.append({"type": "tool_result", "tool_use_id": call.id,
+                                    "content": run_tool(call.name, call.input)})
+                except Exception as exc:
+                    results.append({"type": "tool_result", "tool_use_id": call.id, "is_error": True,
+                                    "content": f"The check failed: {str(exc).splitlines()[0][:300]}"})
+            messages.append({"role": "user", "content": results})
+            continue
+        for block in response.content:
+            if block.type == "text":
+                return json.loads(block.text)
+        raise RuntimeError("Claude did not return a result. Try rephrasing the question.")
+    raise RuntimeError("Claude did not finish checking the data. Try a simpler question.")
 
 
 def question_to_query(question: str, schema: str, notes: str, today: str, language: str = "DAX",
                       context: list[dict] | None = None,
                       failed_query: str | None = None, error: str | None = None,
-                      clarification: tuple[str, str] | None = None, instructions: str = "") -> dict:
+                      clarification: tuple[str, str] | None = None, instructions: str = "",
+                      tools: list | None = None, run_tool=None, on_step=None) -> dict:
     """clarification = (question Claude asked, the user's answer). instructions = extra
-    requirements, e.g. for a dashboard chart. A result with needs_clarification has no query."""
+    requirements, e.g. for a dashboard chart. tools + run_tool let Claude check the data first
+    (on_step(name, input) reports each check). A result with needs_clarification has no query."""
     rules = RULES[language].replace("MAX_ROWS", str(config.MAX_ROWS)).replace("TODAY_DATE", today)
     system_text = rules + "\n\n" + schema
     if notes.strip():
@@ -162,13 +205,15 @@ def question_to_query(question: str, schema: str, notes: str, today: str, langua
     parts.append(f"Question: {question}")
     if clarification:
         parts.append(f"You asked: {clarification[0]}\nThe user answered: {clarification[1]}\n"
-                     "Answer the question now; do not ask again.")
+                     "Use this answer. Only ask again about something different that is still unclear.")
     if instructions:
         parts.append(instructions)
     if failed_query:
         parts.append(f"Your previous query failed.\nQuery:\n{failed_query}\n\nError:\n{error}\n\n"
                      "Fix the query (check names against the schema). Do not ask for clarification.")
-    result = _structured_call(system, QUERY_TOOL, "\n\n".join(parts))
+    if tools and run_tool:
+        parts.append(CHECK_RULES)
+    result = _structured_call(system, QUERY_TOOL, "\n\n".join(parts), tools, run_tool, on_step)
     if result.get("needs_clarification") and result.get("clarifying_question") and not failed_query:
         result["query"] = ""
         return result

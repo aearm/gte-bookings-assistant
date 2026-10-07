@@ -22,6 +22,8 @@ class Backend:
     supports_schedule: bool
     date_literal: Callable[[date], str]   # how a date is written in a query
     data_as_of: Callable[[], str]          # when the data was last refreshed, or ""
+    find_values: Callable[[str, list, list], dict]   # (column, group_with, values) -> {value: real value or None}
+    search_values: Callable[..., list]               # (column, group_with, text) -> similar real values
 
 
 def resolve_source() -> str:
@@ -48,6 +50,8 @@ def get_backend() -> Backend:
             supports_schedule=True,
             date_literal=lambda d: f"DATE({d.year},{d.month},{d.day})",
             data_as_of=ssas.last_data_update,
+            find_values=ssas.find_values,
+            search_values=ssas.search_values,
         )
 
     import localdb
@@ -62,4 +66,6 @@ def get_backend() -> Backend:
         supports_schedule=False,
         date_literal=lambda d: f"DATE '{d.isoformat()}'",
         data_as_of=lambda: "",
+        find_values=localdb.find_values,
+        search_values=localdb.search_values,
     )

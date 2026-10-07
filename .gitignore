@@ -17,3 +17,4 @@ data/snapshots/
 data/history.jsonl
 data/pull_log.txt
 queries/*.dax
+data/value_index.json

@@ -131,6 +131,16 @@ filters) so you can check it. If the question is too unclear to answer, it asks 
 with one-click answers. **Hover over any chart** and click **➕ Add to dashboard** to keep it
 (admins only); on the dashboard it then follows the dashboard's period.
 
+**Claude checks the data before writing the query.** *Refresh data structure* also builds a
+local index of every value in every text column (statuses, markets, countries, customers, suppliers...)
+with how much data each has, saved in `data/value_index.json` (not in git). Before answering, Claude
+looks up the words in your question in that index (you see each check, e.g. *Looking up "UAE"*) and can
+test-run a query. If a word matches different things (e.g. Market "UAE" vs agency country "UNITED ARAB
+EMIRATES") or a value nobody uses, it asks you, with the real values as options. As a final safety net,
+every value a query filters on is checked against the data before it runs. Answers take about 15-35
+seconds. Business words like "Ok bookings" belong in the Glossary; once a term is Agreed there, Claude
+stops asking about it.
+
 Under each answer you can open the **data** (and download it as CSV) and the **query**
 Claude wrote (DAX in live mode, SQL in local mode), so you can check it.
 
@@ -172,6 +182,9 @@ You can point Excel or Power BI at those CSVs, or ask the app new questions any 
 | `app.py` | The web app's menu; the pages are in `views/` (Dashboard, Chat, Glossary, Settings) |
 | `dashboards.py` | The dashboard: saved charts, periods, running and building charts |
 | `ui.py` | Small pieces of UI shared by the pages |
+| `value_index.py` | Local index of every value in the data (built on Refresh data structure) |
+| `data_tools.py` | Read-only tools Claude uses to check the data before writing a query |
+| `value_check.py` | Checks the values a query filters on against the real data before it runs |
 | `secrets_store.py` | Saves keys and passwords from the Settings page in Windows Credential Manager |
 | `admin.py` | Admin sign-in for Settings and glossary editing |
 | `glossary.py` | Loads/saves `glossary.json` and passes it to Claude |

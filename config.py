@@ -54,6 +54,7 @@ LOCAL_SCHEMA_FILE = BASE_DIR / "schema_local.md"  # structure of the local data 
 NOTES_FILE = BASE_DIR / "business_notes.md"     # your own hints for Claude
 GLOSSARY_FILE = BASE_DIR / "glossary.json"      # agreed meaning of each number (Glossary page)
 DASHBOARD_FILE = BASE_DIR / "dashboard.json"    # the shared dashboard's charts (Dashboard page)
+VALUE_INDEX_FILE = BASE_DIR / "data" / "value_index.json"  # every value in the data, for lookups
 ENV_FILE = BASE_DIR / ".env"
 QUERIES_DIR = BASE_DIR / "queries"              # saved .dax files for scheduled pulls
 DATA_DIR = BASE_DIR / "data"

@@ -9,6 +9,7 @@ from pathlib import Path
 import pandas as pd
 
 import config
+import value_index
 
 _DLL_NAME = "Microsoft.AnalysisServices.AdomdClient.dll"
 # Places ADOMD.NET can be, in order of preference
@@ -315,6 +316,124 @@ def _md_level_columns() -> list[dict]:
     return cols
 
 
+VALUE_LIMIT = 60  # columns with up to this many values get the full list in the schema
+
+
+def _dax_str(value: str) -> str:
+    return '"' + str(value).replace('"', '""') + '"'
+
+
+def _default_measure(meas: list[dict]) -> str:
+    """A measure that shows how much data each value has: a count measure (e.g. [Booking Count])
+    if there is one, else the cube's default measure."""
+    counts = [m["name"] for m in meas if re.search(r"\bcount$", str(m["name"]), flags=re.IGNORECASE)
+              and not re.search(r"\b(LY|LYS|Var|Growth|Opt)\b|%", str(m["name"]), flags=re.IGNORECASE)]
+    if counts:
+        return f"[{min(counts, key=len)}]"
+    try:
+        h = run_query("SELECT [DIMENSION_UNIQUE_NAME], [DEFAULT_MEMBER] FROM $SYSTEM.MDSCHEMA_HIERARCHIES")
+        default = h.loc[h["DIMENSION_UNIQUE_NAME"] == "[Measures]", "DEFAULT_MEMBER"].dropna().astype(str)
+        name = re.findall(r"\[([^\]]+)\]", default.iloc[0])[-1] if len(default) else ""
+        return f"[{name}]" if name in {m["name"] for m in meas} else ""
+    except Exception:
+        return ""
+
+
+def _level_cardinality() -> dict[tuple[str, str], int]:
+    try:
+        lv = run_query("SELECT [CUBE_NAME], [DIMENSION_UNIQUE_NAME], [LEVEL_NAME], [LEVEL_CARDINALITY] "
+                       "FROM $SYSTEM.MDSCHEMA_LEVELS")
+    except Exception:
+        return {}
+    lv = lv[~lv["CUBE_NAME"].astype(str).str.startswith("$")]
+    return {(str(r.DIMENSION_UNIQUE_NAME).strip("[]"), str(r.LEVEL_NAME)): _int(r.LEVEL_CARDINALITY)
+            for r in lv.itertuples()}
+
+
+def _read_column(c: dict, measure: str, cardinality: int | None) -> dict:
+    """Every value of a text column with its count, for the value index. Columns with more than
+    INDEX_LIMIT values are marked "live" (searched on the server) and get a few examples."""
+    ref = f"'{c['table']}'[{c['column']}]"
+    cols = ", ".join(c.get("group_with", []) + [ref])
+    if cardinality is None or cardinality <= value_index.INDEX_LIMIT:
+        df = clean_column_names(run_query(f"EVALUATE TOPN({value_index.INDEX_LIMIT + 1}, SUMMARIZECOLUMNS({cols}))"))
+        if len(df) <= value_index.INDEX_LIMIT:
+            counts = {}
+            if measure:  # members without data are left out here, so they show as "no data"
+                n_df = clean_column_names(run_query(f'EVALUATE SUMMARIZECOLUMNS({cols}, "n", {measure})'))
+                for v, n in zip(n_df[c["column"]], n_df["n"]):
+                    if n is not None and not pd.isna(n):
+                        counts[str(v)] = counts.get(str(v), 0) + float(n)
+            seen, values = set(), []
+            for v in df[c["column"]]:
+                if v is None or (isinstance(v, float) and pd.isna(v)) or not str(v).strip() or str(v) in seen:
+                    continue
+                seen.add(str(v))
+                values.append([str(v), counts.get(str(v))])
+            if measure:
+                values.sort(key=lambda x: -(x[1] or 0))
+            return {"values": values}
+        cardinality = cardinality or f"over {value_index.INDEX_LIMIT:,}"
+    df = clean_column_names(run_query(f"EVALUATE TOPN(5, SUMMARIZECOLUMNS({cols}))"))
+    return {"live": True, "count": cardinality, "examples": [str(v) for v in df[c["column"]]]}
+
+
+def _add_values(cols: list[dict], measure: str) -> None:
+    """Read every text column's values: short lists go into the schema, all of them into the
+    value index (data/value_index.json) that Claude searches before writing a query."""
+    from concurrent.futures import ThreadPoolExecutor
+    cards = _level_cardinality()
+    text_cols = [c for c in cols if c.get("type") == "Text"]
+
+    def one(c):
+        try:
+            c.update(_read_column(c, measure, cards.get((c["table"], c["column"]))))
+        except Exception:
+            pass  # values are a help, not a requirement
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        list(pool.map(one, text_cols))
+    value_index.save({f"'{c['table']}'[{c['column']}]": {"group_with": c.get("group_with", []),
+                                                          **{k: c[k] for k in ("values", "live", "count") if k in c}}
+                      for c in text_cols if "values" in c or c.get("live")}, measure)
+
+
+def _values_text(c: dict, measure: str) -> str:
+    if "values" in c and len(c["values"]) > VALUE_LIMIT:  # too long for the schema: a few examples
+        return (f" | {len(c['values']):,} values, e.g. "
+                + ", ".join(_dax_str(v) for v, _ in c["values"][:5]))
+    if "values" in c:
+        shown = []
+        for v, n in c["values"]:
+            if not measure:
+                shown.append(_dax_str(v))
+            else:
+                shown.append(f"{_dax_str(v)} ({n:,.0f})" if n else f"{_dax_str(v)} (no data)")
+        return " | values: " + ", ".join(shown)
+    if "examples" in c:
+        count = f"{c['count']:,}" if isinstance(c["count"], int) else c["count"]
+        return f" | {count} values, e.g. " + ", ".join(_dax_str(v) for v in c["examples"])
+    return ""
+
+
+def find_values(column: str, group_with: list[str], values: list[str]) -> dict[str, str | None]:
+    """For each value, the matching value in the model (ignoring case), or None if there is none."""
+    cols, alls = ", ".join(group_with + [column]), ", ".join([column] + group_with)
+    wanted = ", ".join(_dax_str(v) for v in values)
+    df = clean_column_names(run_query(
+        f"EVALUATE SUMMARIZECOLUMNS({cols}, KEEPFILTERS(FILTER(ALL({alls}), {column} IN {{{wanted}}})))"))
+    found = {str(v).lower(): str(v) for v in df.iloc[:, -1]} if len(df) else {}
+    return {v: found.get(v.lower()) for v in values}
+
+
+def search_values(column: str, group_with: list[str], text: str, limit: int = 6) -> list[str]:
+    """Values of the column containing the text (ignoring case)."""
+    cols, alls = ", ".join(group_with + [column]), ", ".join([column] + group_with)
+    df = clean_column_names(run_query(
+        f"EVALUATE TOPN({int(limit)}, SUMMARIZECOLUMNS({cols}, KEEPFILTERS(FILTER(ALL({alls}), "
+        f"SEARCH({_dax_str(text)}, {column}, 1, 0) > 0))))"))
+    return [str(v) for v in df.iloc[:, -1]] if len(df) else []
+
+
 def build_schema_text() -> tuple[str, int, int]:
     """Read the model's tables, columns and measures and format them for Claude."""
     try:
@@ -323,6 +442,8 @@ def build_schema_text() -> tuple[str, int, int]:
     except Exception:
         cols, meas = _multidimensional_schema()
         kind = "Multidimensional (cube)"
+    measure = _default_measure(meas) if kind != "Tabular" else ""
+    _add_values(cols, measure)
 
     lines = [
         f"# Model: {config.SSAS_DATABASE}",
@@ -344,6 +465,11 @@ def build_schema_text() -> tuple[str, int, int]:
     if any(c.get("group_with") for c in cols):
         lines.append("'group with' = hidden helper column(s) that must be listed next to this column "
                      "whenever you group by it. 'sort by' = hidden column that gives its natural order.")
+    if any("values" in c for c in cols):
+        lines.append("'values' = every value in the column, written exactly; filter only on these. "
+                     + (f"The number after each is {measure} for all dates; 'no data' means nothing has that "
+                        "value. " if measure else "")
+                     + "Longer columns show a few examples to show how values are written.")
     current = None
     for c in sorted(cols, key=lambda x: (str(x["table"]), str(x["column"]))):
         if c["table"] != current:
@@ -358,5 +484,6 @@ def build_schema_text() -> tuple[str, int, int]:
             line += f" | group with {', '.join(c['group_with'])}"
         if c.get("sort_by"):
             line += f" | sort by {', '.join(c['sort_by'])}"
+        line += _values_text(c, measure)
         lines.append(line)
     return "\n".join(lines) + "\n", len(cols), len(meas)

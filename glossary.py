@@ -65,8 +65,9 @@ def prompt_text(rows: list[dict]) -> str:
         return ""
     lines = ["## Glossary",
              "Agreed entries are confirmed by the owner of the numbers: always follow them.",
-             "Draft entries are not confirmed yet: pick the most likely option and say in the "
-             "explanation which measure and date you used."]
+             "Draft entries are not confirmed yet. For which measure or date to use, pick the most likely "
+             "option and say which in the understanding. For which values to filter on (e.g. which statuses), "
+             "a draft does not decide: if the question depends on it, ask."]
     for r in rows:
         parts = [f"- {r['Term']} ({r.get('Status') or 'Draft'}): {r.get('Meaning', '')}"]
         if r.get("Measure"):

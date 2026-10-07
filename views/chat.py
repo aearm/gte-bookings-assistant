@@ -7,10 +7,12 @@ import streamlit as st
 import admin
 import config
 import dashboards
+import data_tools
 import glossary
 import llm
 import storage
 import ui
+import value_check
 from backends import get_backend
 from charts import build_figure
 from errors import details, friendly
@@ -45,27 +47,45 @@ def answer(question: str, context: list[dict], clarification: tuple[str, str] | 
 
     with st.status("Working on it...", expanded=False) as status:
         status.write("Understanding the question")
-        result = llm.question_to_query(question, schema, notes, today, lang, context, clarification=clarification)
+        checks = dict(tools=data_tools.TOOLS, run_tool=data_tools.run,
+                      on_step=lambda name, args: status.write(data_tools.describe_step(name, args)))
+        result = llm.question_to_query(question, schema, notes, today, lang, context, clarification=clarification,
+                                       **checks)
         turn["understanding"] = result.get("understanding", "")
         if result.get("needs_clarification"):
             turn["clarify"] = {"original": question, "question": result["clarifying_question"],
                                "options": result.get("options", [])[:4]}
             status.update(label="I need a bit more detail", state="complete")
             return turn
-        try:
-            status.write("Pulling the data")
-            df = backend.run(result["query"], config.MAX_ROWS)
-        except Exception as first_error:
-            status.write("Query failed, asking Claude to fix it")
-            result = llm.question_to_query(question, schema, notes, today, lang, context,
-                                           failed_query=result["query"], error=str(first_error)[:1500],
-                                           clarification=clarification)
-            df = backend.run(result["query"], config.MAX_ROWS)
+        query = result["query"]
+        for attempt in (1, 2):
+            status.write("Checking the values it filters on")
+            checked = value_check.check(query, lang, schema, backend)
+            if checked.problems:  # a value that isn't in the data: ask instead of returning nothing
+                problem = checked.problems[0]
+                turn["clarify"] = {"original": turn["question"], "question": problem.question(),
+                                   "options": problem.suggestions}
+                status.update(label="I need a bit more detail", state="complete")
+                return turn
+            query = checked.query
+            try:
+                status.write("Pulling the data")
+                df = backend.run(query, config.MAX_ROWS)
+                break
+            except Exception as error:
+                if attempt == 2:
+                    raise
+                status.write("Query failed, asking Claude to fix it")
+                result = llm.question_to_query(question, schema, notes, today, lang, context,
+                                               failed_query=query, error=str(error)[:1500],
+                                               clarification=clarification, **checks)
+                query = result["query"]
 
-        turn.update(query=result["query"], explanation=result.get("explanation", ""), df=df)
+        turn.update(query=query, explanation=result.get("explanation", ""), df=df, notes=checked.notes)
         if df.empty:
             turn["spec"] = {"chart_type": "table", "title": "No results",
-                            "summary": "The query ran but returned no rows. Try widening the filters or dates."}
+                            "summary": "The query ran but returned no rows. " + (
+                                " ".join(checked.notes) or "Try widening the filters or dates.")}
         else:
             status.write("Choosing a chart")
             turn["spec"] = llm.describe_result(question, df)
@@ -112,16 +132,21 @@ def show_turn(i: int, turn: dict) -> None:
         if "clarify" in turn:
             cl = turn["clarify"]
             st.markdown(f"**{cl['question']}**")
-            cols = st.columns(max(len(cl["options"]), 1))
-            for j, option in enumerate(cl["options"]):
-                if cols[j].button(option, key=f"opt_{i}_{j}", width="stretch", disabled=turn.get("answered", False)):
-                    st.session_state.pending_reply = option
-                    st.rerun()
+            for row in range(0, len(cl["options"]), 3):
+                cols = st.columns(3)
+                for j, option in enumerate(cl["options"][row:row + 3], start=row):
+                    if cols[j - row].button(option, key=f"opt_{i}_{j}", width="stretch",
+                                            disabled=turn.get("answered", False)):
+                        st.session_state.pending_reply = option
+                        st.rerun()
             if not turn.get("answered"):
                 st.caption("Pick an answer, or type your own below.")
             return
         spec, df = turn["spec"], turn["df"]
         st.markdown(spec.get("summary", ""))
+        if not df.empty:
+            for note in turn.get("notes", []):
+                st.caption(f"ℹ️ {note}")
         with st.container(key=f"answer_{i}"):
             fig = build_figure(df, spec, dark=ui.is_dark())
             if fig is not None:

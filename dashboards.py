@@ -10,8 +10,10 @@ from datetime import date, datetime, timedelta
 import pandas as pd
 
 import config
+import data_tools
 import glossary
 import llm
+import value_check
 from backends import get_backend
 from errors import details, friendly
 
@@ -185,14 +187,20 @@ def build_chart(question: str, title: str, chart_type: str, width: str, date_col
     instructions = llm.dashboard_instructions(backend.language, date_column, chart_type == "kpi", base_query)
     args = (question, schema, notes, date.today().isoformat(), backend.language)
 
-    query = llm.question_to_query(*args, instructions=instructions)["query"]
+    def checked(q: str) -> str:
+        _check_dates(q, date_column)
+        return value_check.require_real_values(value_check.check(q, backend.language, schema, backend))
+
+    checks = dict(tools=data_tools.TOOLS, run_tool=data_tools.run)
+    query = llm.question_to_query(*args, instructions=instructions, **checks)["query"]
     try:
-        _check_dates(query, date_column)
+        query = checked(query)
         df = backend.run(fill_dates(query, start, end, backend), config.MAX_ROWS)
+    except value_check.ValueProblem:
+        raise  # only the person asking can say which real value they mean
     except Exception as first_error:  # one retry, with the error, like the chat
-        query = llm.question_to_query(*args, instructions=instructions, failed_query=query,
-                                      error=str(first_error)[:1500])["query"]
-        _check_dates(query, date_column)
+        query = checked(llm.question_to_query(*args, instructions=instructions, failed_query=query, **checks,
+                                              error=str(first_error)[:1500])["query"])
         df = backend.run(fill_dates(query, start, end, backend), config.MAX_ROWS)
 
     if chart_type == "kpi":

@@ -8,6 +8,7 @@ import duckdb
 import pandas as pd
 
 import config
+import value_index
 
 _lock = threading.Lock()
 _con = None
@@ -87,6 +88,42 @@ def run_query(sql: str, max_rows: int | None = None) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=columns)
 
 
+def _tables_with(column: str) -> list[str]:
+    name = column.strip('"')
+    return [t for (t,) in _connection().execute(
+        "SELECT table_name FROM information_schema.columns WHERE column_name = ?", [name]).fetchall()]
+
+
+def find_values(column: str, group_with: list[str], values: list[str]) -> dict[str, str | None]:
+    """For each value, the matching value in the data (ignoring case), or None if there is none."""
+    found = {}
+    cur = _connection().cursor()
+    try:
+        for table in _tables_with(column):
+            marks = ", ".join("?" * len(values))
+            rows = cur.execute(f'SELECT DISTINCT {column} FROM "{table}" '
+                               f'WHERE lower(CAST({column} AS VARCHAR)) IN ({marks})',
+                               [v.lower() for v in values]).fetchall()
+            found.update({str(r[0]).lower(): str(r[0]) for r in rows})
+    finally:
+        cur.close()
+    return {v: found.get(v.lower()) for v in values}
+
+
+def search_values(column: str, group_with: list[str], text: str, limit: int = 6) -> list[str]:
+    """Values of the column containing the text (ignoring case)."""
+    out = []
+    cur = _connection().cursor()
+    try:
+        for table in _tables_with(column):
+            rows = cur.execute(f'SELECT DISTINCT {column} FROM "{table}" WHERE CAST({column} AS VARCHAR) ILIKE ? '
+                               f'LIMIT {int(limit)}', [f"%{text}%"]).fetchall()
+            out += [str(r[0]) for r in rows]
+    finally:
+        cur.close()
+    return list(dict.fromkeys(out))[:limit]
+
+
 def build_schema_text() -> tuple[str, int, int]:
     """Describe every table: columns, types, value ranges and example values."""
     con = _connection()
@@ -98,6 +135,7 @@ def build_schema_text() -> tuple[str, int, int]:
         "Table and column names are case-sensitive; wrap column names in double quotes.",
     ]
     n_cols = 0
+    index = {}  # every text value, for value_index (Claude's find_values tool)
     for table, source in _tables.items():
         rows = con.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0]
         lines += ["", f'## Table "{table}"  ({rows:,} rows, from {source})']
@@ -113,11 +151,15 @@ def build_schema_text() -> tuple[str, int, int]:
                 info = f"range {lo} to {hi}"
             elif "VARCHAR" in dtype:
                 n_distinct = con.execute(f'SELECT COUNT(DISTINCT {q}) FROM "{table}"').fetchone()[0]
-                top = [r[0] for r in con.execute(
-                    f'SELECT {q} FROM "{table}" WHERE {q} IS NOT NULL GROUP BY 1 ORDER BY COUNT(*) DESC LIMIT 25'
-                ).fetchall()]
-                shown = ", ".join(str(v) for v in top)
-                info = (f"{n_distinct} values: {shown}" if n_distinct <= 25
-                        else f"{n_distinct:,} distinct values, e.g. {', '.join(str(v) for v in top[:8])}")
+                top = con.execute(f'SELECT {q}, COUNT(*) FROM "{table}" WHERE {q} IS NOT NULL '
+                                  f'GROUP BY 1 ORDER BY 2 DESC LIMIT {value_index.INDEX_LIMIT + 1}').fetchall()
+                index[q] = ({"group_with": [], "values": [[str(v), n] for v, n in top]}
+                            if n_distinct <= value_index.INDEX_LIMIT else
+                            {"group_with": [], "live": True, "count": n_distinct})
+                top = top[:25]
+                quoted = lambda v: '"' + str(v).replace('"', '""') + '"'
+                info = ("| values: " + ", ".join(f"{quoted(v)} ({n:,} rows)" for v, n in top) if n_distinct <= 25
+                        else f"| {n_distinct:,} values, e.g. " + ", ".join(quoted(v) for v, _ in top[:6]))
             lines.append(f'- "{col}" ({dtype}) {info}'.rstrip())
+    value_index.save(index, "")
     return "\n".join(lines) + "\n", n_cols, len(_tables)
