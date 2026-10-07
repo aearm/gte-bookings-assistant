@@ -11,6 +11,7 @@ schema.md
 schema_local.md
 business_notes.md
 glossary.json
+dashboard.json
 data/results/
 data/snapshots/
 data/history.jsonl

@@ -11,8 +11,9 @@ def signed_in() -> bool:
     return st.session_state.get("admin", False)
 
 
-def sign_in_form() -> bool:
-    """Shows the admin sign-in form (or first-time setup). Returns True when signed in."""
+def sign_in_form(scope: str = "app") -> bool:
+    """Shows the admin sign-in form (or first-time setup). Returns True when signed in.
+    Use scope="fragment" inside a dialog so it stays open after signing in."""
     if signed_in():
         return True
 
@@ -30,7 +31,7 @@ def sign_in_form() -> bool:
                 else:
                     secrets_store.set_admin_password(pw)
                     st.session_state.admin = True
-                    st.rerun()
+                    st.rerun(scope=scope)
         return False
 
     with st.form("admin_sign_in"):
@@ -38,7 +39,7 @@ def sign_in_form() -> bool:
         if st.form_submit_button("Sign in", type="primary"):
             if secrets_store.check_admin_password(pw):
                 st.session_state.admin = True
-                st.rerun()
+                st.rerun(scope=scope)
             time.sleep(1)  # slows down guessing
             st.error("That password isn't right. (Forgotten it? Run reset_admin_password.py on the server.)")
     return False

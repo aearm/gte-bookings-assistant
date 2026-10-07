@@ -33,6 +33,11 @@ Rules:
 - The query must start with EVALUATE (or DEFINE ... EVALUATE). It is read-only.
 - Use only the exact table, column and measure names listed in the schema below.
   Write columns as 'Table'[Column] and measures as [Measure Name].
+- If the schema says a column has "group with" columns, list those hidden columns right next to it
+  every time you group by that column (SUMMARIZECOLUMNS, SUMMARIZE, VALUES), e.g.
+  SUMMARIZECOLUMNS('Countries'[Country.UniqueName], 'Countries'[Country], "Bookings", [Bookings]).
+  Otherwise the server rejects the query. They are removed from the result automatically.
+  To put such a column in its natural order, also group by its "sort by" column and ORDER BY it.
 - Prefer existing measures. Typical shape:
     EVALUATE
     SUMMARIZECOLUMNS('Date'[Year], 'Destination'[Country], "Bookings", [Total Bookings])
@@ -45,7 +50,6 @@ Rules:
 - Keep results small (well under MAX_ROWS rows): pick a sensible grain, e.g. months not days
   for long periods. Never return raw transaction-level rows unless asked.
 - "This year", "last month" etc.: today's date is TODAY_DATE.
-- If the question is ambiguous, make a reasonable choice and say what you assumed in the explanation.
 - If an earlier question is given as context, treat the new question as a follow-up to it.
 """
 
@@ -64,11 +68,23 @@ Rules:
   for long periods. Never return raw row-level data unless asked.
 - "This year", "last month" etc.: today's date is TODAY_DATE (use DATE 'TODAY_DATE', not current_date).
 - Use the listed example values to match filters exactly (e.g. country or status spellings).
-- If the question is ambiguous, make a reasonable choice and say what you assumed in the explanation.
 - If an earlier question is given as context, treat the new question as a follow-up to it.
 """
 
-RULES = {"DAX": DAX_RULES, "SQL": SQL_RULES}
+ANSWER_RULES = """
+How to answer:
+- "understanding": restate the question in one plain sentence a business user can check: the number
+  (which measure), how it is broken down, the exact period with dates (e.g. 1-30 Sep 2026) and which
+  date it is based on, any filters, and top-N or sorting.
+- If a sensible reading exists, set needs_clarification to false and write the query. Where you had
+  to pick a default (period, date, which measure), say so in the understanding.
+- Set needs_clarification to true only when you cannot pick a sensible reading: the question names
+  nothing you can measure, or it could mean very different things that would give very different
+  numbers, and neither the glossary, the business notes nor earlier questions settle it. Then leave
+  query empty, ask ONE short question in clarifying_question and give 2-4 short answer options.
+"""
+
+RULES = {"DAX": DAX_RULES + ANSWER_RULES, "SQL": SQL_RULES + ANSWER_RULES}
 
 QUERY_TOOL = {
     "name": "submit_query",
@@ -76,10 +92,14 @@ QUERY_TOOL = {
     "input_schema": {
         "type": "object",
         "properties": {
-            "query": {"type": "string", "description": "The complete query."},
+            "understanding": {"type": "string", "description": "The question restated precisely: measure, breakdown, exact period and date used, filters."},
+            "needs_clarification": {"type": "boolean"},
+            "clarifying_question": {"type": "string", "description": "Only when needs_clarification is true, else empty."},
+            "options": {"type": "array", "items": {"type": "string"}, "description": "2-4 short answers to the clarifying question, else empty."},
+            "query": {"type": "string", "description": "The complete query, or empty when asking for clarification."},
             "explanation": {"type": "string", "description": "One plain-English sentence: what the query returns and any assumption made."},
         },
-        "required": ["query", "explanation"],
+        "required": ["understanding", "needs_clarification", "clarifying_question", "options", "query", "explanation"],
     },
 }
 
@@ -125,7 +145,10 @@ def _structured_call(system: list, tool: dict, user_text: str) -> dict:
 
 def question_to_query(question: str, schema: str, notes: str, today: str, language: str = "DAX",
                       context: list[dict] | None = None,
-                      failed_query: str | None = None, error: str | None = None) -> dict:
+                      failed_query: str | None = None, error: str | None = None,
+                      clarification: tuple[str, str] | None = None, instructions: str = "") -> dict:
+    """clarification = (question Claude asked, the user's answer). instructions = extra
+    requirements, e.g. for a dashboard chart. A result with needs_clarification has no query."""
     rules = RULES[language].replace("MAX_ROWS", str(config.MAX_ROWS)).replace("TODAY_DATE", today)
     system_text = rules + "\n\n" + schema
     if notes.strip():
@@ -137,16 +160,49 @@ def question_to_query(question: str, schema: str, notes: str, today: str, langua
     for prev in (context or [])[-3:]:
         parts.append(f"Earlier question: {prev['question']}\nEarlier query:\n{prev['query']}")
     parts.append(f"Question: {question}")
+    if clarification:
+        parts.append(f"You asked: {clarification[0]}\nThe user answered: {clarification[1]}\n"
+                     "Answer the question now; do not ask again.")
+    if instructions:
+        parts.append(instructions)
     if failed_query:
         parts.append(f"Your previous query failed.\nQuery:\n{failed_query}\n\nError:\n{error}\n\n"
-                     "Fix the query (check names against the schema).")
+                     "Fix the query (check names against the schema). Do not ask for clarification.")
     result = _structured_call(system, QUERY_TOOL, "\n\n".join(parts))
+    if result.get("needs_clarification") and result.get("clarifying_question") and not failed_query:
+        result["query"] = ""
+        return result
+    result["needs_clarification"] = False
     if language == "DAX":
         validate_dax(result.get("query", ""))
     return result
 
 
+def dashboard_instructions(language: str, date_column: str, kpi: bool, base_query: str = "") -> str:
+    """Extra requirements for a dashboard chart: the dashboard, not the question, sets the period."""
+    lines = ["This query is for a dashboard chart that is re-run for whatever period the user picks."]
+    if base_query:
+        lines.append("Start from this query, which answered the question in a chat. Keep its measures, "
+                     f"breakdown, sorting and top-N, but change the period as described below:\n{base_query}")
+    if date_column and language == "DAX":
+        lines.append(f"Filter the period on {date_column} with exactly KEEPFILTERS(FILTER(ALL({date_column}), "
+                     f"{date_column} >= @START && {date_column} < @END)) inside SUMMARIZECOLUMNS. ")
+    elif date_column:
+        lines.append(f"Filter the period with {date_column} >= @START AND {date_column} < @END.")
+    if date_column:
+        lines.append("Write @START and @END literally: they are replaced with dates when the chart runs. "
+                     "Remove any other period or date filter, including one in the question.")
+    else:
+        lines.append("Do not filter by date: the chart covers all dates. Remove any period in the question.")
+    if kpi:
+        lines.append("Return exactly one row with one number (the headline figure), no other columns.")
+    lines.append("Set needs_clarification to false.")
+    return "\n".join(lines)
+
+
 def validate_dax(dax: str) -> None:
+    if not dax.strip():
+        raise RuntimeError("Claude did not return a query. Try rephrasing the question.")
     body = re.sub(r"(--|//).*?$", "", dax, flags=re.MULTILINE)  # drop comment lines
     body = re.sub(r"/\*.*?\*/", "", body, flags=re.DOTALL).strip()
     if not re.match(r"^(DEFINE|EVALUATE)\b", body, flags=re.IGNORECASE):

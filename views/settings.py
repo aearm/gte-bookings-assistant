@@ -90,7 +90,7 @@ else:
                 secrets_store.save_server_address(server, database)
                 secrets_store.save_server_login(username, password)
                 st.success("Saved. Use **Test server** below to check it works. If you changed the "
-                           "server or model, also click **Refresh data structure** on the Ask page.")
+                           "server or model, also click **Refresh data structure** on the Chat page.")
 
     if st.button("Test server"):
         import ssas

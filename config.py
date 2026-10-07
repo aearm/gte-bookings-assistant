@@ -53,6 +53,7 @@ SCHEMA_FILE = BASE_DIR / "schema.md"            # live model structure (build_sc
 LOCAL_SCHEMA_FILE = BASE_DIR / "schema_local.md"  # structure of the local data files
 NOTES_FILE = BASE_DIR / "business_notes.md"     # your own hints for Claude
 GLOSSARY_FILE = BASE_DIR / "glossary.json"      # agreed meaning of each number (Glossary page)
+DASHBOARD_FILE = BASE_DIR / "dashboard.json"    # the shared dashboard's charts (Dashboard page)
 ENV_FILE = BASE_DIR / ".env"
 QUERIES_DIR = BASE_DIR / "queries"              # saved .dax files for scheduled pulls
 DATA_DIR = BASE_DIR / "data"

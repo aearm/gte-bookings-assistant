@@ -47,6 +47,9 @@ def friendly(exc: Exception) -> str:
         return ("Claude couldn't write a query the bookings data accepts for this question "
                 "(it tried twice). Try rephrasing: name the number (e.g. sales, profit, bookings) "
                 "and the period, or ask for a simpler breakdown.")
+    if "dashboard dates" in text:
+        return ("Claude couldn't make this chart follow the dashboard's dates. Try rephrasing the "
+                "question, or choose 'All dates' for this chart.")
     if isinstance(exc, json.JSONDecodeError):
         return "Claude's answer came back in an unexpected format. Please try again."
     if isinstance(exc, RuntimeError) and str(exc):

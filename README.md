@@ -68,7 +68,7 @@ create a key) and the server details you use in Power BI or Excel.
    - the **Claude API key**, and click **Test Claude**,
    - the **server**, **model**, **username** and **password** you use in Power BI/Excel,
      and click **Test server**.
-4. **On the Ask page, click "Refresh data structure"** in the sidebar. This reads the list of
+4. **On the Chat page, click "Refresh data structure"** in the sidebar. This reads the list of
    tables and measures Claude is allowed to use.
 5. **Agree the 📖 Glossary** with Finance/BI, and add hints to `business_notes.md`
    (e.g. which measure "revenue" means). This makes the biggest difference to answer quality.
@@ -102,13 +102,34 @@ If something goes wrong, the app shows a plain-English message; the technical te
 
 ## Daily use
 
-Windows: double-click **`run_app.bat`**. Mac: run `bash run_app.sh` in Terminal.
-Your browser opens at http://localhost:8501.
+Windows: double-click the **Bookings Assistant** desktop shortcut (or **`run_app.bat`**).
+Mac: run `bash run_app.sh` in Terminal. Your browser opens at http://localhost:8501.
+
+### 📊 Dashboard (opens first)
+
+The company's saved charts: headline numbers at the top (with the change vs the same period
+last year), then charts. Pick a **Period** (last 7 days, this month, last month, this year,
+last 12 months or a custom range) and every chart follows it. **🔄 Refresh** gets the latest
+numbers from the server; refreshing never uses Claude, it just re-runs the saved queries.
+
+Admins (signed in with the admin password) can **➕ Add chart** by describing it in plain
+English, and use each chart's **⋮** menu to edit (title, chart type, size, which date the period
+applies to, the question or the query itself), reorder or delete it. The first time, an admin can
+click **✨ Create starter charts** (bookings, sales, profit, monthly trends, top 10s).
+Charts are saved in `dashboard.json`.
+
+### 💬 Chat
+
 Type a question, e.g.:
 - *Bookings by month for 2026*
 - *Top 10 destinations by revenue this year*
 - *Compare this month with the same month last year by channel*
 - Follow-ups work: *now only for Spain*, *show it as a table*
+
+Claude first shows **"I understood your question as: ..."** (the exact measure, dates and
+filters) so you can check it. If the question is too unclear to answer, it asks you instead,
+with one-click answers. **Hover over any chart** and click **➕ Add to dashboard** to keep it
+(admins only); on the dashboard it then follows the dashboard's period.
 
 Under each answer you can open the **data** (and download it as CSV) and the **query**
 Claude wrote (DAX in live mode, SQL in local mode), so you can check it.
@@ -148,7 +169,9 @@ You can point Excel or Power BI at those CSVs, or ask the app new questions any 
 
 | File | What it does |
 |---|---|
-| `app.py` | The web app's menu; the pages are in `views/` (Ask, Glossary, Settings) |
+| `app.py` | The web app's menu; the pages are in `views/` (Dashboard, Chat, Glossary, Settings) |
+| `dashboards.py` | The dashboard: saved charts, periods, running and building charts |
+| `ui.py` | Small pieces of UI shared by the pages |
 | `secrets_store.py` | Saves keys and passwords from the Settings page in Windows Credential Manager |
 | `admin.py` | Admin sign-in for Settings and glossary editing |
 | `glossary.py` | Loads/saves `glossary.json` and passes it to Claude |

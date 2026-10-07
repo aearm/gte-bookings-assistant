@@ -139,7 +139,9 @@ def run_query(query: str, max_rows: int | None = None, conn_str: str | None = No
 
 
 def clean_column_names(df: pd.DataFrame) -> pd.DataFrame:
-    """'Date'[Year] -> Year, [Total Bookings] -> Total Bookings (keeps names unique)."""
+    """'Date'[Year] -> Year, [Total Bookings] -> Total Bookings (keeps names unique).
+    Also drops cube helper columns such as 'Country.UniqueName' that only exist so the
+    query can group by 'Country'."""
     short = []
     for col in df.columns:
         parts = re.findall(r"\[([^\]]+)\]", str(col))
@@ -152,7 +154,17 @@ def clean_column_names(df: pd.DataFrame) -> pd.DataFrame:
         final.append(name)
     out = df.copy()
     out.columns = final
-    return out
+    helpers = [n for n in final if any(n != other and n.startswith(other + ".") for other in final)]
+    return out.drop(columns=helpers)
+
+
+
+def last_data_update() -> str:
+    """When the server last refreshed the model's data, e.g. '6 Oct 2026, 23:37' (server time)."""
+    cubes = run_query("SELECT [CUBE_NAME], [LAST_DATA_UPDATE] FROM $SYSTEM.MDSCHEMA_CUBES")
+    cubes = cubes[~cubes["CUBE_NAME"].astype(str).str.startswith("$")]
+    latest = pd.to_datetime(cubes["LAST_DATA_UPDATE"], errors="coerce").max()
+    return "" if pd.isna(latest) else f"{latest.day} {latest:%b %Y, %H:%M}"
 
 
 # ---------------------------------------------------------------- schema --
@@ -210,13 +222,69 @@ def _tabular_schema() -> tuple[list[dict], list[dict]]:
     return cols, meas
 
 
-def _multidimensional_schema() -> tuple[list[dict], list[dict]]:
-    """Fallback for older cube-style models. Names are a best guess for DAX."""
-    measures = run_query("SELECT * FROM $SYSTEM.MDSCHEMA_MEASURES")
-    levels = run_query("SELECT * FROM $SYSTEM.MDSCHEMA_LEVELS")
-    measures = measures[~measures["CUBE_NAME"].astype(str).str.startswith("$")]
-    levels = levels[~levels["CUBE_NAME"].astype(str).str.startswith("$")]
+_CSDL_NS = {"e": "http://schemas.microsoft.com/ado/2008/09/edm",
+             "bi": "http://schemas.microsoft.com/sqlbi/2010/10/edm/extensions"}
+_CSDL_TYPES = {"String": "Text", "Int64": "Whole number", "Int32": "Whole number", "Double": "Decimal",
+               "Decimal": "Decimal", "DateTime": "Date/time", "Boolean": "True/False"}
 
+
+def _csdl_columns(cube: str) -> list[dict]:
+    """Columns exactly as DAX sees them in a cube, read from the model's CSDL description,
+    including the hidden helper columns a column must be grouped with (e.g. Country.UniqueName)."""
+    import xml.etree.ElementTree as ET
+    db = config.SSAS_DATABASE.replace("'", "''")
+    xml = run_query("SELECT * FROM SYSTEMRESTRICTSCHEMA($SYSTEM.DISCOVER_CSDL_METADATA, "
+                    f"[CATALOG_NAME] = '{db}', [PERSPECTIVE_NAME] = '{cube.replace(chr(39), chr(39) * 2)}', "
+                    "[VERSION] = '2.0')").iloc[0, -1]
+    root = ET.fromstring(str(xml))
+    types = {et.get("Name"): et for et in root.iter(f"{{{_CSDL_NS['e']}}}EntityType")}
+
+    cols = []
+    for es in root.iter(f"{{{_CSDL_NS['e']}}}EntitySet"):
+        bi_es = es.find("bi:EntitySet", _CSDL_NS)
+        if bi_es is not None and bi_es.get("Hidden") == "true":
+            continue
+        table = (bi_es.get("ReferenceName") if bi_es is not None else None) or es.get("Name")
+        et = types.get(es.get("EntityType", "").split(".")[-1])
+        if et is None:
+            continue
+        props = et.findall("e:Property", _CSDL_NS)
+        dax_name = {}
+        for p in props:
+            bp = p.find("bi:Property", _CSDL_NS)
+            dax_name[p.get("Name")] = (bp.get("ReferenceName") if bp is not None else None) or p.get("Name")
+        for p in props:
+            bp = p.find("bi:Property", _CSDL_NS)
+            if bp is None or bp.get("Hidden") == "true":
+                continue
+            refs = lambda tag: [f"'{table}'[{dax_name[r.get('Name')]}]"
+                                for r in bp.findall(f"bi:{tag}/bi:PropertyRef", _CSDL_NS) if r.get("Name") in dax_name]
+            cols.append({"table": table, "column": dax_name[p.get("Name")],
+                         "type": _CSDL_TYPES.get(p.get("Type"), ""), "description": "",
+                         "group_with": refs("GroupBy"), "sort_by": refs("OrderBy")})
+    return cols
+
+
+def _multidimensional_schema() -> tuple[list[dict], list[dict]]:
+    """Cube-style models: measures from MDSCHEMA, columns from the CSDL description
+    (falls back to level names, a best guess, if that fails)."""
+    measures = run_query("SELECT * FROM $SYSTEM.MDSCHEMA_MEASURES")
+    measures = measures[~measures["CUBE_NAME"].astype(str).str.startswith("$")]
+    try:
+        cols, seen = [], set()
+        for cube in measures["CUBE_NAME"].astype(str).unique():
+            for c in _csdl_columns(cube):
+                if (c["table"], c["column"]) not in seen:
+                    seen.add((c["table"], c["column"]))
+                    cols.append(c)
+        if cols:
+            return cols, _md_measures(measures)
+    except Exception:
+        pass
+    return _md_level_columns(), _md_measures(measures)
+
+
+def _md_measures(measures: pd.DataFrame) -> list[dict]:
     meas, seen = [], set()
     for _, m in measures.iterrows():
         if "MEASURE_IS_VISIBLE" in m and not _is_true(m["MEASURE_IS_VISIBLE"]):
@@ -227,7 +295,12 @@ def _multidimensional_schema() -> tuple[list[dict], list[dict]]:
         meas.append({"name": m["MEASURE_NAME"], "table": m.get("MEASUREGROUP_NAME", ""),
                      "description": _short(m.get("DESCRIPTION")),
                      "format": _short(m.get("DEFAULT_FORMAT_STRING"), 40), "formula": ""})
+    return meas
 
+
+def _md_level_columns() -> list[dict]:
+    levels = run_query("SELECT * FROM $SYSTEM.MDSCHEMA_LEVELS")
+    levels = levels[~levels["CUBE_NAME"].astype(str).str.startswith("$")]
     cols, seen = [], set()
     for _, lv in levels.iterrows():
         dim = str(lv["DIMENSION_UNIQUE_NAME"]).strip("[]")
@@ -239,7 +312,7 @@ def _multidimensional_schema() -> tuple[list[dict], list[dict]]:
         seen.add((dim, level))
         cols.append({"table": dim, "column": level, "type": "",
                      "description": _short(lv.get("DESCRIPTION"))})
-    return cols, meas
+    return cols
 
 
 def build_schema_text() -> tuple[str, int, int]:
@@ -249,7 +322,7 @@ def build_schema_text() -> tuple[str, int, int]:
         kind = "Tabular"
     except Exception:
         cols, meas = _multidimensional_schema()
-        kind = "Multidimensional (cube) - column names are approximate"
+        kind = "Multidimensional (cube)"
 
     lines = [
         f"# Model: {config.SSAS_DATABASE}",
@@ -268,6 +341,9 @@ def build_schema_text() -> tuple[str, int, int]:
         lines.append(line)
 
     lines += ["", "## Tables and columns (use these to group and filter)"]
+    if any(c.get("group_with") for c in cols):
+        lines.append("'group with' = hidden helper column(s) that must be listed next to this column "
+                     "whenever you group by it. 'sort by' = hidden column that gives its natural order.")
     current = None
     for c in sorted(cols, key=lambda x: (str(x["table"]), str(x["column"]))):
         if c["table"] != current:
@@ -278,5 +354,9 @@ def build_schema_text() -> tuple[str, int, int]:
             line += f" ({c['type']})"
         if c["description"]:
             line += f" - {c['description']}"
+        if c.get("group_with"):
+            line += f" | group with {', '.join(c['group_with'])}"
+        if c.get("sort_by"):
+            line += f" | sort by {', '.join(c['sort_by'])}"
         lines.append(line)
     return "\n".join(lines) + "\n", len(cols), len(meas)

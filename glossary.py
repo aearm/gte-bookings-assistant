@@ -1,6 +1,7 @@
 """The glossary: what each number means, agreed with the owner of the numbers (Finance/BI).
 Shown on the Glossary page and given to Claude with every question."""
 import json
+import re
 from datetime import date
 
 import config
@@ -27,6 +28,11 @@ STARTER = [
     {"Term": "Cost", "Meaning": "To agree: which cost is the official one?",
      "Measure": "Options: [Cost], [Base Cost], [Final Cost]",
      "Date to use": "To agree", "Status": "Draft", "Agreed by": ""},
+    {"Term": "Destination",
+     "Meaning": "To agree: is 'destination' the country or the city/area of the service? "
+                "And is 'Countries' the destination country or another country (e.g. the customer's)?",
+     "Measure": "Options: 'Countries'[Country] (country), 'Areas'[Area] (city/area)",
+     "Date to use": "", "Status": "Draft", "Agreed by": ""},
     {"Term": "Default date",
      "Meaning": "The date to use when a question doesn't say (e.g. 'bookings in March').",
      "Measure": "",
@@ -69,3 +75,10 @@ def prompt_text(rows: list[dict]) -> str:
             parts.append(f"Date: {r['Date to use']}")
         lines.append(" | ".join(parts))
     return "\n".join(lines)
+
+
+def notes_for_claude() -> str:
+    """Business notes plus the glossary, as given to Claude with every question."""
+    notes = config.NOTES_FILE.read_text(encoding="utf-8") if config.NOTES_FILE.exists() else ""
+    notes = re.sub(r"<!--.*?-->", "", notes, flags=re.DOTALL)
+    return (notes.strip() + "\n\n" + prompt_text(load()[0])).strip()
