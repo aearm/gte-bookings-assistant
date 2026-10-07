@@ -1,0 +1,11 @@
+pandas>=2.0
+streamlit>=1.36
+plotly>=5.20
+anthropic>=0.40
+python-dotenv>=1.0
+keyring>=24
+duckdb>=1.0
+openpyxl>=3.1
+# Live Analysis Services connection - Windows only
+pyadomd; sys_platform == "win32"
+pythonnet>=3.0; sys_platform == "win32"

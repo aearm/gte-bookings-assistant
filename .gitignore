@@ -1,0 +1,18 @@
+# Secrets and machine-specific files: never commit
+.env
+.venv/
+adomd/
+__pycache__/
+*.pyc
+.claude/
+
+# Company data, created on each computer when the app runs
+schema.md
+schema_local.md
+business_notes.md
+glossary.json
+data/results/
+data/snapshots/
+data/history.jsonl
+data/pull_log.txt
+queries/*.dax
