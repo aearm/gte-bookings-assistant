@@ -1,4 +1,5 @@
 """Talks to the Analysis Services model. Windows only (needs Microsoft ADOMD.NET)."""
+import contextvars
 import ctypes
 import re
 import sys
@@ -80,11 +81,29 @@ def _is_http() -> bool:
     return config.SSAS_SERVER.lower().startswith(("http://", "https://"))
 
 
-def connection_string() -> str:
+# The cube (database) queries go to. Set with using(); defaults to SSAS_DATABASE from .env.
+_current_db = contextvars.ContextVar("ssas_database", default="")
+
+
+def current_database(database: str | None = None) -> str:
+    return database or _current_db.get() or config.SSAS_DATABASE
+
+
+@contextmanager
+def using(database: str | None):
+    """Run the queries inside this block against another cube."""
+    token = _current_db.set(database or _current_db.get())
+    try:
+        yield
+    finally:
+        _current_db.reset(token)
+
+
+def connection_string(database: str | None = None) -> str:
     if not config.SSAS_SERVER:
         raise RuntimeError("No bookings server is set yet. An admin can add it on the ⚙️ Settings page.")
     parts = [f"Data Source={_quote(config.SSAS_SERVER)}",
-             f"Catalog={_quote(config.SSAS_DATABASE)}"]
+             f"Catalog={_quote(current_database(database))}"]
     # Over HTTP the login goes in the connection string. Over TCP ADOMD.NET ignores it and
     # signs in as the current Windows user, so run_query uses _network_login() instead.
     if config.SSAS_USERNAME and _is_http():
@@ -116,12 +135,13 @@ def _network_login():
         ctypes.windll.kernel32.CloseHandle(token)
 
 
-def run_query(query: str, max_rows: int | None = None, conn_str: str | None = None) -> pd.DataFrame:
-    """Run a DAX (or DMV) query and return the result as a table."""
+def run_query(query: str, max_rows: int | None = None, conn_str: str | None = None,
+              database: str | None = None) -> pd.DataFrame:
+    """Run a DAX (or DMV) query on a cube (default: the current one) and return the result."""
     _load_adomd()
     from pyadomd import Pyadomd  # imported here because it needs the DLL path first
 
-    with _network_login(), Pyadomd(conn_str or connection_string()) as conn:
+    with _network_login(), Pyadomd(conn_str or connection_string(database)) as conn:
         with conn.cursor().execute(query) as cur:
             columns = [c.name for c in cur.description]
             rows = []
@@ -160,9 +180,14 @@ def clean_column_names(df: pd.DataFrame) -> pd.DataFrame:
 
 
 
-def last_data_update() -> str:
+def list_databases() -> pd.DataFrame:
+    """Every cube database on the server this login can open, with when its data was last refreshed."""
+    return run_query("SELECT [CATALOG_NAME], [DATE_MODIFIED] FROM $SYSTEM.DBSCHEMA_CATALOGS")
+
+
+def last_data_update(database: str | None = None) -> str:
     """When the server last refreshed the model's data, e.g. '6 Oct 2026, 23:37' (server time)."""
-    cubes = run_query("SELECT [CUBE_NAME], [LAST_DATA_UPDATE] FROM $SYSTEM.MDSCHEMA_CUBES")
+    cubes = run_query("SELECT [CUBE_NAME], [LAST_DATA_UPDATE] FROM $SYSTEM.MDSCHEMA_CUBES", database=database)
     cubes = cubes[~cubes["CUBE_NAME"].astype(str).str.startswith("$")]
     latest = pd.to_datetime(cubes["LAST_DATA_UPDATE"], errors="coerce").max()
     return "" if pd.isna(latest) else f"{latest.day} {latest:%b %Y, %H:%M}"
@@ -233,7 +258,7 @@ def _csdl_columns(cube: str) -> list[dict]:
     """Columns exactly as DAX sees them in a cube, read from the model's CSDL description,
     including the hidden helper columns a column must be grouped with (e.g. Country.UniqueName)."""
     import xml.etree.ElementTree as ET
-    db = config.SSAS_DATABASE.replace("'", "''")
+    db = current_database().replace("'", "''")
     xml = run_query("SELECT * FROM SYSTEMRESTRICTSCHEMA($SYSTEM.DISCOVER_CSDL_METADATA, "
                     f"[CATALOG_NAME] = '{db}', [PERSPECTIVE_NAME] = '{cube.replace(chr(39), chr(39) * 2)}', "
                     "[VERSION] = '2.0')").iloc[0, -1]
@@ -380,7 +405,7 @@ def _read_column(c: dict, measure: str, cardinality: int | None) -> dict:
 
 def _add_values(cols: list[dict], measure: str) -> None:
     """Read every text column's values: short lists go into the schema, all of them into the
-    value index (data/value_index.json) that Claude searches before writing a query."""
+    cube's value index (models/<cube>/value_index.json) that Claude searches before writing a query."""
     from concurrent.futures import ThreadPoolExecutor
     cards = _level_cardinality()
     text_cols = [c for c in cols if c.get("type") == "Text"]
@@ -390,9 +415,9 @@ def _add_values(cols: list[dict], measure: str) -> None:
             c.update(_read_column(c, measure, cards.get((c["table"], c["column"]))))
         except Exception:
             pass  # values are a help, not a requirement
-    with ThreadPoolExecutor(max_workers=4) as pool:
-        list(pool.map(one, text_cols))
-    value_index.save({f"'{c['table']}'[{c['column']}]": {"group_with": c.get("group_with", []),
+    with ThreadPoolExecutor(max_workers=4) as pool:  # each thread gets a copy of the current cube
+        list(pool.map(lambda c: contextvars.copy_context().run(one, c), text_cols))
+    value_index.for_cube(current_database()).save({f"'{c['table']}'[{c['column']}]": {"group_with": c.get("group_with", []),
                                                           **{k: c[k] for k in ("values", "live", "count") if k in c}}
                       for c in text_cols if "values" in c or c.get("live")}, measure)
 
@@ -415,27 +440,36 @@ def _values_text(c: dict, measure: str) -> str:
     return ""
 
 
-def find_values(column: str, group_with: list[str], values: list[str]) -> dict[str, str | None]:
+def find_values(column: str, group_with: list[str], values: list[str],
+                database: str | None = None) -> dict[str, str | None]:
     """For each value, the matching value in the model (ignoring case), or None if there is none."""
     cols, alls = ", ".join(group_with + [column]), ", ".join([column] + group_with)
     wanted = ", ".join(_dax_str(v) for v in values)
     df = clean_column_names(run_query(
-        f"EVALUATE SUMMARIZECOLUMNS({cols}, KEEPFILTERS(FILTER(ALL({alls}), {column} IN {{{wanted}}})))"))
+        f"EVALUATE SUMMARIZECOLUMNS({cols}, KEEPFILTERS(FILTER(ALL({alls}), {column} IN {{{wanted}}})))",
+        database=database))
     found = {str(v).lower(): str(v) for v in df.iloc[:, -1]} if len(df) else {}
     return {v: found.get(v.lower()) for v in values}
 
 
-def search_values(column: str, group_with: list[str], text: str, limit: int = 6) -> list[str]:
+def search_values(column: str, group_with: list[str], text: str, limit: int = 6,
+                  database: str | None = None) -> list[str]:
     """Values of the column containing the text (ignoring case)."""
     cols, alls = ", ".join(group_with + [column]), ", ".join([column] + group_with)
     df = clean_column_names(run_query(
         f"EVALUATE TOPN({int(limit)}, SUMMARIZECOLUMNS({cols}, KEEPFILTERS(FILTER(ALL({alls}), "
-        f"SEARCH({_dax_str(text)}, {column}, 1, 0) > 0))))"))
+        f"SEARCH({_dax_str(text)}, {column}, 1, 0) > 0))))", database=database))
     return [str(v) for v in df.iloc[:, -1]] if len(df) else []
 
 
-def build_schema_text() -> tuple[str, int, int]:
-    """Read the model's tables, columns and measures and format them for Claude."""
+def build_schema_text(database: str | None = None) -> tuple[str, int, int]:
+    """Read a cube's tables, columns, measures and values, format them for Claude, and save
+    its value index."""
+    with using(database):
+        return _build_schema_text()
+
+
+def _build_schema_text() -> tuple[str, int, int]:
     try:
         cols, meas = _tabular_schema()
         kind = "Tabular"
@@ -446,7 +480,7 @@ def build_schema_text() -> tuple[str, int, int]:
     _add_values(cols, measure)
 
     lines = [
-        f"# Model: {config.SSAS_DATABASE}",
+        f"# Model: {current_database()}",
         f"Server: {config.SSAS_SERVER} | Type: {kind} | Read on {datetime.now():%Y-%m-%d %H:%M}",
         "",
         "## Measures (use these for any numbers)",

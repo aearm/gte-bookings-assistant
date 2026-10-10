@@ -5,8 +5,6 @@ import difflib
 import re
 from dataclasses import dataclass, field
 
-import value_index
-
 DAX_COL = r"'(?:[^']|'')+'\[[^\]]+\]"
 DAX_STR = r'"(?:[^"]|"")*"'
 SQL_COL = r'"[^"]+"'
@@ -88,8 +86,9 @@ def _is_text(col_type: str) -> bool:
 
 
 def _suggest(meta: dict, column: str, value: str, backend) -> list[str]:
-    if value_index.column_info(column) and "values" in value_index.column_info(column):
-        hits = [h["value"] for h in value_index.search(value, column=column, limit=12) if h["count"]]
+    info = backend.index.column_info(column)
+    if info and "values" in info:
+        hits = [h["value"] for h in backend.index.search(value, column=column, limit=12) if h["count"]]
         if hits:
             return hits[:6]
     if meta["values"] is None:
@@ -116,7 +115,7 @@ def check(query: str, language: str, schema_text: str, backend) -> CheckResult:
         meta = info.get(column)
         if not meta or not _is_text(meta["type"]):
             continue
-        lookup = value_index.lookup(column, values)  # the local index: instant, covers long lists too
+        lookup = backend.index.lookup(column, values)  # the cube's value index: instant, covers long lists
         if lookup is not None:
             pass
         elif meta["values"] is not None:
@@ -133,7 +132,7 @@ def check(query: str, language: str, schema_text: str, backend) -> CheckResult:
             elif actual != value and language == "SQL":  # SQL compares capitals exactly: use the real value
                 quote = lambda v: "'" + v.replace("'", "''") + "'"
                 result.query = result.query.replace(quote(value), quote(actual))
-            if actual and (actual in meta["no_data"] or value_index.has_no_data(column, actual)):
+            if actual and (actual in meta["no_data"] or backend.index.has_no_data(column, actual)):
                 result.notes.append(f'Nothing in the data has {column_label(column)} "{actual}".')
     return result
 

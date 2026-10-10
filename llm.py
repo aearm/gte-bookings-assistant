@@ -5,6 +5,7 @@ import re
 import anthropic
 import pandas as pd
 
+import charts
 import config
 
 _client = None
@@ -49,6 +50,9 @@ Rules:
 - Always add ORDER BY (dates ascending, rankings descending).
 - Keep results small (well under MAX_ROWS rows): pick a sensible grain, e.g. months not days
   for long periods. Never return raw transaction-level rows unless asked.
+- When a breakdown has many values (hotels, customers, destinations, suppliers...) and the question
+  doesn't ask for all of them, return the top 25 by the main number with TOPN, and say so in the
+  understanding (e.g. "top 25 hotels by sales").
 - "This year", "last month" etc.: today's date is TODAY_DATE.
 - If an earlier question is given as context, treat the new question as a follow-up to it.
 """
@@ -66,6 +70,9 @@ Rules:
 - Always add ORDER BY (dates ascending, rankings descending).
 - Keep results small (well under MAX_ROWS rows): pick a sensible grain, e.g. months not days
   for long periods. Never return raw row-level data unless asked.
+- When a breakdown has many values (hotels, customers, destinations, suppliers...) and the question
+  doesn't ask for all of them, return the top 25 by the main number (ORDER BY ... DESC LIMIT 25),
+  and say so in the understanding.
 - "This year", "last month" etc.: today's date is TODAY_DATE (use DATE 'TODAY_DATE', not current_date).
 - Use the listed example values to match filters exactly (e.g. country or status spellings).
 - If an earlier question is given as context, treat the new question as a follow-up to it.
@@ -109,11 +116,19 @@ CHART_TOOL = {
     "input_schema": {
         "type": "object",
         "properties": {
-            "chart_type": {"type": "string", "enum": ["bar", "horizontal_bar", "line", "area", "pie", "scatter", "table"],
-                           "description": "line/area for trends over time, bar for comparing categories, horizontal_bar for long category names or rankings, pie only for 2-6 parts of a whole, table when a chart would not help."},
-            "x": {"type": "string", "description": "Column for the x-axis (or pie labels). Must be an exact column name."},
+            "chart_type": {"type": "string", "enum": charts.CHART_TYPES,
+                           "description": (
+                               "Pick the chart that answers the question best: map when the breakdown is by "
+                               "country; line (or area) for trends over time; donut for 2-6 parts of a whole; "
+                               "treemap for shares across many parts; horizontal_bar for rankings / top N or long "
+                               "names; bar to compare a few categories; stacked_bar for a category split by a "
+                               "second one with few values; heatmap for two breakdowns with many values (e.g. "
+                               "market by month); scatter to relate two numbers; table when a chart would not "
+                               "help (e.g. a single row with many numbers). Never put two measures with very "
+                               "different scales on one chart.")},
+            "x": {"type": "string", "description": "Column for the x-axis, the labels, or the countries (map). Exact column name."},
             "y": {"type": "array", "items": {"type": "string"}, "description": "Numeric column(s) to plot. Exact column names."},
-            "color": {"type": "string", "description": "Optional column to split into series (exact name), or empty."},
+            "color": {"type": "string", "description": "Second breakdown column (series of a line / stacked bar, rows of a heatmap), or empty."},
             "title": {"type": "string"},
             "summary": {"type": "string", "description": "2-3 sentences answering the question with the key numbers. Plain English."},
         },
@@ -217,6 +232,10 @@ def question_to_query(question: str, schema: str, notes: str, today: str, langua
     if result.get("needs_clarification") and result.get("clarifying_question") and not failed_query:
         result["query"] = ""
         return result
+    if not result.get("query", "").strip():  # checked the data but gave no query: ask once more
+        parts.append("You did not return a query. Using what you found, write the query now "
+                     "(needs_clarification false).")
+        result = _structured_call(system, QUERY_TOOL, "\n\n".join(parts))
     result["needs_clarification"] = False
     if language == "DAX":
         validate_dax(result.get("query", ""))
@@ -261,8 +280,11 @@ def describe_result(question: str, df: pd.DataFrame) -> dict:
     system = [{"type": "text", "text": (
         "You present query results for business users. Pick the clearest chart and answer "
         "the question in plain English using the numbers shown. Do not invent numbers.")}]
-    user = (f"Question: {question}\n\nResult has {len(df)} rows. Columns: {col_info}\n\n"
+    hint = charts.suggest(df)
+    user = (f"Question: {question}\n\nResult has {len(df)} rows. Columns: {col_info}\n"
+            f"From the shape of the data the best fit looks like: {hint['chart_type']} "
+            f"(x={hint['x']!r}, color={hint['color']!r}). Use it unless another chart answers the question better.\n\n"
             f"First rows (CSV):\n{sample}")
     spec = _structured_call(system, CHART_TOOL, user)
     spec.setdefault("y", [])
-    return spec
+    return charts.fit(df, spec)

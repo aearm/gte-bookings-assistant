@@ -8,6 +8,7 @@ import duckdb
 import pandas as pd
 
 import config
+import cubes
 import value_index
 
 _lock = threading.Lock()
@@ -161,5 +162,5 @@ def build_schema_text() -> tuple[str, int, int]:
                 info = ("| values: " + ", ".join(f"{quoted(v)} ({n:,} rows)" for v, n in top) if n_distinct <= 25
                         else f"| {n_distinct:,} values, e.g. " + ", ".join(quoted(v) for v, _ in top[:6]))
             lines.append(f'- "{col}" ({dtype}) {info}'.rstrip())
-    value_index.save(index, "")
+    value_index.for_cube(cubes.LOCAL).save(index, "")
     return "\n".join(lines) + "\n", n_cols, len(_tables)

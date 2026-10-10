@@ -1,15 +1,32 @@
-"""Ask questions about bookings data in plain English, and keep the useful answers on a dashboard.
+"""Ask questions about your cubes in plain English, and keep the useful answers on dashboards.
 
 Run:  streamlit run app.py   (or run_app.bat on Windows, ./run_app.sh on Mac)
-Pages are in the views folder.
+Pages: dashboards (dashboard_view.py) and views/ (Chat, Glossary, Cubes, Settings).
 """
 import streamlit as st
 
-st.set_page_config(page_title="Bookings Assistant", page_icon="📊", layout="wide")
+import cubes
+import dashboard_view
+import dashboards
+import ui
 
-st.navigation([
-    st.Page("views/dashboard.py", title="Dashboard", icon="📊", default=True),
-    st.Page("views/chat.py", title="Chat", icon="💬"),
-    st.Page("views/glossary.py", title="Glossary", icon="📖"),
-    st.Page("views/settings.py", title="Settings", icon="⚙️"),
-]).run()
+st.set_page_config(page_title="Bookings Assistant", page_icon=":material/insights:", layout="wide")
+cubes.migrate()  # one-time move of files from the single-cube layout
+ui.apply_style()
+
+boards = dashboards.list_dashboards()
+board_pages = {b["id"]: st.Page(dashboard_view.page_for(b), title=b["name"], icon=":material/space_dashboard:",
+                                url_path=f"dashboard-{b['id']}", default=(i == 0))
+               for i, b in enumerate(boards)}
+nav = st.navigation({
+    "Dashboards": list(board_pages.values()),
+    "Ask": [st.Page("views/chat.py", title="Chat", icon=":material/chat_bubble:", url_path="chat"),
+            st.Page("views/glossary_page.py", title="Glossary", icon=":material/menu_book:", url_path="glossary")],
+    "Admin": [st.Page("views/cubes_page.py", title="Cubes", icon=":material/deployed_code:", url_path="cubes"),
+              st.Page("views/settings.py", title="Settings", icon=":material/settings:", url_path="settings")],
+})
+st.session_state.board_pages = board_pages  # for links to a dashboard from other pages
+go_to = st.session_state.pop("go_to_dashboard", None)  # just created a dashboard: open it
+if go_to in board_pages:
+    st.switch_page(board_pages[go_to])
+nav.run()

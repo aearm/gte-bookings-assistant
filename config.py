@@ -14,6 +14,14 @@ load_dotenv(BASE_DIR / ".env")
 DATA_SOURCE = os.getenv("DATA_SOURCE", "auto").strip().lower() or "auto"
 LOCAL_DATA_DIR = BASE_DIR / "data" / "local"
 
+
+def resolve_source() -> str:
+    """"ssas" (live cubes) or "local" (files in data/local)."""
+    import platform
+    if DATA_SOURCE in ("ssas", "local"):
+        return DATA_SOURCE
+    return "ssas" if platform.system() == "Windows" else "local"
+
 # Analysis Services model (from Power BI > Data source settings)
 SSAS_SERVER = os.getenv("SSAS_SERVER", "")
 SSAS_DATABASE = os.getenv("SSAS_DATABASE", "")
@@ -48,13 +56,18 @@ CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-5-5")
 # Safety limit on rows pulled per question
 MAX_ROWS = int(os.getenv("MAX_ROWS", "5000"))
 
-# Files
-SCHEMA_FILE = BASE_DIR / "schema.md"            # live model structure (build_schema.py)
-LOCAL_SCHEMA_FILE = BASE_DIR / "schema_local.md"  # structure of the local data files
-NOTES_FILE = BASE_DIR / "business_notes.md"     # your own hints for Claude
-GLOSSARY_FILE = BASE_DIR / "glossary.json"      # agreed meaning of each number (Glossary page)
-DASHBOARD_FILE = BASE_DIR / "dashboard.json"    # the shared dashboard's charts (Dashboard page)
-VALUE_INDEX_FILE = BASE_DIR / "data" / "value_index.json"  # every value in the data, for lookups
+# Files. Each cube has its own folder in models/ (structure, value index, glossary, notes, setup);
+# see cubes.py. The single files below are from before several cubes were supported and are
+# moved into the cube's folder the first time the app starts.
+MODELS_DIR = BASE_DIR / "models"
+DASHBOARDS_FILE = BASE_DIR / "dashboards.json"  # all dashboards and their charts
+NOTES_TEMPLATE = BASE_DIR / "business_notes.example.md"
+SCHEMA_FILE = BASE_DIR / "schema.md"            # (old) live model structure
+LOCAL_SCHEMA_FILE = BASE_DIR / "schema_local.md"  # (old) structure of the local data files
+NOTES_FILE = BASE_DIR / "business_notes.md"     # (old) your own hints for Claude
+GLOSSARY_FILE = BASE_DIR / "glossary.json"      # (old) agreed meaning of each number
+DASHBOARD_FILE = BASE_DIR / "dashboard.json"    # (old) the single dashboard
+VALUE_INDEX_FILE = BASE_DIR / "data" / "value_index.json"  # (old) every value in the data
 ENV_FILE = BASE_DIR / ".env"
 QUERIES_DIR = BASE_DIR / "queries"              # saved .dax files for scheduled pulls
 DATA_DIR = BASE_DIR / "data"

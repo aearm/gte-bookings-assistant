@@ -57,7 +57,7 @@ if st.button("Test Claude"):
 # ---------------------------------------------------------------- bookings server --
 
 st.divider()
-st.subheader("Bookings server")
+st.subheader("Server")
 if resolve_source() != "ssas":
     st.info("The app is using local data files, so no server is needed.")
 else:
@@ -73,31 +73,29 @@ else:
     with st.form("server_login", clear_on_submit=True):
         server = st.text_input("Server", value=config.SSAS_SERVER, placeholder="bi.company.com:2383",
                                help="The Analysis Services server, as shown in Power BI > Data source settings.")
-        database = st.text_input("Model", value=config.SSAS_DATABASE, placeholder="Bookings",
-                                 help="The model (database) name on that server.")
         username = st.text_input("Username", value=config.SSAS_USERNAME,
                                  help="Exactly as you type it in Excel or Power BI (often name@domain "
                                       "or DOMAIN\\name). Leave blank to use this computer's Windows login.")
         password = st.text_input("Password", type="password",
                                  placeholder="Leave blank to keep the saved password")
         if st.form_submit_button("Save", type="primary"):
-            server, database, username = server.strip(), database.strip(), username.strip()
-            if not server or not database:
-                st.error("Enter both the server and the model.")
+            server, username = server.strip(), username.strip()
+            if not server:
+                st.error("Enter the server.")
             elif username and username != config.SSAS_USERNAME and not password:
                 st.error("Enter the password for the new username too.")
             else:
-                secrets_store.save_server_address(server, database)
+                secrets_store.save_server_address(server, config.SSAS_DATABASE)
                 secrets_store.save_server_login(username, password)
-                st.success("Saved. Use **Test server** below to check it works. If you changed the "
-                           "server or model, also click **Refresh data structure** on the Chat page.")
+                st.success("Saved. Use **Test server** below to check it works, then choose the cubes "
+                           "to use on the **Cubes** page.")
 
     if st.button("Test server"):
         import ssas
-        with st.spinner("Connecting to the bookings server..."):
+        with st.spinner("Connecting to the server..."):
             try:
-                ssas.run_query("SELECT [CATALOG_NAME] FROM $SYSTEM.DBSCHEMA_CATALOGS", max_rows=50)
-                st.success("Connected to the bookings server.")
+                found = ssas.list_databases()
+                st.success(f"Connected. {len(found)} cubes available - choose them on the Cubes page.")
             except Exception as exc:
                 show_error(exc)
 
