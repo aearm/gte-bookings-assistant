@@ -229,14 +229,28 @@ def build(df: pd.DataFrame, spec, dark: bool = False, height: int | None = None,
         if any(t["type"] in ("bar", "waterfall", "funnel") for t in traces):
             fig.update_layout(barcornerradius=4, bargap=0.3)
         fig.update_layout(**layout)
-        if isinstance(layout.get("yaxis2"), dict):  # a second axis: the app's colours, no second grid
-            ink = charts.INK[mode]
-            fig.update_layout(yaxis2={"showgrid": False, "tickfont": {"color": ink["muted"]},
-                                      "title_font": {"color": ink["muted"]}, **layout["yaxis2"]})
+        _extra_axes(fig, layout, charts.INK[mode])
     except (ValueError, TypeError) as exc:
         first = str(exc).strip().splitlines()
         raise ChartSpecError("Plotly rejected the chart: " + " ".join(first[:3])[:400]) from exc
     return fig
+
+
+def _extra_axes(fig: go.Figure, layout: dict, ink: dict) -> None:
+    """Second, third... y axes: the app's colours, no extra grid, and moved outwards when several sit
+    on the same side, so their numbers don't print on top of each other."""
+    names = sorted((k for k, v in layout.items() if re.fullmatch(r"yaxis\d+", k) and isinstance(v, dict)),
+                   key=lambda k: int(k[5:]))
+    on_side: dict[str, int] = {}
+    for name in names:
+        axis = layout[name]
+        side = axis.get("side", "left")
+        on_side[side] = on_side.get(side, 0) + 1
+        style = {"showgrid": False, "tickfont": {"color": ink["muted"]}, "title_font": {"color": ink["muted"]}}
+        if axis.get("overlaying") and (side == "left" or on_side[side] > 1):  # the side's edge is taken
+            style.update(anchor="free", autoshift=True, position=0 if side == "left" else 1)
+        fig.update_layout({name: {**style, **{k: v for k, v in axis.items() if k not in ("anchor", "position")
+                                               or not style.get("autoshift")}}})
 
 
 def check(df: pd.DataFrame, spec) -> str:

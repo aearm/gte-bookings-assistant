@@ -1,8 +1,9 @@
-"""One dashboard page: its charts for the period you pick - a quick choice (this week, last month...),
-any dates on the calendar, or week numbers of a year. Everyone can view dashboards; admins create,
-rename and delete them, and add, edit, restyle, reorder, copy/move and delete charts. Each dashboard
-is a page in the menu (app.py builds one with page_for)."""
-from datetime import date
+"""One dashboard page: its charts for the period you pick on the calendar (period_picker.py) - a
+quick choice, days, or week numbers. Everyone can view dashboards; adding, editing, restyling,
+reordering, copying/moving and deleting charts and dashboards asks for the admin password (the +
+buttons are always there; the dialog asks to sign in first). Each dashboard is a page in the menu
+(app.py builds one with page_for)."""
+from datetime import date, datetime
 
 import pandas as pd
 import streamlit as st
@@ -12,10 +13,11 @@ import config
 import cubes
 import dashboards
 import data_layer
-import periods
+import period_picker
 import plans
 import ui
 from backends import get_backend
+import charts
 from charts import build_figure, suggest, trim
 
 
@@ -47,6 +49,17 @@ def first_number(df) -> float | None:
     return df[nums[0]].iloc[0] if nums else None
 
 
+def headline(c: dict, df) -> str:
+    """A headline number written the way Claude chose for it (AED 4.5M, 12.3%), else plainly."""
+    nums = [col for col in df.columns if pd.api.types.is_numeric_dtype(df[col])] if df is not None else []
+    value = first_number(df)
+    d3, prefix, suffix = charts.number_format(c, nums[0]) if nums else ("", "", "")
+    if not (d3 or prefix or suffix):
+        d3, prefix, suffix = next(((f.get("d3_format", ""), f.get("prefix", ""), f.get("suffix", ""))
+                                   for f in (c.get("style") or {}).get("formats", [])), ("", "", ""))
+    return charts.format_number(value, d3, prefix, suffix) if (d3 or prefix or suffix) else fmt(value)
+
+
 def chart_cubes(c: dict) -> list[str]:
     return plans.Plan.from_chart(c).cubes
 
@@ -55,57 +68,37 @@ def _target_dashboard(choice: str, name: str) -> str:
     return dashboards.create_dashboard(name or "New dashboard") if choice == "new" else choice
 
 
-# ---------------------------------------------------------------- the period --
+def updated_text(cubes_used: list[str]) -> tuple[str, str]:
+    """('Data updated 13 Oct, 18:24', one line per cube for the tooltip) from the server times."""
+    times = {cb: t for cb in cubes_used if (t := data_as_of(cb))}
+    if not times:
+        return "", ""
+    parsed = {}
+    for cb, t in times.items():
+        try:
+            parsed[cb] = datetime.strptime(t, "%d %b %Y, %H:%M")
+        except ValueError:
+            pass
+    latest = max(parsed.values()) if parsed else None
+    head = f"Data updated {latest.day} {latest:%b, %H:%M}" if latest else "Data updated " + next(iter(times.values()))
+    return head, "  \n".join(f"{data_layer.cube_label(cb)}: {t}" for cb, t in times.items())
 
-def period_picker() -> tuple[date, date, bool]:
-    """The period picked on the dashboard: (start, end exclusive, weekly). The choice is kept for
-    every dashboard and for charts added from Chat."""
-    mode_col, pick_col = st.columns([2, 5], vertical_alignment="center")
-    mode = mode_col.segmented_control("Pick the period by", periods.MODES, default="Quick", key="dash_mode",
-                                      label_visibility="collapsed",
-                                      help="Quick: this week, last month... · Calendar: any dates · "
-                                           "Week: ISO week numbers of a year (weeks start on Monday)") or "Quick"
-    with pick_col:
-        start, end, preset = _pick(mode, date.today())
-    st.session_state.dash_range = (start, end)
-    return start, end, periods.is_weekly(mode, preset)
 
-
-def _pick(mode: str, today: date) -> tuple[date, date, str]:
-    preset = ""
-    if mode == "Quick":
-        preset = st.selectbox("Period", periods.PRESETS, index=periods.PRESETS.index(periods.DEFAULT_PRESET),
-                              key="dash_period", label_visibility="collapsed")
-        start, end = periods.preset_range(preset)
-    elif mode == "Calendar":
-        picked = st.date_input("Dates", value=(today.replace(month=1, day=1), today), format="DD/MM/YYYY",
-                               key="dash_calendar", label_visibility="collapsed")
-        if not (isinstance(picked, (tuple, list)) and len(picked) == 2):
-            st.caption("Pick the last day too.")
-            st.stop()
-        start, end = periods.calendar_range(picked[0], picked[1])
-    else:
-        iso_year, iso_week = periods.current_week(today)
-        years = list(range(iso_year + 1, iso_year - 6, -1))
-        year_col, from_col, to_col = st.columns([1, 2, 2])
-        year = year_col.selectbox("Year", years, index=years.index(iso_year), key="dash_week_year",
-                                  label_visibility="collapsed")
-        weeks = list(range(1, periods.weeks_in_year(year) + 1))
-        default = iso_week if year == iso_year else 1
-        first = from_col.selectbox("From week", weeks, index=default - 1, key=f"dash_week_from_{year}",
-                                   format_func=lambda w: "From " + periods.week_label(year, w),
-                                   label_visibility="collapsed")
-        last = to_col.selectbox("To week", weeks, index=max(first, default) - 1, key=f"dash_week_to_{year}",
-                                format_func=lambda w: "to " + periods.week_label(year, w),
-                                label_visibility="collapsed")
-        start, end = periods.week_range(year, first, last)
-    return start, end, preset
+def needs_admin(what: str) -> bool:
+    """Inside a dialog: True once signed in as admin, else shows the sign-in form."""
+    if admin.signed_in():
+        return True
+    st.caption(f":material/lock: Dashboards are shared with everyone, so {what} needs the admin password.")
+    admin.sign_in_form(scope="fragment")
+    return False
 
 
 # ---------------------------------------------------------------- dialogs --
 
 @st.dialog("Add a chart", width="large")
 def add_dialog(dashboard_id: str, start: date, end: date):
+    if not needs_admin("adding a chart"):
+        return
     cube = ui.cube_picker("add_cube", label="Data", allow_all=True)
     question = st.text_area("What should the chart show?", placeholder="e.g. Top 10 destination countries by sales"
                             + (", or sales and payments by customer" if cube == "" else ""))
@@ -231,6 +224,8 @@ def delete_dialog(dashboard_id: str, chart_id: str):
 
 @st.dialog("New dashboard")
 def new_dashboard_dialog():
+    if not needs_admin("adding a dashboard"):
+        return
     name = st.text_input("Name", placeholder="e.g. Sales overview")
     if st.button("Create", type="primary", disabled=not name.strip()):
         st.session_state.go_to_dashboard = dashboards.create_dashboard(name)
@@ -291,7 +286,7 @@ def kpi_card(dashboard_id: str, c: dict, res: dict, start: date, end: date, is_a
             than = "same weeks last year" if weekly else "last year"
             delta = f"{(value - prev) / abs(prev):+.1%} vs {than}" if value is not None and prev else None
             source = " + ".join(data_layer.cube_label(x) for x in chart_cubes(c))
-            st.metric(c["title"], fmt(value), delta=delta, help=f"{c['question']} · {source}")
+            st.metric(c["title"], headline(c, res["df"]), delta=delta, help=f"{c['question']} · {source}")
 
 
 def chart_card(dashboard_id: str, c: dict, res: dict, start: date, end: date, is_admin: bool,
@@ -321,10 +316,19 @@ def chart_card(dashboard_id: str, c: dict, res: dict, start: date, end: date, is
             if note:
                 st.caption(note.split(" (")[0] + ".")
         else:
-            ui.table(df, height=min(330, 38 + 35 * len(df)))
+            ui.table(df, c, height=min(330, 38 + 35 * len(df)))
 
 
 # ---------------------------------------------------------------- page --
+
+def add_tile(dashboard_id: str, start: date, end: date, first: bool = False) -> None:
+    """The dashed "+ Add chart" tile at the end of the charts."""
+    with st.container(key="addtile_first" if first else "addtile"):
+        label = "Add your first chart" if first else "Add chart"
+        if st.button(label, icon=":material/add:", key=f"addtile_btn_{'first' if first else 'more'}", width="stretch",
+                     help="Describe a chart in plain English; Claude builds it from the data"):
+            add_dialog(dashboard_id, start, end)
+
 
 def render(dashboard_id: str) -> None:
     board = dashboards.get_dashboard(dashboard_id)
@@ -335,58 +339,56 @@ def render(dashboard_id: str) -> None:
     charts = board["charts"]
     board_cubes = list(dict.fromkeys(x for c in charts for x in chart_cubes(c) if x))
 
-    top_left, top_right = st.columns([3, 2], vertical_alignment="bottom")
-    with top_left:
-        st.title(board["name"])
-        times = [f"{cubes.label(cb)} {t}" if len(board_cubes) > 1 else t
-                 for cb in board_cubes if (t := data_as_of(cb))]
-        if times:
-            st.caption("Live data · last refreshed on the server " + " · ".join(times))
-    with top_right:
-        _, refresh_col, more_col = st.columns([3, 2, 1] if is_admin else [3, 2, 0.01], vertical_alignment="bottom")
-        if refresh_col.button("Refresh", icon=":material/refresh:", width="stretch",
-                              help="Get the latest numbers from the server"):
+    # title on the left; + Add chart and the dashboard menu on the right
+    title_col, actions_col = st.columns([3, 2], vertical_alignment="center")
+    with title_col:
+        st.title(board["name"], anchor=False)
+    with actions_col, st.container(horizontal=True, horizontal_alignment="right", vertical_alignment="center",
+                                   key="dash_actions"):
+        start, end = period_picker.current()[:2]
+        if st.button("Add chart", icon=":material/add:", type="primary", key="dash_add"):
+            add_dialog(dashboard_id, start, end)
+        with st.popover("", icon=":material/more_horiz:", help="Dashboard options"):
+            if st.button("New dashboard", icon=":material/dashboard_customize:", key="dash_new", width="stretch"):
+                new_dashboard_dialog()
+            if st.button("Rename", icon=":material/edit:", key="dash_rename", width="stretch", disabled=not is_admin):
+                rename_dialog(board)
+            if st.button("Delete dashboard", icon=":material/delete:", key="dash_delete", width="stretch",
+                         disabled=not is_admin):
+                delete_dashboard_dialog(board)
+            if not is_admin:
+                st.caption("Renaming and deleting need the admin sign-in (top of the page).")
+
+    # one row of filters above the charts: the period, refresh, and when the data was updated
+    with st.container(horizontal=True, vertical_alignment="center", key="dash_filters"):
+        start, end, weekly = period_picker.picker()
+        if st.button("", icon=":material/refresh:", type="tertiary", key="dash_refresh",
+                     help="Get the latest numbers from the server"):
             run_cached.clear()
             data_as_of.clear()
-        if is_admin:
-            with more_col.popover("⋯", help="Dashboard options"):
-                if st.button("Add chart", icon=":material/add_chart:", key="dash_add", width="stretch"):
-                    add_dialog(dashboard_id, *ui.dashboard_period())
-                if st.button("New dashboard", icon=":material/dashboard_customize:", key="dash_new", width="stretch"):
-                    new_dashboard_dialog()
-                if st.button("Rename", icon=":material/edit:", key="dash_rename", width="stretch"):
-                    rename_dialog(board)
-                if st.button("Delete dashboard", icon=":material/delete:", key="dash_delete", width="stretch"):
-                    delete_dashboard_dialog(board)
-
-    with st.container(key="panel_period"):
-        start, end, weekly = period_picker()
-        st.caption(f":material/calendar_month: {periods.describe(start, end)}")
-
-    if not is_admin:
-        st.caption(":material/visibility: View only. Sign in as admin (top of the page) to add or change charts.")
+        updated, per_cube = updated_text(board_cubes)
+        if updated:
+            st.caption(updated, help=per_cube if len(board_cubes) > 1 else None)
 
     if not charts:
         with st.container(key="panel_empty"):
-            st.markdown("#### This dashboard is empty")
-            if is_admin:
-                st.caption("Add a chart with ⋯ › Add chart, send one from Chat, or start with suggested charts.")
-                ready = [cb for cb in cubes.enabled() if cubes.is_ready(cb)]
-                if ready:
-                    cube = st.selectbox("Suggested charts from", ready, format_func=data_layer.cube_label,
-                                        key="starter_cube")
-                    if st.button("Create suggested charts", icon=":material/auto_awesome:", type="primary"):
-                        with st.status("Claude is creating the charts...", expanded=True) as status:
-                            failed = dashboards.create_starter(dashboard_id, cube, start, end,
-                                                               on_done=lambda t: status.write(f"✓ {t}"))
-                            status.update(label="Charts created", state="complete")
-                        if failed:
-                            st.warning("These charts could not be created: " + ", ".join(failed))
-                        st.rerun()
-                else:
-                    st.info("Build the data layer on the Cubes page first.")
-            else:
-                st.caption("An admin can add charts here, or send any chart from Chat.")
+            st.markdown("#### Nothing on this dashboard yet")
+            st.caption("Add a chart by describing it in plain English, send one from Chat, or start with suggested "
+                       "charts.")
+            add_tile(dashboard_id, start, end, first=True)
+            ready = [cb for cb in cubes.enabled() if cubes.is_ready(cb)]
+            if is_admin and ready:
+                left, right = st.columns([2, 1], vertical_alignment="bottom")
+                cube = left.selectbox("Or create suggested charts from", ready, format_func=data_layer.cube_label,
+                                      key="starter_cube")
+                if right.button("Create suggested charts", icon=":material/auto_awesome:", width="stretch"):
+                    with st.status("Claude is creating the charts...", expanded=True) as status:
+                        failed = dashboards.create_starter(dashboard_id, cube, start, end,
+                                                           on_done=lambda t: status.write(f"✓ {t}"))
+                        status.update(label="Charts created", state="complete")
+                    if failed:
+                        st.warning("These charts could not be created: " + ", ".join(failed))
+                    st.rerun()
         return
 
     with st.spinner("Loading the latest numbers..."):
@@ -418,9 +420,13 @@ def render(dashboard_id: str) -> None:
         else:
             pending = c
     if pending:
-        left, _ = st.columns(2)
+        left, right = st.columns(2)
         with left:
             draw(pending)
+        with right:
+            add_tile(dashboard_id, start, end)
+    else:
+        add_tile(dashboard_id, start, end)
 
 
 def page_for(board: dict):

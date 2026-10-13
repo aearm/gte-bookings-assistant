@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import os
 import re
+import time
 
 import keyring
 from keyring.errors import PasswordDeleteError
@@ -76,6 +77,27 @@ def check_admin_password(password: str) -> bool:
     salt_hex, digest_hex = stored.split("$", 1)
     digest = hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt_hex), 200_000)
     return hmac.compare_digest(digest.hex(), digest_hex)
+
+
+def _login_key() -> bytes:
+    """Signs "keep me signed in" tokens. It comes from the admin password's hash, so changing the
+    admin password (or resetting it) signs every computer out."""
+    stored = config.stored_secret(ADMIN_HASH_NAME)
+    return hashlib.sha256(f"keep-signed-in:{stored}".encode()).digest() if stored else b""
+
+
+def make_login_token(days: int) -> str:
+    """A token a browser keeps to stay signed in as admin for some days."""
+    expires = str(int(time.time()) + days * 86400)
+    return f"{expires}.{hmac.new(_login_key(), expires.encode(), hashlib.sha256).hexdigest()}"
+
+
+def check_login_token(token: str) -> bool:
+    expires, _, signature = str(token or "").partition(".")
+    key = _login_key()
+    if not key or not expires.isdigit() or int(expires) < time.time():
+        return False
+    return hmac.compare_digest(hmac.new(key, expires.encode(), hashlib.sha256).hexdigest(), signature)
 
 
 def clear_admin_password() -> None:

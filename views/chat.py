@@ -56,7 +56,8 @@ def answer(question: str, context: list[dict], clarification: tuple[str, str] | 
             turn.update({k: previous[k] for k in ("query", "plan", "cubes", "explanation", "df", "notes")
                          if k in previous})
             status.write("Drawing the chart you asked for")
-            turn["spec"] = llm.describe_result(question, turn["df"], chart_request=request or question)
+            turn["spec"] = llm.describe_result(question, turn["df"], chart_request=request or question,
+                                               **chart_context(turn))
             status.update(label="Done", state="complete")
             return turn
         df = outcome.df
@@ -68,10 +69,16 @@ def answer(question: str, context: list[dict], clarification: tuple[str, str] | 
                                 " ".join(outcome.notes) or "Try widening the filters or dates.")}
         else:
             status.write("Drawing the chart you asked for" if request else "Choosing the best chart")
-            turn["spec"] = llm.describe_result(question, df, chart_request=request)
+            turn["spec"] = llm.describe_result(question, df, chart_request=request, **chart_context(turn))
         turn["file"] = storage.save_result(turn["question"], turn["query"], df, turn["spec"])
         status.update(label="Done", state="complete")
     return turn
+
+
+def chart_context(turn: dict) -> dict:
+    """The query and what its numbers are, so Claude formats the chart for them (AED, %, counts)."""
+    return {"query": turn.get("query", ""), "measures": data_layer.measure_notes(turn.get("cubes", []),
+                                                                                 turn.get("query", ""))}
 
 
 @st.dialog("Add to a dashboard", width="large")
@@ -117,7 +124,8 @@ def restyle(i: int):
     if st.button("Draw it", type="primary", disabled=not request.strip()):
         with st.spinner("Claude is drawing the chart you described..."):
             try:
-                spec = llm.describe_result(turn["question"], turn["df"], chart_request=request.strip())
+                spec = llm.describe_result(turn["question"], turn["df"], chart_request=request.strip(),
+                                           **chart_context(turn))
             except Exception as exc:
                 ui.show_exception(exc)
                 return
@@ -164,7 +172,7 @@ def show_turn(i: int, turn: dict) -> None:
                 if note:
                     st.caption(note)
             else:
-                ui.table(df)
+                ui.table(df, spec)
             if not df.empty:
                 add_col, restyle_col, _ = st.columns([1, 1, 3])
                 if add_col.button("Add to dashboard", icon=":material/add_chart:", key=f"addbtn_{i}"):
@@ -172,7 +180,7 @@ def show_turn(i: int, turn: dict) -> None:
                 if restyle_col.button("Change chart", icon=":material/palette:", key=f"restyle_{i}"):
                     restyle(i)
         with st.expander(f"Data ({len(df)} rows)"):
-            ui.table(df)
+            ui.table(df, spec)
             st.download_button("Download CSV", df.to_csv(index=False).encode("utf-8"),
                                file_name="result.csv", mime="text/csv", key=f"dl_{i}")
         used = turn.get("cubes") or []

@@ -254,14 +254,17 @@ def build_chart(cube: str, question: str, title: str, chart_type: str, width: st
         raise RuntimeError("Claude didn't write a query for this chart. Try rephrasing the question.")
     df, plan = outcome.df, outcome.plan
 
-    if chart_type == "kpi":
-        spec = {"chart_type": "kpi", "x": "", "y": [], "color": ""}
+    context = {"query": plan.text(), "measures": data_layer.measure_notes(plan.cubes, plan.text())}
+    if chart_type == "kpi":  # Claude still picks how the number is written (AED 4.5M, 12.3%...)
+        style = llm.describe_result(question, df, **context).get("style", {}) if not df.empty else {}
+        spec = {"chart_type": "kpi", "x": "", "y": [], "color": "", "style": style}
     elif chart_type == "custom" or chart_request:
-        spec = llm.describe_result(question, df, chart_request=chart_request or question)
+        spec = llm.describe_result(question, df, chart_request=chart_request or question, **context)
     elif base_spec and (base_spec.get("x") in df.columns or base_spec.get("custom")):
         spec = {**base_spec, "y": [y for y in base_spec.get("y", []) if y in df.columns]}
-    elif chart_type == "auto" and not df.empty:
-        spec = llm.describe_result(question, df)
+    elif not df.empty:  # Claude picks the chart (unless one was chosen) and formats it for the data
+        asked = question if chart_type in ("auto", "") else f"{question} (draw it as: {TYPE_LABELS[chart_type]})"
+        spec = llm.describe_result(asked, df, **context)
     else:
         spec = charts.suggest(df)
     if chart_type not in ("auto", "", "custom"):
@@ -271,7 +274,7 @@ def build_chart(cube: str, question: str, title: str, chart_type: str, width: st
              "title": title.strip() or spec.get("title") or question, "question": question,
              "query": plan.text(), "plan": plan.to_dict(), "date_column": date_column,
              "chart_type": spec.get("chart_type", "table"), "x": spec.get("x", ""), "y": spec.get("y", []),
-             "color": spec.get("color", ""), "width": width}
+             "color": spec.get("color", ""), "style": spec.get("style", {}), "width": width}
     if spec.get("chart_type") == "custom":
         chart.update(custom=spec["custom"], chart_request=spec.get("chart_request") or chart_request)
     return chart
@@ -279,11 +282,13 @@ def build_chart(cube: str, question: str, title: str, chart_type: str, width: st
 
 def restyle_chart(chart: dict, chart_request: str, start: date, end: date) -> dict:
     """The same numbers drawn as the user describes (no new query)."""
-    df = plans.run(plans.Plan.from_chart(chart).with_dates(start, end))
-    spec = llm.describe_result(chart["question"], df, chart_request=chart_request)
+    plan = plans.Plan.from_chart(chart)
+    df = plans.run(plan.with_dates(start, end))
+    spec = llm.describe_result(chart["question"], df, chart_request=chart_request, query=plan.text(),
+                               measures=data_layer.measure_notes(plan.cubes, plan.text()))
     chart = {k: v for k, v in chart.items() if k not in ("custom", "chart_request")}
     chart.update(chart_type=spec.get("chart_type", "table"), x=spec.get("x", ""), y=spec.get("y", []),
-                 color=spec.get("color", ""))
+                 color=spec.get("color", ""), style=spec.get("style", {}))
     if spec.get("chart_type") == "custom":
         chart.update(custom=spec["custom"], chart_request=chart_request)
     return chart

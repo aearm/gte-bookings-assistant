@@ -1,12 +1,12 @@
-"""Dashboard periods: a quick choice (this month, last week...), any dates on a calendar, or week
-numbers of a year. Weeks follow ISO 8601: they start on Monday, and week 1 is the week with the
+"""Dashboard periods: a quick choice (this month, last week...), any days or weeks on the calendar
+(period_picker.py). Weeks follow ISO 8601: they start on Monday, and week 1 is the week with the
 year's first Thursday (so 29 Dec 2025 is in week 1 of 2026, and 2026 has 53 weeks).
 Every period is (start, end) with end exclusive: the day after the last day."""
 from datetime import date, timedelta
 
-PRESETS = ["Last 7 days", "This week", "Last week", "This month", "Last month", "This year", "Last 12 months"]
+PRESETS = ["Today", "Yesterday", "This week", "Last week", "Last 7 days", "Last 30 days", "This month",
+           "Last month", "This quarter", "Last quarter", "This year", "Last year", "Last 12 months"]
 DEFAULT_PRESET = "This year"
-MODES = ["Quick", "Calendar", "Week"]  # how the period is picked on a dashboard
 
 
 def add_months(d: date, months: int) -> date:
@@ -18,8 +18,21 @@ def preset_range(name: str, today: date | None = None) -> tuple[date, date]:
     today = today or date.today()
     tomorrow, first = today + timedelta(days=1), today.replace(day=1)
     monday = today - timedelta(days=today.weekday())
+    quarter = today.replace(month=(today.month - 1) // 3 * 3 + 1, day=1)
+    if name == "Today":
+        return today, tomorrow
+    if name == "Yesterday":
+        return today - timedelta(days=1), today
     if name == "Last 7 days":
         return today - timedelta(days=6), tomorrow
+    if name == "Last 30 days":
+        return today - timedelta(days=29), tomorrow
+    if name == "This quarter":
+        return quarter, tomorrow
+    if name == "Last quarter":
+        return add_months(quarter, -3), quarter
+    if name == "Last year":
+        return date(today.year - 1, 1, 1), date(today.year, 1, 1)
     if name == "This week":
         return monday, tomorrow
     if name == "Last week":
@@ -82,6 +95,32 @@ def weeks_of(start: date, end: date) -> str:
     return f"weeks {w1} ({y1}) – {w2} ({y2})"
 
 
+def dates_text(start: date, end: date) -> str:
+    """'1 Jan – 13 Oct 2026', '5 Oct 2026', '29 Dec 2025 – 4 Jan 2026'"""
+    last = end - timedelta(days=1)
+    if start == last:
+        return f"{start.day} {start:%b %Y}"
+    first = f"{start.day} {start:%b}" + ("" if start.year == last.year else f" {start.year}")
+    return f"{first} – {last.day} {last:%b %Y}"
+
+
+def label(start: date, end: date, preset: str = "") -> str:
+    """The period button: 'This year · 1 Jan – 13 Oct 2026 · W1–42'."""
+    last = end - timedelta(days=1)
+    (y1, w1, _), (y2, w2, _) = start.isocalendar(), last.isocalendar()
+    if (y1, w1) == (y2, w2):
+        weeks = f"W{w1}"
+    elif y1 == y2:
+        weeks = f"W{w1}–{w2}"
+    else:  # across a new year: only short periods, where the numbers still help
+        weeks = f"W{w1}–W{w2} {y2}" if (end - start).days <= 92 else ""
+    return " · ".join(x for x in (preset, dates_text(start, end), weeks) if x)
+
+
+def whole_weeks(start: date, end: date) -> bool:
+    return start.weekday() == 0 and (end - start).days % 7 == 0
+
+
 def describe(start: date, end: date) -> str:
     """'06 Oct 2026 – 12 Oct 2026 · week 41'"""
     return f"{start:%d %b %Y} – {end - timedelta(days=1):%d %b %Y} · {weeks_of(start, end)}"
@@ -100,5 +139,6 @@ def same_period_last_year(start: date, end: date, weekly: bool = False) -> tuple
     return shift(start), shift(end)
 
 
-def is_weekly(mode: str, preset: str = "") -> bool:
-    return mode == "Week" or (mode == "Quick" and preset in ("This week", "Last week"))
+def is_weekly(start: date, end: date, preset: str = "") -> bool:
+    """Compare with the same weeks last year: whole weeks picked on the calendar, or this/last week."""
+    return preset in ("This week", "Last week") or (not preset and whole_weeks(start, end))

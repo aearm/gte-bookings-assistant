@@ -185,6 +185,35 @@ PLAN_TOOL = {
     },
 }
 
+_FORMAT = {
+    "type": "object",
+    "properties": {
+        "column": {"type": "string", "description": "Exact number column."},
+        "d3_format": {"type": "string", "description": "d3 number format for its axis, hover and labels: ',.0f' "
+                      "whole numbers, ',.2f' averages, '.1%' fractions shown as percent, '~s' compact (4.5M)."},
+        "prefix": {"type": "string", "description": "e.g. 'AED ' for money, else empty."},
+        "suffix": {"type": "string", "description": "e.g. '%' when values are already 0-100, ' nights', ' s', else empty."},
+    },
+    "required": ["column", "d3_format", "prefix", "suffix"],
+    "additionalProperties": False,
+}
+STYLE = {
+    "type": "object",
+    "description": "How the chart is formatted; the app draws it exactly like this.",
+    "properties": {
+        "formats": {"type": "array", "items": _FORMAT, "description": "One per number column shown."},
+        "x_title": {"type": "string", "description": "Title of the axis with the categories or dates, or empty."},
+        "y_title": {"type": "string", "description": "Title of the axis with the numbers, with the unit, or empty."},
+        "sort": {"type": "string", "enum": ["value_desc", "value_asc", "label", "none"]},
+        "show_values": {"type": "boolean", "description": "Write each value on its bar or slice."},
+        "label_angle": {"type": "integer", "enum": [0, -30, -45, -90]},
+        "legend": {"type": "string", "enum": ["top", "right", "bottom", "none"]},
+        "log_scale": {"type": "boolean"},
+    },
+    "required": ["formats", "x_title", "y_title", "sort", "show_values", "label_angle", "legend", "log_scale"],
+    "additionalProperties": False,
+}
+
 CHART_TOOL = {
     "name": "submit_chart",
     "description": "Choose how to display the result and answer the question in words.",
@@ -206,12 +235,35 @@ CHART_TOOL = {
             "y": {"type": "array", "items": {"type": "string"}, "description": "Numeric column(s) to plot. Exact column names."},
             "color": {"type": "string", "description": "Second breakdown column (series of a line / stacked bar, rows of a heatmap), or empty."},
             "custom_chart": {"type": "string", "description": "Only for chart_type custom: the chart spec as JSON, else empty."},
+            "style": STYLE,
             "title": {"type": "string"},
-            "summary": {"type": "string", "description": "2-3 sentences answering the question with the key numbers. Plain English."},
+            "summary": {"type": "string", "description": "2-3 sentences answering the question with the key numbers, "
+                        "formatted like the chart (e.g. AED 4.5M, 12.3%). Plain English."},
         },
-        "required": ["chart_type", "title", "summary"],
+        "required": ["chart_type", "title", "summary", "style"],
     },
 }
+
+FORMAT_RULES = """Format the chart so it reads best for this data and question; it is drawn exactly as you say.
+- formats: one per number column on the chart, from what the number is (see the query and the measures):
+  money gets the currency as prefix ("AED ") with ',.0f', or '~s' once values reach the hundreds of
+  thousands (AED 4.5M); counts ',.0f' (or '~s' when in the millions); fractions (0.123) '.1%'; numbers
+  already 0-100 that are percentages ',.1f' with suffix '%'; averages and ratios ',.2f'; durations with
+  their unit as suffix.
+- title: what is shown, with the period if known, e.g. "Sales by month, 2026". y_title: the measure and
+  unit, e.g. "Sales (AED)"; empty when there are several measures (the legend names them) or for donut,
+  treemap and map. x_title: empty when obvious (months, countries), else short.
+- sort: value_desc for rankings and categories so the biggest comes first; label for dates, weeks,
+  months and natural orders (age bands, star ratings); none to keep the query's order.
+- show_values: true for up to about 12 bars or 7 slices, so the exact numbers are on the chart; false for
+  lines, maps and dense charts.
+- label_angle: 0 for short labels; -45 when there are many or long category labels on the x axis
+  (use horizontal_bar instead when names are long).
+- legend: none for a single series; top otherwise.
+- log_scale: only when values span several orders of magnitude and the point is to compare many items.
+- Never put measures of very different size on one axis: pick the main one, or a chart the user asked for.
+- For chart_type custom, put the same formatting in the Plotly spec (tickformat, tickprefix, hovertemplate,
+  texttemplate, axis titles, categoryorder) and still fill style."""
 
 DYNAMIC_RULES = """The user described the chart they want: follow their description exactly.
 If a standard chart_type draws exactly what they asked, use it. Otherwise set chart_type to "custom"
@@ -386,21 +438,40 @@ def validate_dax(dax: str) -> None:
         raise ValueError("Generated query does not start with EVALUATE/DEFINE, so it was not run.")
 
 
-def describe_result(question: str, df: pd.DataFrame, chart_request: str = "") -> dict:
-    """The chart and the written answer. chart_request = the user's own description of the chart
-    they want; Claude may then draw any chart (a 'custom' spec, see dynamic_chart.py)."""
+def data_profile(df: pd.DataFrame) -> str:
+    """What each column holds: ranges of numbers, sizes of labels (for choosing formats)."""
+    lines = []
+    for c in df.columns:
+        col = df[c]
+        if pd.api.types.is_numeric_dtype(col) and col.notna().any():
+            lines.append(f"- {c}: number, min {col.min():,.6g}, median {col.median():,.6g}, max {col.max():,.6g}")
+        else:
+            values = col.dropna().astype(str)
+            examples = ", ".join(values.unique()[:4])
+            lines.append(f"- {c}: text/date, {values.nunique():,} different, up to {values.str.len().max() or 0} "
+                         f"characters, e.g. {examples}")
+    return "\n".join(lines)
+
+
+def describe_result(question: str, df: pd.DataFrame, chart_request: str = "", query: str = "",
+                    measures: str = "") -> dict:
+    """The chart, formatted for this data, and the written answer. chart_request = the user's own
+    description of the chart they want; Claude may then draw any chart (a 'custom' spec, see
+    dynamic_chart.py). query and measures (what the numbers are, from the data layer) help Claude
+    pick formats: currency, percent, counts."""
     sample = df.head(60).to_csv(index=False)
-    col_info = ", ".join(f"{c} ({'number' if pd.api.types.is_numeric_dtype(df[c]) else 'text/date'})"
-                         for c in df.columns)
-    rules = ("You present query results for business users. Pick the clearest chart and answer "
-             "the question in plain English using the numbers shown. Do not invent numbers.")
+    rules = ("You present query results for business users. Pick the clearest chart, format it for the data, "
+             "and answer the question in plain English using the numbers shown. Do not invent numbers.\n\n"
+             + FORMAT_RULES)
     if chart_request:
         rules += "\n\n" + DYNAMIC_RULES
     system = [{"type": "text", "text": rules}]
     hint = charts.suggest(df)
-    user = (f"Question: {question}\n\nResult has {len(df)} rows. Columns: {col_info}\n"
-            + (f"The user asked for this chart: {chart_request}\n" if chart_request else
-               f"From the shape of the data the best fit looks like: {hint['chart_type']} "
+    user = (f"Question: {question}\n\nResult has {len(df)} rows. Columns:\n{data_profile(df)}\n"
+            + (f"\nThe query that produced it:\n{query[:2500]}\n" if query else "")
+            + (f"\nWhat the numbers are:\n{measures}\n" if measures else "")
+            + (f"\nThe user asked for this chart: {chart_request}\n" if chart_request else
+               f"\nFrom the shape of the data the best fit looks like: {hint['chart_type']} "
                f"(x={hint['x']!r}, color={hint['color']!r}). Use it unless another chart answers the question better.\n")
             + f"\nFirst rows (CSV):\n{sample}")
     spec = _structured_call(system, CHART_TOOL, user)
@@ -414,6 +485,7 @@ def describe_result(question: str, df: pd.DataFrame, chart_request: str = "") ->
             problem = _custom_problem(df, spec) if spec.get("chart_type") == "custom" else ""
         if problem:
             spec = {**charts.suggest(df), "title": spec.get("title", ""), "summary": spec.get("summary", ""),
+                    "style": spec.get("style", {}),
                     "note": "The chart you described couldn't be drawn from this data, so the best standard chart is shown."}
         elif spec.get("chart_type") == "custom":
             spec["custom"] = dynamic_chart.parse(spec.pop("custom_chart"))

@@ -160,18 +160,22 @@ Mac: run `bash run_app.sh` in Terminal. Your browser opens at http://localhost:8
 
 Every dashboard is listed under **Dashboards** in the menu. Headline numbers at the top (with the
 change vs the same period last year), then charts. A dashboard can mix charts from different cubes.
-Pick the **period** three ways, and every chart follows it:
-- **Quick** - last 7 days, this week, last week, this month, last month, this year, last 12 months;
-- **Calendar** - any first and last day on a regular calendar;
-- **Week** - a year and week numbers (ISO 8601: weeks start on Monday, week 1 holds the year's first
-  Thursday), e.g. *W42 · 12 Oct – 18 Oct*. The dates and week numbers of the period are shown under it.
+The **period button** above the charts (e.g. *This year · 1 Jan – 13 Oct 2026 · W1–42*) opens a calendar,
+and every chart follows what you pick:
+- **Quick choices** on the left - today, yesterday, this/last week, last 7 or 30 days, this/last month,
+  this/last quarter, this/last year, last 12 months (one click);
+- **Days** - click a day, then another, on the two months shown;
+- **Weeks** - each row starts with its ISO week number (weeks start on Monday; week 1 holds the year's
+  first Thursday): click it for that week, shift-click another to add weeks; or type a year and week
+  numbers at the bottom (e.g. 2025, weeks 10 to 12);
+- **A month** - click the month's name.
+Then **Apply**. Headline numbers compare with the same period last year; for weeks, with the same week
+numbers. **Refresh** (↻) gets the latest numbers; it never uses Claude, it just re-runs the saved queries.
 
-Headline numbers compare with the same period last year; for weeks, with the same week numbers. **Refresh** gets the latest numbers; it never uses Claude, it just
-re-runs the saved queries.
-
-Admins (signed in with the admin password) use the **⋯** menus:
-- next to Refresh: **Add chart** (describe it in plain English), **New dashboard**, **Rename**,
-  **Delete dashboard**;
+**+ Add chart** (top right, and the dashed tile after the charts) and the **+** next to **Dashboards** in
+the menu (a new dashboard) are there for everyone; dashboards are shared, so the dialog asks for the admin password first if you
+aren't signed in. Admins also have **⋯** menus:
+- next to + Add chart: **New dashboard**, **Rename**, **Delete dashboard**;
 - on each chart: **Edit** (title, chart type, size, which date the period applies to, the question
   or the query), **Change how it looks** (describe any chart), **Send to another dashboard** (copy or
   move), **Move earlier/later**, **Delete**.
@@ -181,6 +185,12 @@ Chart type **Custom** draws the chart you describe in words (see Chat).
 
 An empty dashboard offers **Create suggested charts** from a set-up cube. Dashboards are saved in
 `dashboards.json`.
+
+**Every chart is formatted by Claude for its data before it's drawn**: money with its currency and in
+compact form when large (AED 4.5M), percentages as %, counts with thousands separators, axis titles with
+units, rankings sorted biggest first, values written on bars when there are few, a legend only when
+there are several series. Claude decides this from the numbers' ranges, the query and what each
+measure is in the data layer; headline numbers and data tables use the same formats.
 
 **Charts** are chosen to fit the data: a **world map** when the breakdown is by country, **line** or
 **area** for trends, **donut** for a few parts of a whole, **treemap** for many parts, **bars** for
@@ -227,9 +237,11 @@ Every answer is saved automatically:
 
 ### Signed in or not
 
-A bar at the top of every page says whether you are **signed in as admin** (green, with Sign out) or
-**not signed in** (amber: view only, with Sign in). Admin pages show a lock in the menu until you sign
-in. Signing in lasts until the browser tab is closed or reloaded.
+A pill at the top right of every page says whether you're signed in: amber **View only · Sign in**,
+or green **Admin** (click it to sign out). Signing in is one box: the admin password, Enter, done.
+**Keep me signed in on this computer** (ticked by default) keeps that browser signed in for 30 days,
+until you sign out, or until the admin password is changed (which signs every computer out). Admin pages
+show a lock in the menu until you sign in.
 
 ## Scheduled pulls (optional, Windows live mode)
 
@@ -268,7 +280,9 @@ You can point Excel or Power BI at those CSVs, or ask the app new questions any 
 | `answering.py` | Answers a question from the data layer: plan, check values, run, retry once (Chat and dashboards) |
 | `plans.py` | Query plans: one query per cube, run in parallel, joined in memory with SQL |
 | `dynamic_chart.py` | Charts described in words: checks Claude's chart description and draws it |
-| `periods.py` | Dashboard periods: quick choices, calendar dates, ISO week numbers |
+| `periods.py` | Dashboard periods: quick choices, dates, ISO week numbers |
+| `period_picker.py` | The period button and its calendar (quick choices, days, week numbers) |
+| `inline_component.py` | Small built-in components (the calendar, "keep me signed in") |
 | `dashboard_view.py` | A dashboard page (each dashboard is a page in the menu) |
 | `views/` | The Chat, Glossary, Cubes and Settings pages |
 | `cubes.py` | Which cubes are connected, and each cube's folder in `models/` |

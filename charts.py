@@ -1,8 +1,9 @@
 """Turns a result into the most suitable chart, in one consistent (Apple-like) style.
 
 suggest(df) picks a chart from the shape of the data; fit(df, spec) corrects a chart that doesn't
-suit the data (e.g. a donut with 30 slices); build_figure(df, spec) draws it with Plotly. A chart
-the user described in words is a "custom" chart, drawn by dynamic_chart.py."""
+suit the data (e.g. a donut with 30 slices); build_figure(df, spec) draws it with Plotly, formatted
+the way Claude chose for this data (spec["style"]: number formats, axis titles, order, value
+labels...). A chart the user described in words is a "custom" chart, drawn by dynamic_chart.py."""
 import re
 from functools import lru_cache
 
@@ -208,17 +209,28 @@ def build_figure(df: pd.DataFrame, spec: dict, dark: bool = False, height: int |
     """Return a Plotly figure, or None if a table is the better display. A custom chart that can't
     be drawn with this data (e.g. a column is gone) falls back to the best standard chart."""
     spec = fit(df, spec)
-    kind, x, ys, color = spec["chart_type"], spec["x"], spec["y"], spec["color"] or None
+    kind = spec["chart_type"]
     if kind == "custom":
         import dynamic_chart
         try:
             return dynamic_chart.build(df, spec["custom"], dark=dark, height=height,
                                        title=spec.get("title", "") if show_title else "")
         except dynamic_chart.ChartSpecError:
-            return build_figure(df, {**suggest(df), "title": spec.get("title", "")}, dark, height, show_title)
+            return build_figure(df, {**suggest(df), "title": spec.get("title", ""), "style": spec.get("style")},
+                                dark, height, show_title)
     if kind == "table":
         return None
     df, _ = trim(df, spec)
+    style = spec.get("style") or {}
+    if kind == "donut" and style.get("sort") in ("value_desc", "value_asc") and spec["y"]:
+        df = df.sort_values(spec["y"][0], ascending=style["sort"] == "value_asc")
+    fig = _draw(df, spec, dark, height, show_title)
+    _format(fig, spec, INK["dark" if dark else "light"])
+    return fig
+
+
+def _draw(df: pd.DataFrame, spec: dict, dark: bool, height: int | None, show_title: bool):
+    kind, x, ys, color = spec["chart_type"], spec["x"], spec["y"], spec["color"] or None
     mode = "dark" if dark else "light"
     colors, seq, ink = PALETTE[mode], SEQUENTIAL[mode], INK[mode]
     title = spec.get("title", "") if show_title else ""
@@ -265,7 +277,7 @@ def build_figure(df: pd.DataFrame, spec: dict, dark: bool = False, height: int |
         if kind == "line" and len(df) <= 40:
             fig.update_traces(mode="lines+markers", marker=dict(size=8))
     elif kind == "horizontal_bar":
-        plot_df = df.sort_values(ys[0]) if not color else df
+        plot_df = df.sort_values(ys[0]) if not color and not (spec.get("style") or {}).get("sort") else df
         fig = px.bar(plot_df, x=y_arg, y=x, color=color, orientation="h", barmode="group", **common)
     else:
         fig = px.bar(df, x=x, y=y_arg, color=color, barmode="stack" if kind == "stacked_bar" else "group",
@@ -279,3 +291,107 @@ def build_figure(df: pd.DataFrame, spec: dict, dark: bool = False, height: int |
         fig.update_yaxes(showgrid=False, title="")
     fig.update_layout(hovermode="x unified" if kind in ("line", "area", "bar", "stacked_bar") else "closest")
     return _style(fig, dark, height, title, legend=bool(color) or isinstance(y_arg, list))
+
+
+# ---------------------------------------------------------------- formatting --
+# Claude formats every chart for its data (llm.describe_result): spec["style"] = {"formats":
+# [{"column", "d3_format", "prefix", "suffix"}], "x_title", "y_title", "sort", "show_values",
+# "label_angle", "legend", "log_scale"}. x_title names the axis with the categories or dates,
+# y_title the axis with the numbers (whichever way round the chart is drawn).
+
+def number_format(spec: dict, column: str) -> tuple[str, str, str]:
+    """(d3 format, prefix, suffix) Claude chose for a column, or ("", "", "")."""
+    for f in (spec.get("style") or {}).get("formats", []):
+        if f.get("column") == column:
+            return f.get("d3_format") or "", f.get("prefix") or "", f.get("suffix") or ""
+    return "", "", ""
+
+
+def _compact(value: float) -> str:
+    for size, unit in ((1e9, "B"), (1e6, "M"), (1e3, "k")):
+        if abs(value) >= size:
+            scaled = value / size
+            return f"{scaled:,.{1 if abs(scaled) < 100 else 0}f}{unit}"
+    return f"{value:,.0f}" if float(value).is_integer() else f"{value:,.2f}"
+
+
+def format_number(value, d3: str = "", prefix: str = "", suffix: str = "") -> str:
+    """A number the way the chart shows it, for headline numbers: 'AED 4.5M', '12.3%', '1,234'."""
+    if value is None or pd.isna(value):
+        return "-"
+    decimals = re.search(r"\.(\d+)", d3 or "")
+    if d3.endswith("%"):
+        text = f"{value * 100:,.{int(decimals.group(1)) if decimals else 0}f}%"
+    elif "s" in d3 or (not d3 and abs(value) >= 1_000_000):
+        text = _compact(value)
+    elif decimals:
+        text = f"{value:,.{int(decimals.group(1))}f}"
+    else:
+        text = f"{value:,.0f}" if abs(value) >= 1000 or float(value).is_integer() else f"{value:,.2f}"
+    return f"{prefix}{text}{suffix}"
+
+
+def _format(fig, spec: dict, ink: dict) -> None:
+    """Apply Claude's formatting to a standard chart."""
+    style = spec.get("style") or {}
+    kind, ys = spec["chart_type"], spec.get("y") or []
+    if not style or not ys:
+        return
+    d3, prefix, suffix = number_format(spec, ys[0])
+    shown = d3 or ",.0f"
+    horizontal = kind == "horizontal_bar"
+    value_axis, label_axis = (fig.update_xaxes, fig.update_yaxes) if horizontal else (fig.update_yaxes, fig.update_xaxes)
+    v, lbl = ("x", "y") if horizontal else ("y", "x")
+    cartesian = kind in ("bar", "horizontal_bar", "stacked_bar", "line", "area", "scatter")
+
+    if cartesian:
+        if d3 or prefix or suffix:
+            value_axis(tickformat=d3 or None, tickprefix=prefix, ticksuffix=suffix, hoverformat=d3 or None)
+            several = len(fig.data) > 1
+            for t in fig.data:
+                name = "%{fullData.name}: " if several else ""
+                head = "" if kind in ("line", "area", "bar", "stacked_bar") else f"%{{{lbl}}}<br>"
+                t.hovertemplate = f"{head}{name}{prefix}%{{{v}:{shown}}}{suffix}<extra></extra>"
+        if style.get("y_title") is not None:
+            value_axis(title_text=style.get("y_title", ""))
+        if style.get("x_title") is not None:
+            label_axis(title_text=style.get("x_title", ""))
+        if style.get("log_scale"):
+            value_axis(type="log")
+        if style.get("label_angle") and not horizontal:
+            fig.update_xaxes(tickangle=style["label_angle"])
+        order = {"value_desc": "total descending", "value_asc": "total ascending", "label": "category ascending",
+                 "none": "trace"}.get(style.get("sort", ""))
+        if order and kind in ("bar", "stacked_bar", "horizontal_bar"):
+            if horizontal:  # the first bar is drawn at the bottom: flip, so the list reads from the top
+                order = {"total descending": "total ascending", "total ascending": "total descending",
+                         "category ascending": "category descending"}.get(order, order)
+            label_axis(categoryorder=order)
+        if style.get("show_values") and kind in ("bar", "horizontal_bar", "stacked_bar"):
+            fig.update_traces(texttemplate=f"{prefix}%{{{v}:{shown}}}{suffix}",
+                              textposition="inside" if kind == "stacked_bar" else "outside",
+                              cliponaxis=False, textfont=dict(size=11))
+            fig.update_layout(uniformtext=dict(minsize=9, mode="hide"))
+    elif kind == "donut":
+        fig.update_traces(hovertemplate=f"%{{label}}<br>{prefix}%{{value:{shown}}}{suffix}<br>%{{percent}}<extra></extra>")
+        if style.get("show_values"):
+            fig.update_traces(texttemplate=f"%{{percent}}<br>{prefix}%{{value:{shown}}}{suffix}")
+    elif kind == "treemap":
+        fig.update_traces(texttemplate=f"%{{label}}<br>{prefix}%{{value:{shown}}}{suffix}",
+                          hovertemplate=f"%{{label}}<br>{prefix}%{{value:{shown}}}{suffix}<extra></extra>")
+    elif kind in ("map", "heatmap"):
+        fig.update_layout(coloraxis_colorbar=dict(tickformat=d3 or None, tickprefix=prefix, ticksuffix=suffix))
+        if kind == "heatmap":
+            if fig.data[0].texttemplate:  # small grids show their numbers
+                fig.update_traces(texttemplate=f"{prefix}%{{z:{shown}}}{suffix}")
+            fig.update_traces(hovertemplate=f"%{{y}} · %{{x}}<br>{prefix}%{{z:{shown}}}{suffix}<extra></extra>")
+        else:
+            fig.update_traces(hovertemplate=f"%{{hovertext}}<br>{prefix}%{{z:{shown}}}{suffix}<extra></extra>")
+
+    legend = style.get("legend")
+    if legend == "none":
+        fig.update_layout(showlegend=False)
+    elif legend == "right":
+        fig.update_layout(legend=dict(orientation="v", x=1.02, y=1, yanchor="top", xanchor="left"))
+    elif legend == "bottom":
+        fig.update_layout(legend=dict(orientation="h", x=0, y=-0.2, yanchor="top"))

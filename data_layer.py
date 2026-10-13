@@ -506,6 +506,23 @@ def catalog_text(layer: dict | None = None, only: list[str] | None = None) -> st
     return "\n".join(lines) + "\n"
 
 
+def measure_notes(cube_names: list[str], query: str) -> str:
+    """What the numbers in a query are (business name, unit, meaning), for formatting its chart:
+    each cube's description (it names the currency) and the measures the query uses."""
+    lines = []
+    for cube in cube_names:
+        p = profile(cube)
+        if not p:
+            continue
+        used = [m for m in p.get("measures", []) if m["name"] in query]
+        lines.append(f"{p.get('label') or cubes.label(cube)}: {p.get('description', '')}")
+        lines += [f"- {m['name']} = {m['label']}: {m['unit']}, {m['aggregation'].replace('_', '-')}. {m['meaning']}"
+                  for m in used]
+        if p.get("variants"):
+            lines.append(f"- Variant measures: {p['variants']}")
+    return "\n".join(lines)
+
+
 def cube_details(cube: str) -> str:
     """Everything about one cube for writing its query: exact structure and values (physical layer),
     the business notes and glossary."""

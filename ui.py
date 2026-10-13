@@ -1,11 +1,12 @@
 """Small pieces of UI shared by the pages, and the Apple-like styling."""
+import re
+
 import streamlit as st
 
 import admin
 import cubes
 import dashboards
 import data_layer
-import periods
 from backends import get_backend
 from errors import details, friendly
 
@@ -32,12 +33,26 @@ def schema_text(cube: str) -> str:
     return get_backend(cube).schema_text()
 
 
-def table(df, height=None) -> None:
-    """A results table with readable numbers (thousands separators, no long decimals)."""
+def table(df, spec: dict | None = None, height=None) -> None:
+    """A results table with readable numbers, formatted like the chart (percent, the currency in the
+    column name, thousands separators)."""
     import pandas as pd
-    numbers = {c: st.column_config.NumberColumn(format="localized") for c in df.columns
-               if pd.api.types.is_numeric_dtype(df[c])}
-    st.dataframe(df.round(2), hide_index=True, column_config=numbers, height=height or "auto")
+
+    import charts
+    numbers = {}
+    for c in df.columns:
+        if not pd.api.types.is_numeric_dtype(df[c]):
+            continue
+        d3, prefix, suffix = charts.number_format(spec or {}, c)
+        unit = (prefix or suffix).strip()
+        label = f"{c} ({unit})" if unit and unit != "%" else None
+        if d3.endswith("%"):
+            numbers[c] = st.column_config.NumberColumn(label, format="percent")
+        elif suffix.strip() == "%":
+            numbers[c] = st.column_config.NumberColumn(label, format="%.1f%%")
+        else:
+            numbers[c] = st.column_config.NumberColumn(label, format="localized")
+    st.dataframe(df.round(4), hide_index=True, column_config=numbers, height=height or "auto")
 
 
 # ---------------------------------------------------------------- pickers --
@@ -114,27 +129,48 @@ def width_picker(value: str, key: str) -> str:
 
 def dashboard_period() -> tuple:
     """The period currently picked on the dashboards (this year if none has been picked)."""
-    return st.session_state.get("dash_range") or periods.preset_range(periods.DEFAULT_PRESET)
+    import period_picker
+    return period_picker.current()[:2]
+
+
+# ---------------------------------------------------------------- the menu --
+
+def _slug(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")
+
+
+def nav_section(title: str, add: tuple | None = None, note: str = "") -> None:
+    """A heading in the menu; add = (help text, function) puts a + next to it."""
+    with st.container(horizontal=True, vertical_alignment="center", gap="small", key=f"navhead_{_slug(title)}"):
+        st.markdown(f"{title} <span class='navnote'>· {note}</span>" if note else title, width="stretch",
+                    unsafe_allow_html=True)
+        if add and st.button("", icon=":material/add:", type="tertiary", key=f"navadd_{_slug(title)}", help=add[0]):
+            add[1]()
+
+
+def nav_link(page, current) -> None:
+    """A page in the menu, highlighted when it's the page you're on."""
+    page_id = getattr(page, "_script_hash", None) or page.title
+    on = page_id == (getattr(current, "_script_hash", None) or current.title)
+    with st.container(key=f"navlink_{'on' if on else 'off'}_{_slug(str(page_id))}"):
+        st.page_link(page, label=page.title, icon=page.icon)
 
 
 # ---------------------------------------------------------------- signed in or not --
 
 def auth_bar() -> None:
-    """A bar at the top of every page that says plainly whether you are signed in as admin."""
-    with st.container(key="authbar_in" if admin.signed_in() else "authbar_out"):
-        text_col, button_col = st.columns([5, 1], vertical_alignment="center")
+    """Top right of every page: an amber "View only · Sign in" pill, or "Admin" with Sign out."""
+    with st.container(horizontal=True, horizontal_alignment="right", vertical_alignment="center", key="authrow"):
         if admin.signed_in():
-            text_col.markdown(":material/verified_user: **Signed in as admin** · you can edit dashboards, "
-                              "cubes, the glossary and settings")
-            if button_col.button("Sign out", icon=":material/logout:", key="authbar_signout", width="stretch"):
-                admin.sign_out()
-                st.rerun()
-        else:
-            text_col.markdown(":material/lock: **Not signed in** · view only. Dashboards and Chat work; "
-                              "editing needs the admin password")
-            if button_col.button("Sign in", icon=":material/login:", key="authbar_signin", type="primary",
-                                 width="stretch"):
-                admin.sign_in_dialog()
+            with st.popover("Admin", icon=":material/verified_user:", key="auth_menu"):
+                st.markdown("**Signed in as admin**")
+                st.caption("You can add and change dashboards, cubes, the glossary and settings.")
+                if st.button("Sign out", icon=":material/logout:", key="auth_signout", width="stretch"):
+                    admin.sign_out()
+                    st.rerun()
+        elif st.button("View only · Sign in", icon=":material/lock:", key="auth_signin",
+                       help="Dashboards and Chat work for everyone. Sign in as admin to add or change things."):
+            admin.sign_in_dialog()
 
 
 # ---------------------------------------------------------------- Apple-like styling --
@@ -168,10 +204,40 @@ header[data-testid="stHeader"] {{ background: {header}; backdrop-filter: saturat
 [data-testid="stExpander"] details {{ border-radius: 14px; }}
 [class*="st-key-card_"] [data-testid="stPopover"] button {{ padding: 0 .55rem; min-height: 1.9rem; }}
 [class*="st-key-card_"] [data-testid="stPopover"] button [data-testid="stIconMaterial"] {{ display: none; }}
-.st-key-authbar_out, .st-key-authbar_in {{ border-radius: 14px; padding: 6px 10px 6px 16px; }}
-.st-key-authbar_out {{ background: {"rgba(255,159,10,.16)" if dark else "#fff4e0"};
-    border: 1px solid {"rgba(255,159,10,.45)" if dark else "#ffd391"}; }}
-.st-key-authbar_in {{ background: {"rgba(48,209,88,.14)" if dark else "#e9f8ee"};
-    border: 1px solid {"rgba(48,209,88,.40)" if dark else "#a6e3b8"}; }}
-.st-key-authbar_out p, .st-key-authbar_in p {{ margin: 0; }}
+/* the menu: headings with a +, tight links, the page you're on highlighted */
+[data-testid="stSidebarHeader"] {{ height: 1.5rem; min-height: 1.5rem; }}
+[class*="st-key-navhead_"] {{ margin-top: 1.15rem; margin-bottom: -.45rem; padding: 0 .25rem 0 .55rem; }}
+.st-key-navhead_dashboards {{ margin-top: .2rem; }}
+.navnote {{ font-weight: 400; font-size: .72rem; opacity: .85; }}
+[class*="st-key-navhead_"] p {{ font-size: .78rem; font-weight: 600; margin: 0;
+    color: {"#98989d" if dark else "#6e6e73"}; }}
+[class*="st-key-navadd_"] button {{ min-height: 1.6rem; height: 1.6rem; width: 1.6rem; padding: 0;
+    border-radius: 8px; color: {"#98989d" if dark else "#6e6e73"}; }}
+[class*="st-key-navadd_"] button:hover {{ background: {"rgba(255,255,255,.08)" if dark else "rgba(0,0,0,.06)"};
+    color: var(--st-primary-color, #0071e3); }}
+[class*="st-key-navlink_"] {{ margin-bottom: -.85rem; }}
+[class*="st-key-navlink_"] a {{ border-radius: 10px; padding: .32rem .55rem; }}
+[class*="st-key-navlink_on_"] a {{ background: {"rgba(255,255,255,.09)" if dark else "rgba(0,0,0,.06)"}; }}
+[class*="st-key-navlink_on_"] a p {{ font-weight: 600; }}
+/* signed in or not: a pill at the top right of every page */
+.st-key-authrow {{ margin: -3.2rem 0 .4rem; min-height: 2rem; }}
+.st-key-auth_signin button {{ background: {"rgba(255,159,10,.16)" if dark else "#fff4e0"};
+    border: 1px solid {"rgba(255,159,10,.5)" if dark else "#ffd08a"}; color: {"#ffb340" if dark else "#8a4b00"};
+    min-height: 2rem; padding: 0 .9rem; font-size: .88rem; }}
+.st-key-auth_signin button:hover {{ border-color: {"#ffb340" if dark else "#f5a524"}; }}
+.st-key-auth_menu button {{ background: {"rgba(48,209,88,.14)" if dark else "#e9f8ee"};
+    border: 1px solid {"rgba(48,209,88,.45)" if dark else "#a6e3b8"}; color: {"#30d158" if dark else "#1a7f37"};
+    min-height: 2rem; padding: 0 .9rem; font-size: .88rem; }}
+/* dashboards: a tight title, one row of filters, and dashed + tiles */
+[class*="st-key-dash_filters"] {{ margin: -0.6rem 0 0.4rem; }}
+[class*="st-key-dash_filters"] [data-testid="stCaptionContainer"] {{ margin-left: .25rem; }}
+.st-key-addtile button, .st-key-addtile_first button {{
+    border: 1.5px dashed {"#48484a" if dark else "#c7c7cc"} !important; background: transparent !important;
+    border-radius: 18px !important; color: {"#98989d" if dark else "#6e6e73"}; font-weight: 500;
+    transition: border-color .15s ease, color .15s ease, background .15s ease; }}
+.st-key-addtile button {{ min-height: 120px; }}
+.st-key-addtile_first button {{ min-height: 180px; font-size: 1.05rem; }}
+.st-key-addtile button:hover, .st-key-addtile_first button:hover {{
+    border-color: var(--st-primary-color, #0071e3) !important; color: var(--st-primary-color, #0071e3);
+    background: {"rgba(10,132,255,.08)" if dark else "rgba(0,113,227,.05)"} !important; }}
 </style>""", unsafe_allow_html=True)
