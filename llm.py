@@ -1,4 +1,6 @@
-"""Claude turns questions into DAX, and results into a chart + short answer."""
+"""Claude turns questions into query plans (one query per cube, joined when a question needs
+several cubes), and results into a chart + short answer. What Claude knows about the data comes
+from the data layer (data_layer.py)."""
 import json
 import re
 
@@ -7,9 +9,12 @@ import pandas as pd
 
 import charts
 import config
+import dynamic_chart
 
 _client = None
 _client_key = ""
+_fallbacks_ok = True  # server-side refusal fallback; switched off if the account doesn't accept it
+FALLBACK_MODELS = ("claude-opus-5-5", "claude-opus-5", "claude-sonnet-5-5", "claude-fable-5-1", "claude-fable-5")
 
 
 def _get_client() -> anthropic.Anthropic:
@@ -27,15 +32,32 @@ def check_connection() -> None:
     _get_client().models.retrieve(config.CLAUDE_MODEL)
 
 
-DAX_RULES = """You write DAX queries for a SQL Server Analysis Services model of travel bookings.
-The user asks a question in plain English; you answer with ONE DAX query and a short explanation.
+def _create(**kwargs):
+    """One request (streamed, so long answers don't time out). If the model declines on safety
+    grounds, the API re-runs the request on Anthropic's recommended fallback model."""
+    global _fallbacks_ok
+    client = _get_client()
+    if _fallbacks_ok and kwargs["model"] in FALLBACK_MODELS:
+        try:
+            with client.beta.messages.stream(betas=["server-side-fallback-2026-07-01"], fallbacks="default",
+                                             **kwargs) as stream:
+                return stream.get_final_message()
+        except anthropic.BadRequestError as exc:
+            if "fallback" not in str(exc).lower() and "beta" not in str(exc).lower():
+                raise
+            _fallbacks_ok = False  # not available for this account: plain requests from now on
+    with client.messages.stream(**kwargs) as stream:
+        return stream.get_final_message()
 
-Rules:
+
+# ---------------------------------------------------------------- rules --
+
+DAX_RULES = """Rules for DAX queries (Analysis Services cubes):
 - The query must start with EVALUATE (or DEFINE ... EVALUATE). It is read-only.
-- Use only the exact table, column and measure names listed in the schema below.
+- Use only the exact table, column and measure names of the cube it runs on (see its details).
   Write columns as 'Table'[Column] and measures as [Measure Name].
-- If the schema says a column has "group with" columns, list those hidden columns right next to it
-  every time you group by that column (SUMMARIZECOLUMNS, SUMMARIZE, VALUES), e.g.
+- If a column has "group with" columns, list those hidden columns right next to it every time you
+  group by that column (SUMMARIZECOLUMNS, SUMMARIZE, VALUES), e.g.
   SUMMARIZECOLUMNS('Countries'[Country.UniqueName], 'Countries'[Country], "Bookings", [Bookings]).
   Otherwise the server rejects the query. They are removed from the result automatically.
   To put such a column in its natural order, also group by its "sort by" column and ORDER BY it.
@@ -52,17 +74,11 @@ Rules:
   for long periods. Never return raw transaction-level rows unless asked.
 - When a breakdown has many values (hotels, customers, destinations, suppliers...) and the question
   doesn't ask for all of them, return the top 25 by the main number with TOPN, and say so in the
-  understanding (e.g. "top 25 hotels by sales").
-- "This year", "last month" etc.: today's date is TODAY_DATE.
-- If an earlier question is given as context, treat the new question as a follow-up to it.
-"""
+  understanding (e.g. "top 25 hotels by sales")."""
 
-SQL_RULES = """You write SQL queries (DuckDB dialect) over tables of travel bookings data.
-The user asks a question in plain English; you answer with ONE SQL query and a short explanation.
-
-Rules:
+SQL_RULES = """Rules for SQL queries (DuckDB dialect, local data files):
 - One read-only SELECT statement (WITH ... SELECT is fine). No other statements.
-- Use only the exact table and column names listed in the schema below.
+- Use only the exact table and column names listed in the schema. Tables can be joined in the query.
   Always wrap column names in double quotes, e.g. "Booking Date", "Sales USD".
 - Aggregate with GROUP BY and give result columns short readable aliases ("Bookings", "Revenue").
 - Months: strftime(date_trunc('month', "Some Date"), '%Y-%m') AS "Month". Years: year("Some Date").
@@ -70,43 +86,102 @@ Rules:
 - Always add ORDER BY (dates ascending, rankings descending).
 - Keep results small (well under MAX_ROWS rows): pick a sensible grain, e.g. months not days
   for long periods. Never return raw row-level data unless asked.
-- When a breakdown has many values (hotels, customers, destinations, suppliers...) and the question
-  doesn't ask for all of them, return the top 25 by the main number (ORDER BY ... DESC LIMIT 25),
-  and say so in the understanding.
-- "This year", "last month" etc.: today's date is TODAY_DATE (use DATE 'TODAY_DATE', not current_date).
-- Use the listed example values to match filters exactly (e.g. country or status spellings).
-- If an earlier question is given as context, treat the new question as a follow-up to it.
-"""
+- When a breakdown has many values and the question doesn't ask for all of them, return the top 25
+  by the main number (ORDER BY ... DESC LIMIT 25), and say so in the understanding.
+- Dates: use DATE 'YYYY-MM-DD' literals, not current_date.
+- Use the listed example values to match filters exactly (e.g. country or status spellings)."""
 
-ANSWER_RULES = """
+PLAN_RULES = """You answer business questions about a travel company's data. The data layer below
+describes every cube: what it is for, its grain, its measures (with business names), what each date
+means, its dimensions, and the shared dimensions that link cubes. Today's date is TODAY_DATE; use it
+for "this year", "last month" and so on.
+
 How to answer:
+1. Pick the cube(s) that hold the numbers asked for, using the data layer (which cube for what,
+   business names and synonyms of the measures). Prefer ONE cube; use several only when the
+   numbers asked for live in different cubes.
+2. Read the details (exact names, helper columns, values) of every cube you use with
+   get_cube_details before writing its query, unless they are already given below.
+3. Write the plan:
+   - steps: one query per cube: name (short, lowercase letters and _, used as a table name in
+     combine_sql), cube (exact cube name from the data layer), query.
+   - combine_sql: empty when there is one step. With several steps: ONE DuckDB SELECT that joins the
+     steps' results, using each step's name as a table name.
+
+Joining cubes (several steps):
+- Aggregate each step to exactly the grain of the final answer (the same breakdown), so the join is
+  one row to one row. Never return transaction-level rows to join them.
+- Join only on the shared dimensions listed in the data layer, on the join columns given there for each
+  cube. Compare text keys with upper(trim(...)). Never join on measures.
+- Join dates at the same grain in every step (e.g. each step groups by its own year and month number
+  columns), on the date each cube's question means (bookings by booking date, payments by payment date...).
+- Use FULL OUTER JOIN and COALESCE the keys when comparing numbers from different cubes, so members
+  found in one cube only are kept; use an INNER JOIN only when the question asks for members in both.
+- Never add up averages or percentages; compute ratios in combine_sql from summable numbers, e.g.
+  SUM(p."Payments") / NULLIF(SUM(b."Sales"), 0).
+- In combine_sql, quote column names in double quotes. A step's result columns are named like this:
+  a grouped column by its column name without the table ('Customers'[Code] -> "Code"; when two have
+  the same name: "Customers Code"), a measure by the label you gave it. Give the final columns clear
+  names ("Customer", "Sales", "Payments") and an ORDER BY.
+
+LANGUAGE_RULES
+
+Answering:
 - "understanding": restate the question in one plain sentence a business user can check: the number
-  (which measure), how it is broken down, the exact period with dates (e.g. 1-30 Sep 2026) and which
-  date it is based on, any filters, and top-N or sorting.
-- If a sensible reading exists, set needs_clarification to false and write the query. Where you had
-  to pick a default (period, date, which measure), say so in the understanding.
+  (which measure, from which cube), how it is broken down, the exact period with dates (e.g. 1-30 Sep
+  2026) and which date it is based on, any filters, top-N or sorting, and how cubes are combined.
+- If a sensible reading exists, set needs_clarification to false and write the plan. Where you had
+  to pick a default (period, date, which measure or cube), say so in the understanding.
 - Set needs_clarification to true only when you cannot pick a sensible reading: the question names
   nothing you can measure, or it could mean very different things that would give very different
   numbers, and neither the glossary, the business notes nor earlier questions settle it. Then leave
-  query empty, ask ONE short question in clarifying_question and give 2-4 short answer options.
-"""
+  steps empty, ask ONE short question in clarifying_question and give 2-4 short answer options.
+- "chart_request": copy any instructions the user gave about how to show the result (chart type,
+  axes, series, colours, sorting, labels, "as a table"...), else empty.
+- "reuse_previous": true only when the new message only asks to show the previous answer
+  differently (another chart, order, colours) and needs no new data; then leave steps empty.
+- If earlier questions are given, treat the new question as a follow-up to them."""
 
-RULES = {"DAX": DAX_RULES + ANSWER_RULES, "SQL": SQL_RULES + ANSWER_RULES}
+CHECK_RULES = """Before writing the queries, check the data with your tools (at most MAX_ROUNDS rounds of checks):
+- For every word or name in the question that refers to a value (a status, market, country, channel,
+  customer, supplier, product...), call find_values to see which cubes and columns contain it, the
+  exact value and how much data it has. Look up several words in the same turn.
+- If a phrase matches values in more than one column with different meanings (e.g. a market and a
+  country), or matches only a value with no data, ask: set needs_clarification and give the real values
+  as options, e.g. "Market = UAE". Don't ask if an Agreed glossary entry or the business notes settle
+  it; a Draft glossary entry does not settle which values to filter on.
+- If you are unsure a query returns data (or which columns it returns, before joining it), check it
+  with preview_query.
+- Filter only on exact values you found."""
 
-QUERY_TOOL = {
-    "name": "submit_query",
-    "description": "Submit the query that answers the user's question.",
+_STEP = {
+    "type": "object",
+    "properties": {
+        "name": {"type": "string", "description": "Short lowercase name, e.g. bookings."},
+        "cube": {"type": "string", "description": "Exact cube name from the data layer."},
+        "query": {"type": "string", "description": "The complete query for that cube."},
+    },
+    "required": ["name", "cube", "query"],
+    "additionalProperties": False,
+}
+PLAN_TOOL = {
+    "name": "submit_plan",
+    "description": "Submit the plan that answers the user's question.",
     "input_schema": {
         "type": "object",
         "properties": {
-            "understanding": {"type": "string", "description": "The question restated precisely: measure, breakdown, exact period and date used, filters."},
+            "understanding": {"type": "string"},
             "needs_clarification": {"type": "boolean"},
             "clarifying_question": {"type": "string", "description": "Only when needs_clarification is true, else empty."},
-            "options": {"type": "array", "items": {"type": "string"}, "description": "2-4 short answers to the clarifying question, else empty."},
-            "query": {"type": "string", "description": "The complete query, or empty when asking for clarification."},
-            "explanation": {"type": "string", "description": "One plain-English sentence: what the query returns and any assumption made."},
+            "options": {"type": "array", "items": {"type": "string"}, "description": "2-4 short answers, else empty."},
+            "reuse_previous": {"type": "boolean"},
+            "steps": {"type": "array", "items": _STEP, "description": "One query per cube used; empty when asking."},
+            "combine_sql": {"type": "string", "description": "DuckDB SELECT joining the steps, or empty for one step."},
+            "explanation": {"type": "string", "description": "One plain sentence: what the plan returns and any assumption made."},
+            "chart_request": {"type": "string", "description": "The user's own instructions for the chart, or empty."},
         },
-        "required": ["understanding", "needs_clarification", "clarifying_question", "options", "query", "explanation"],
+        "required": ["understanding", "needs_clarification", "clarifying_question", "options", "reuse_previous",
+                     "steps", "combine_sql", "explanation", "chart_request"],
     },
 }
 
@@ -116,7 +191,7 @@ CHART_TOOL = {
     "input_schema": {
         "type": "object",
         "properties": {
-            "chart_type": {"type": "string", "enum": charts.CHART_TYPES,
+            "chart_type": {"type": "string", "enum": charts.CHART_TYPES + ["custom"],
                            "description": (
                                "Pick the chart that answers the question best: map when the breakdown is by "
                                "country; line (or area) for trends over time; donut for 2-6 parts of a whole; "
@@ -124,11 +199,13 @@ CHART_TOOL = {
                                "names; bar to compare a few categories; stacked_bar for a category split by a "
                                "second one with few values; heatmap for two breakdowns with many values (e.g. "
                                "market by month); scatter to relate two numbers; table when a chart would not "
-                               "help (e.g. a single row with many numbers). Never put two measures with very "
-                               "different scales on one chart.")},
+                               "help (e.g. a single row with many numbers); custom only for a chart the user "
+                               "described that no other type draws exactly. Never put two measures with very "
+                               "different scales on one axis.")},
             "x": {"type": "string", "description": "Column for the x-axis, the labels, or the countries (map). Exact column name."},
             "y": {"type": "array", "items": {"type": "string"}, "description": "Numeric column(s) to plot. Exact column names."},
             "color": {"type": "string", "description": "Second breakdown column (series of a line / stacked bar, rows of a heatmap), or empty."},
+            "custom_chart": {"type": "string", "description": "Only for chart_type custom: the chart spec as JSON, else empty."},
             "title": {"type": "string"},
             "summary": {"type": "string", "description": "2-3 sentences answering the question with the key numbers. Plain English."},
         },
@@ -136,41 +213,54 @@ CHART_TOOL = {
     },
 }
 
+DYNAMIC_RULES = """The user described the chart they want: follow their description exactly.
+If a standard chart_type draws exactly what they asked, use it. Otherwise set chart_type to "custom"
+and write custom_chart: a JSON object {"prepare": {...}, "traces": [...], "layout": {...}}.
+- traces are Plotly traces: bar, scatter (lines and/or markers; fill "tozeroy" for areas), pie, funnel,
+  funnelarea, waterfall, indicator, treemap, sunburst, icicle, heatmap, histogram, box, violin,
+  scatterpolar, barpolar, choropleth, scattergeo, sankey, table... Wherever a trace takes data, write
+  {"col": "<exact result column>"}, e.g. "x": {"col": "Month"}, "y": {"col": "Sales"}.
+- "split_by": "<column>" in a trace draws one series per value of that column (e.g. a line per channel).
+- treemap / sunburst / icicle: "path": ["<outer column>", "<inner column>"] and "values": {"col": "<number>"}.
+- "prepare" is optional: {"group_by": [...], "aggregate": {"<column>": "sum|mean|min|max|count|median"},
+  "sort_by": "<column>", "descending": true, "top": 10}.
+- layout is a Plotly layout, e.g. "barmode": "stack" | "group" | "relative", "barnorm": "percent",
+  a second axis ("yaxis2": {"overlaying": "y", "side": "right", "title": {"text": "..."}} with
+  "yaxis": "y2" on the trace), axis titles, "tickformat": ",.0f" or ".0%", "xaxis": {"type": "category"}.
+  Horizontal bars: "orientation": "h" on the trace, with x and y swapped.
+  Don't set fonts or backgrounds; set colours only if the user asked for them.
+- Use only columns of the result. If the user asks for a number the result doesn't have, draw what
+  you can and say so in the summary."""
 
-MAX_CHECK_ROUNDS = 5  # rounds of data checks (tool calls) before Claude must answer
 
-CHECK_RULES = """Before writing the query, check the data with your tools (at most 5 rounds of checks):
-- For every word or name in the question that refers to a value (a status, market, country, channel,
-  customer, supplier, product...), call find_values to see which columns contain it, the exact value and
-  how much data it has. Look up several words in the same turn.
-- If a phrase matches values in more than one column with different meanings (e.g. a market and a
-  country), or matches only a value with no data, ask: set needs_clarification and give the real values
-  as options, e.g. "Market = UAE". Don't ask if an Agreed glossary entry or the business notes settle
-  it; a Draft glossary entry does not settle which values to filter on. If several things are unclear,
-  ask about the most important one first.
-- If you are unsure a filter returns data, check with preview_query before answering.
-- Filter only on exact values you found."""
+# ---------------------------------------------------------------- calls --
+
+MAX_CHECK_ROUNDS = 6  # rounds of data checks (tool calls) before Claude must answer
 
 
 def _structured_call(system: list, tool: dict, user_text: str, tools: list | None = None,
-                     run_tool=None, on_step=None) -> dict:
-    """Ask Claude for JSON matching the tool's schema. (Forcing a tool call with tool_choice
-    is not supported on current Claude models, so this uses structured outputs instead.)
-    With tools, Claude may first call them (e.g. to look up values); run_tool(name, input) answers."""
+                     run_tool=None, on_step=None, model: str | None = None, effort: str | None = None,
+                     max_tokens: int = 16000) -> dict:
+    """Ask Claude for JSON matching the tool's schema (structured outputs). With tools, Claude may
+    first call them (e.g. to look up values); run_tool(name, input) answers each call."""
     schema = {**tool["input_schema"], "additionalProperties": False}
     messages = [{"role": "user", "content": user_text}]
+    output_config = {"format": {"type": "json_schema", "schema": schema}}
+    if effort:
+        output_config["effort"] = effort
     for check_round in range(MAX_CHECK_ROUNDS + 1):
         extra = {}
         if tools and run_tool:
             extra["tools"] = tools
             if check_round == MAX_CHECK_ROUNDS:
                 extra["tool_choice"] = {"type": "none"}  # enough checking: answer now
-        response = _get_client().messages.create(
-            model=config.CLAUDE_MODEL,
-            max_tokens=16000,  # Claude thinks before answering, and thinking counts toward this limit
+        response = _create(
+            model=model or config.CLAUDE_MODEL,
+            max_tokens=max_tokens,  # Claude thinks before answering, and thinking counts toward this limit
             system=system,
-            output_config={"format": {"type": "json_schema", "schema": schema}},
+            output_config=output_config,
             messages=messages,
+            cache_control={"type": "ephemeral"},  # earlier rounds of checks are re-read from the cache
             **extra,
         )
         if response.stop_reason == "refusal":
@@ -199,56 +289,79 @@ def _structured_call(system: list, tool: dict, user_text: str, tools: list | Non
     raise RuntimeError("Claude did not finish checking the data. Try a simpler question.")
 
 
-def question_to_query(question: str, schema: str, notes: str, today: str, language: str = "DAX",
-                      context: list[dict] | None = None,
-                      failed_query: str | None = None, error: str | None = None,
-                      clarification: tuple[str, str] | None = None, instructions: str = "",
-                      tools: list | None = None, run_tool=None, on_step=None) -> dict:
-    """clarification = (question Claude asked, the user's answer). instructions = extra
-    requirements, e.g. for a dashboard chart. tools + run_tool let Claude check the data first
-    (on_step(name, input) reports each check). A result with needs_clarification has no query."""
-    rules = RULES[language].replace("MAX_ROWS", str(config.MAX_ROWS)).replace("TODAY_DATE", today)
-    system_text = rules + "\n\n" + schema
+def plan_rules(language: str, today: str) -> str:
+    rules = PLAN_RULES.replace("LANGUAGE_RULES", DAX_RULES if language == "DAX" else SQL_RULES)
+    return rules.replace("MAX_ROWS", str(config.MAX_ROWS)).replace("TODAY_DATE", today)
+
+
+def question_to_plan(question: str, catalog: str, details: str, notes: str, today: str, language: str = "DAX",
+                     context: list[dict] | None = None, failed_plan: str | None = None, error: str | None = None,
+                     clarification: tuple[str, str] | None = None, instructions: str = "",
+                     tools: list | None = None, run_tool=None, on_step=None) -> dict:
+    """The plan for a question: one query per cube (+ the SQL joining them). catalog = the data
+    layer, details = the exact structure of cubes already chosen (e.g. the one the user picked).
+    clarification = (question Claude asked, the user's answer). instructions = extra requirements,
+    e.g. for a dashboard chart. tools + run_tool let Claude check the data first (on_step(name,
+    input) reports each check). A result with needs_clarification or reuse_previous has no steps."""
+    system_text = plan_rules(language, today)
+    if catalog.strip():
+        system_text += "\n\n" + catalog
+    if details.strip():
+        system_text += "\n\n# Details of the cube to use\n" + details
     if notes.strip():
         system_text += "\n\n## Business notes from the user\n" + notes
-    # The schema is the same every time, so cache it (cheaper and faster on repeat questions).
+    # The rules and the data layer are the same every time, so they are cached (cheaper and faster).
     system = [{"type": "text", "text": system_text, "cache_control": {"type": "ephemeral"}}]
 
     parts = []
     for prev in (context or [])[-3:]:
-        parts.append(f"Earlier question: {prev['question']}\nEarlier query:\n{prev['query']}")
+        parts.append(f"Earlier question: {prev['question']}\nEarlier plan:\n{prev['query']}")
     parts.append(f"Question: {question}")
     if clarification:
         parts.append(f"You asked: {clarification[0]}\nThe user answered: {clarification[1]}\n"
                      "Use this answer. Only ask again about something different that is still unclear.")
     if instructions:
         parts.append(instructions)
-    if failed_query:
-        parts.append(f"Your previous query failed.\nQuery:\n{failed_query}\n\nError:\n{error}\n\n"
-                     "Fix the query (check names against the schema). Do not ask for clarification.")
+    if failed_plan:
+        parts.append(f"Your previous plan failed.\nPlan:\n{failed_plan}\n\nError:\n{error}\n\n"
+                     "Fix it (check names against the cube details, and the steps' column names). "
+                     "Do not ask for clarification.")
     if tools and run_tool:
-        parts.append(CHECK_RULES)
-    result = _structured_call(system, QUERY_TOOL, "\n\n".join(parts), tools, run_tool, on_step)
-    if result.get("needs_clarification") and result.get("clarifying_question") and not failed_query:
-        result["query"] = ""
+        parts.append(CHECK_RULES.replace("MAX_ROUNDS", str(MAX_CHECK_ROUNDS)))
+    result = _structured_call(system, PLAN_TOOL, "\n\n".join(parts), tools, run_tool, on_step)
+    if result.get("needs_clarification") and result.get("clarifying_question") and not failed_plan:
+        result["steps"] = []
         return result
-    if not result.get("query", "").strip():  # checked the data but gave no query: ask once more
-        parts.append("You did not return a query. Using what you found, write the query now "
-                     "(needs_clarification false).")
-        result = _structured_call(system, QUERY_TOOL, "\n\n".join(parts))
+    if result.get("reuse_previous") and context and not failed_plan and not instructions:
+        result["steps"] = []
+        return result
+    if not [s for s in result.get("steps", []) if s.get("query", "").strip()]:
+        parts.append("You did not return any query. Using what you found, write the plan now "
+                     "(needs_clarification false, reuse_previous false).")
+        result = _structured_call(system, PLAN_TOOL, "\n\n".join(parts))
     result["needs_clarification"] = False
+    result["reuse_previous"] = False
     if language == "DAX":
-        validate_dax(result.get("query", ""))
+        for step in result.get("steps", []):
+            validate_dax(step.get("query", ""))
+    if not result.get("steps"):
+        raise RuntimeError("Claude did not return a query. Try rephrasing the question.")
     return result
 
 
 def dashboard_instructions(language: str, date_column: str, kpi: bool, base_query: str = "") -> str:
-    """Extra requirements for a dashboard chart: the dashboard, not the question, sets the period."""
-    lines = ["This query is for a dashboard chart that is re-run for whatever period the user picks."]
+    """Extra requirements for a dashboard chart: the dashboard, not the question, sets the period.
+    date_column "auto" = each step filters on its cube's main date."""
+    lines = ["This plan is for a dashboard chart that is re-run for whatever period the user picks."]
     if base_query:
-        lines.append("Start from this query, which answered the question in a chat. Keep its measures, "
-                     f"breakdown, sorting and top-N, but change the period as described below:\n{base_query}")
-    if date_column and language == "DAX":
+        lines.append("Start from this plan, which answered the question in a chat. Keep its cubes, measures, "
+                     f"breakdown, joins, sorting and top-N, but change the period as described below:\n{base_query}")
+    if date_column == "auto":
+        filt = ("KEEPFILTERS(FILTER(ALL(<date column>), <date column> >= @START && <date column> < @END)) inside "
+                "SUMMARIZECOLUMNS" if language == "DAX" else "<date column> >= @START AND <date column> < @END")
+        lines.append(f"In every step, filter the period on the date the question means in that cube (by default the "
+                     f"cube's default date in the data layer) with exactly {filt}.")
+    elif date_column and language == "DAX":
         lines.append(f"Filter the period on {date_column} with exactly KEEPFILTERS(FILTER(ALL({date_column}), "
                      f"{date_column} >= @START && {date_column} < @END)) inside SUMMARIZECOLUMNS. ")
     elif date_column:
@@ -260,7 +373,7 @@ def dashboard_instructions(language: str, date_column: str, kpi: bool, base_quer
         lines.append("Do not filter by date: the chart covers all dates. Remove any period in the question.")
     if kpi:
         lines.append("Return exactly one row with one number (the headline figure), no other columns.")
-    lines.append("Set needs_clarification to false.")
+    lines.append("Set needs_clarification and reuse_previous to false.")
     return "\n".join(lines)
 
 
@@ -273,18 +386,44 @@ def validate_dax(dax: str) -> None:
         raise ValueError("Generated query does not start with EVALUATE/DEFINE, so it was not run.")
 
 
-def describe_result(question: str, df: pd.DataFrame) -> dict:
+def describe_result(question: str, df: pd.DataFrame, chart_request: str = "") -> dict:
+    """The chart and the written answer. chart_request = the user's own description of the chart
+    they want; Claude may then draw any chart (a 'custom' spec, see dynamic_chart.py)."""
     sample = df.head(60).to_csv(index=False)
     col_info = ", ".join(f"{c} ({'number' if pd.api.types.is_numeric_dtype(df[c]) else 'text/date'})"
                          for c in df.columns)
-    system = [{"type": "text", "text": (
-        "You present query results for business users. Pick the clearest chart and answer "
-        "the question in plain English using the numbers shown. Do not invent numbers.")}]
+    rules = ("You present query results for business users. Pick the clearest chart and answer "
+             "the question in plain English using the numbers shown. Do not invent numbers.")
+    if chart_request:
+        rules += "\n\n" + DYNAMIC_RULES
+    system = [{"type": "text", "text": rules}]
     hint = charts.suggest(df)
     user = (f"Question: {question}\n\nResult has {len(df)} rows. Columns: {col_info}\n"
-            f"From the shape of the data the best fit looks like: {hint['chart_type']} "
-            f"(x={hint['x']!r}, color={hint['color']!r}). Use it unless another chart answers the question better.\n\n"
-            f"First rows (CSV):\n{sample}")
+            + (f"The user asked for this chart: {chart_request}\n" if chart_request else
+               f"From the shape of the data the best fit looks like: {hint['chart_type']} "
+               f"(x={hint['x']!r}, color={hint['color']!r}). Use it unless another chart answers the question better.\n")
+            + f"\nFirst rows (CSV):\n{sample}")
     spec = _structured_call(system, CHART_TOOL, user)
     spec.setdefault("y", [])
+    if spec.get("chart_type") == "custom":
+        problem = _custom_problem(df, spec)
+        if problem:  # one more try, with what went wrong
+            spec = _structured_call(system, CHART_TOOL, user + f"\n\nYour custom_chart could not be drawn: {problem}\n"
+                                    "Fix it.")
+            spec.setdefault("y", [])
+            problem = _custom_problem(df, spec) if spec.get("chart_type") == "custom" else ""
+        if problem:
+            spec = {**charts.suggest(df), "title": spec.get("title", ""), "summary": spec.get("summary", ""),
+                    "note": "The chart you described couldn't be drawn from this data, so the best standard chart is shown."}
+        elif spec.get("chart_type") == "custom":
+            spec["custom"] = dynamic_chart.parse(spec.pop("custom_chart"))
+            spec["chart_request"] = chart_request
+            return spec
+    spec.pop("custom_chart", None)
     return charts.fit(df, spec)
+
+
+def _custom_problem(df: pd.DataFrame, spec: dict) -> str:
+    if not spec.get("custom_chart"):
+        return "custom_chart is empty."
+    return dynamic_chart.check(df, spec["custom_chart"])

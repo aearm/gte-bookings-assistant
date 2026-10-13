@@ -131,7 +131,8 @@ Ok "Created 'Bookings Assistant' on the desktop"
 # ---------------------------------------------------------------- done --
 Write-Host "`nSetup complete." -ForegroundColor Green
 Write-Host "Next: start the app, open Settings (in the app's menu), create an admin password,"
-Write-Host "then enter the Claude API key and the bookings server details."
+Write-Host "then enter the Claude API key and the bookings server details. Finally, on the Cubes page,"
+Write-Host "tick the cubes and click 'Build the data layer' (once; or run: python build_layer.py --all)."
 Write-Host "Later, start the app with the 'Bookings Assistant' shortcut on the desktop."
 if (-not $NoStart) {
     $answer = Read-Host "`nStart the app now? (Y/n)"

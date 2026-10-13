@@ -409,15 +409,17 @@ def _add_values(cols: list[dict], measure: str) -> None:
     from concurrent.futures import ThreadPoolExecutor
     cards = _level_cardinality()
     text_cols = [c for c in cols if c.get("type") == "Text"]
+    database = current_database()  # worker threads don't inherit the cube set with using()
 
     def one(c):
         try:
-            c.update(_read_column(c, measure, cards.get((c["table"], c["column"]))))
+            with using(database):
+                c.update(_read_column(c, measure, cards.get((c["table"], c["column"]))))
         except Exception:
             pass  # values are a help, not a requirement
-    with ThreadPoolExecutor(max_workers=4) as pool:  # each thread gets a copy of the current cube
-        list(pool.map(lambda c: contextvars.copy_context().run(one, c), text_cols))
-    value_index.for_cube(current_database()).save({f"'{c['table']}'[{c['column']}]": {"group_with": c.get("group_with", []),
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        list(pool.map(one, text_cols))
+    value_index.for_cube(database).save({f"'{c['table']}'[{c['column']}]": {"group_with": c.get("group_with", []),
                                                           **{k: c[k] for k in ("values", "live", "count") if k in c}}
                       for c in text_cols if "values" in c or c.get("live")}, measure)
 

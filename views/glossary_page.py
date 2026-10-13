@@ -12,7 +12,7 @@ import ui
 with st.sidebar:
     cube = ui.cube_picker("glossary")
 st.title("Glossary")
-if not cube:
+if cube is None:
     st.info("No cube is connected yet. An admin connects cubes on the Cubes page.")
     st.stop()
 st.caption(f"What the words mean in **{cubes.label(cube)}**. Claude follows these definitions in every answer, "
@@ -49,6 +49,8 @@ if updated:
 
 st.divider()
 st.subheader("Edit")
+if not admin.signed_in():
+    st.caption(":material/lock: You're not signed in. Editing the glossary needs the admin password.")
 if admin.sign_in_form():
     edited = st.data_editor(
         pd.DataFrame(rows, columns=glossary.COLUMNS),

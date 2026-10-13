@@ -12,8 +12,8 @@ st.title("⚙️ Settings")
 st.caption("Keys and passwords are saved in Windows Credential Manager on the computer running "
            "the app, never in a text file. They are never shown again after saving.")
 
-if not admin.sign_in_form():
-    st.stop()
+if not admin.signed_in():
+    admin.locked_page("The Settings page")
 
 
 def show_error(exc: Exception) -> None:
@@ -116,6 +116,6 @@ with st.form("change_admin", clear_on_submit=True):
             secrets_store.set_admin_password(new)
             st.success("Admin password changed.")
 
-if st.button("Sign out of admin"):
-    st.session_state.admin = False
+if st.button("Sign out of admin", icon=":material/logout:"):
+    admin.sign_out()
     st.rerun()

@@ -1,28 +1,29 @@
-"""Dashboards: named pages of charts saved as queries that re-run for the period the user picks.
-A dashboard can mix charts from different cubes; each chart remembers its cube. Saved in
-dashboards.json; only admins change them (see dashboard_view.py). Claude is only used when a chart
-is created or its question changes - refreshing just re-runs the saved queries."""
+"""Dashboards: named pages of charts saved as query plans that re-run for the period the user picks.
+A dashboard can mix charts from different cubes, and a chart can combine several cubes (see
+plans.py). Saved in dashboards.json; only admins change them (see dashboard_view.py). Claude is
+only used when a chart is created or its question changes - refreshing just re-runs the saved plans."""
 import json
 import re
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 
-import pandas as pd
-
+import answering
 import charts
 import config
 import cubes
-import data_tools
+import data_layer
 import glossary
 import llm
-import value_check
+import periods
+import plans
 from backends import get_backend
 from errors import details, friendly
 
-TYPE_LABELS = {"auto": "Best fit (automatic)", "kpi": "Headline number", **charts.TYPE_LABELS}
-PERIODS = ["Last 7 days", "This month", "Last month", "This year", "Last 12 months", "Custom"]
+TYPE_LABELS = {"auto": "Best fit (automatic)", "kpi": "Headline number", **charts.TYPE_LABELS,
+               "custom": "Custom (describe it in words)"}
+AUTO_DATE = "auto"  # a chart on several cubes: each cube filters on its own main date
 
 # Questions for the first dashboard. Claude turns them into queries for whichever model is connected.
 STARTER = [
@@ -43,36 +44,6 @@ STARTER = [
 ]
 
 
-# ---------------------------------------------------------------- periods --
-
-def _add_months(d: date, months: int) -> date:
-    years, month0 = divmod(d.month - 1 + months, 12)
-    return d.replace(year=d.year + years, month=month0 + 1)
-
-
-def period_range(name: str, custom: tuple[date, date] | None = None, today: date | None = None) -> tuple[date, date]:
-    """(start, end) of a period; end is exclusive (the day after the last day)."""
-    today = today or date.today()
-    tomorrow, first = today + timedelta(days=1), today.replace(day=1)
-    if name == "Last 7 days":
-        return today - timedelta(days=6), tomorrow
-    if name == "This month":
-        return first, tomorrow
-    if name == "Last month":
-        return _add_months(first, -1), first
-    if name == "This year":
-        return today.replace(month=1, day=1), tomorrow
-    if name == "Last 12 months":
-        return _add_months(first, -11), tomorrow
-    start, last = custom or (today.replace(month=1, day=1), today)
-    return start, last + timedelta(days=1)
-
-
-def same_period_last_year(start: date, end: date) -> tuple[date, date]:
-    shift = lambda d: d.replace(year=d.year - 1) if not (d.month == 2 and d.day == 29) else d.replace(year=d.year - 1, day=28)
-    return shift(start), shift(end)
-
-
 # ---------------------------------------------------------------- date columns --
 
 def date_columns(schema_text: str) -> list[str]:
@@ -84,13 +55,18 @@ def date_columns(schema_text: str) -> list[str]:
 
 def default_date_column(cols: list[str], cube: str = "") -> str:
     """The date the period applies to by default: the cube's agreed default date if the setup
-    settled it, else a column that looks like a booking/creation date, else the first one."""
-    if cube:
-        for row in glossary.load(cube)[0]:
-            if row.get("Status") == "Agreed" and re.search(r"date", row["Term"], flags=re.IGNORECASE):
-                found = [c for c in cols if c in row.get("Date to use", "") + row.get("Measure", "")]
-                if found:
-                    return found[0]
+    settled it, else the data layer's default date, else a column that looks like a booking/creation
+    date, else the first one."""
+    if not cube:  # all data: each cube's own main date
+        return AUTO_DATE
+    for row in glossary.load(cube)[0]:
+        if row.get("Status") == "Agreed" and re.search(r"\bdates?\b", row["Term"], flags=re.IGNORECASE):
+            found = [c for c in cols if c in row.get("Date to use", "") + row.get("Measure", "")]
+            if found:
+                return found[0]
+    layer_default = data_layer.profile(cube).get("default_date")
+    if layer_default in cols:
+        return layer_default
     for c in cols:
         if re.search(r"create|booking", c, flags=re.IGNORECASE):
             return c
@@ -101,6 +77,8 @@ def date_label(col: str) -> str:
     """'Create Date'[Create Date] -> Create Date, 'Calendar'[Date] -> Calendar · Date."""
     if not col:
         return "All dates"
+    if col == AUTO_DATE:
+        return "Each cube's main date"
     m = re.match(r"'([^']+)'\[([^\]]+)\]", col)
     if not m:
         return col.strip('"')
@@ -114,7 +92,9 @@ def fill_dates(query: str, start: date, end: date, backend) -> str:
 
 # ---------------------------------------------------------------- storage --
 # dashboards.json: {"dashboards": [{"id", "name", "charts": [chart, ...]}, ...]}. A chart is
-# {"id", "cube", "title", "question", "query", "date_column", "chart_type", "x", "y", "color", "width"}.
+# {"id", "cube", "title", "question", "query", "plan", "date_column", "chart_type", "x", "y", "color",
+#  "custom", "chart_request", "width"}: "cube" is the cube ("" when it combines several), "query"
+# the plan as readable text, "plan" the steps (plans.py), "custom" a chart described in words.
 
 _lock = threading.Lock()
 
@@ -224,89 +204,100 @@ def send_chart(chart: dict, to_dashboard_id: str, remove_from: str = "") -> None
 
 # ---------------------------------------------------------------- running --
 
-def _run_one(chart: dict, start: date, end: date) -> dict:
+def _run_one(chart: dict, start: date, end: date, weekly: bool = False) -> dict:
     out = {"df": None, "prev": None, "error": "", "details": ""}
     try:
-        backend = get_backend(chart.get("cube"))
-        out["df"] = backend.run(fill_dates(chart["query"], start, end, backend), config.MAX_ROWS)
+        plan = plans.Plan.from_chart(chart)
+        out["df"] = plans.run(plan.with_dates(start, end))
         if chart["chart_type"] == "kpi" and chart.get("date_column"):
-            prev_start, prev_end = same_period_last_year(start, end)
-            out["prev"] = backend.run(fill_dates(chart["query"], prev_start, prev_end, backend), config.MAX_ROWS)
+            out["prev"] = plans.run(plan.with_dates(*periods.same_period_last_year(start, end, weekly)))
     except Exception as exc:
         out["error"], out["details"] = friendly(exc), details(exc)
     return out
 
 
-def run_all(charts: list[dict], start: date, end: date) -> dict[str, dict]:
-    """Run every chart's query (each on its own cube) for the period.
-    Returns {chart id: {df, prev, error, details}}."""
+def run_all(charts: list[dict], start: date, end: date, weekly: bool = False) -> dict[str, dict]:
+    """Run every chart's plan (each on its own cubes) for the period. weekly = compare headline
+    numbers with the same weeks last year. Returns {chart id: {df, prev, error, details}}."""
     workers = 4 if config.resolve_source() == "ssas" else 1  # the local database runs one query at a time
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        futures = {c["id"]: pool.submit(_run_one, c, start, end) for c in charts}
+        futures = {c["id"]: pool.submit(_run_one, c, start, end, weekly) for c in charts}
     return {cid: f.result() for cid, f in futures.items()}
+
+
+def run_key(chart: dict) -> tuple:
+    """What a chart's numbers depend on (for caching the results)."""
+    return (chart["id"], json.dumps(plans.Plan.from_chart(chart).to_dict(), sort_keys=True),
+            chart.get("date_column", ""), chart["chart_type"])
+
+
+def chart_from_key(key: tuple) -> dict:
+    chart_id, plan, date_column, chart_type = key
+    return {"id": chart_id, "plan": json.loads(plan), "date_column": date_column, "chart_type": chart_type}
 
 
 # ---------------------------------------------------------------- building --
 
-def _check_dates(query: str, date_column: str) -> None:
-    if date_column and ("@START" not in query or "@END" not in query):
-        raise ValueError("The query does not use the dashboard dates. Filter the period with @START and @END.")
-
-
 def build_chart(cube: str, question: str, title: str, chart_type: str, width: str, date_column: str,
-                start: date, end: date, base_query: str = "", base_spec: dict | None = None) -> dict:
-    """Ask Claude for a dashboard query on a cube, test it for the period, and return the chart."""
-    backend = get_backend(cube)
-    if not backend.schema_file.exists():
-        raise RuntimeError(f"The {cubes.label(cube)} cube isn't set up yet. An admin sets it up on the Cubes page.")
-    schema = backend.schema_text()
-    notes = glossary.notes_for_claude(cube)
-    instructions = llm.dashboard_instructions(backend.language, date_column, chart_type == "kpi", base_query)
-    args = (question, schema, notes, date.today().isoformat(), backend.language)
-
-    def checked(q: str) -> str:
-        _check_dates(q, date_column)
-        return value_check.require_real_values(value_check.check(q, backend.language, schema, backend))
-
-    checks = data_tools.checks(backend)
-    query = llm.question_to_query(*args, instructions=instructions, **checks)["query"]
-    try:
-        query = checked(query)
-        df = backend.run(fill_dates(query, start, end, backend), config.MAX_ROWS)
-    except value_check.ValueProblem:
-        raise  # only the person asking can say which real value they mean
-    except Exception as first_error:  # one retry, with the error, like the chat
-        query = checked(llm.question_to_query(*args, instructions=instructions, failed_query=query, **checks,
-                                              error=str(first_error)[:1500])["query"])
-        df = backend.run(fill_dates(query, start, end, backend), config.MAX_ROWS)
+                start: date, end: date, base_query: str = "", base_spec: dict | None = None,
+                chart_request: str = "") -> dict:
+    """Ask Claude for a dashboard plan (on one cube, or "" = any cubes), test it for the period, and
+    return the chart. chart_request = the user's own description of the chart (a custom chart)."""
+    ok, why = answering.ready(cube)
+    if not ok:
+        raise RuntimeError(why)
+    language = get_backend(answering.cubes_in(cube)[0]).language
+    instructions = llm.dashboard_instructions(language, date_column, chart_type == "kpi", base_query)
+    outcome = answering.require_values(answering.answer(
+        question, cube, instructions=instructions, period=(start, end), needs_dates=bool(date_column)))
+    if outcome.kind != "data":
+        raise RuntimeError("Claude didn't write a query for this chart. Try rephrasing the question.")
+    df, plan = outcome.df, outcome.plan
 
     if chart_type == "kpi":
         spec = {"chart_type": "kpi", "x": "", "y": [], "color": ""}
-    elif base_spec and base_spec.get("x") in df.columns:
+    elif chart_type == "custom" or chart_request:
+        spec = llm.describe_result(question, df, chart_request=chart_request or question)
+    elif base_spec and (base_spec.get("x") in df.columns or base_spec.get("custom")):
         spec = {**base_spec, "y": [y for y in base_spec.get("y", []) if y in df.columns]}
     elif chart_type == "auto" and not df.empty:
         spec = llm.describe_result(question, df)
     else:
         spec = charts.suggest(df)
-    if chart_type not in ("auto", ""):
+    if chart_type not in ("auto", "", "custom"):
         spec["chart_type"] = chart_type
     spec = charts.fit(df, spec) if spec.get("chart_type") != "kpi" else spec
-    return {"id": uuid.uuid4().hex[:8], "cube": cube, "title": title.strip() or spec.get("title") or question,
-            "question": question, "query": query, "date_column": date_column,
-            "chart_type": spec.get("chart_type", "table"), "x": spec.get("x", ""), "y": spec.get("y", []),
-            "color": spec.get("color", ""), "width": width}
+    chart = {"id": uuid.uuid4().hex[:8], "cube": plan.cubes[0] if len(plan.cubes) == 1 else "",
+             "title": title.strip() or spec.get("title") or question, "question": question,
+             "query": plan.text(), "plan": plan.to_dict(), "date_column": date_column,
+             "chart_type": spec.get("chart_type", "table"), "x": spec.get("x", ""), "y": spec.get("y", []),
+             "color": spec.get("color", ""), "width": width}
+    if spec.get("chart_type") == "custom":
+        chart.update(custom=spec["custom"], chart_request=spec.get("chart_request") or chart_request)
+    return chart
+
+
+def restyle_chart(chart: dict, chart_request: str, start: date, end: date) -> dict:
+    """The same numbers drawn as the user describes (no new query)."""
+    df = plans.run(plans.Plan.from_chart(chart).with_dates(start, end))
+    spec = llm.describe_result(chart["question"], df, chart_request=chart_request)
+    chart = {k: v for k, v in chart.items() if k not in ("custom", "chart_request")}
+    chart.update(chart_type=spec.get("chart_type", "table"), x=spec.get("x", ""), y=spec.get("y", []),
+                 color=spec.get("color", ""))
+    if spec.get("chart_type") == "custom":
+        chart.update(custom=spec["custom"], chart_request=chart_request)
+    return chart
 
 
 def starter_items(cube: str) -> list[dict]:
-    """The cube's suggested charts from its setup, or the generic starter set."""
+    """Suggested charts: the cube's from its setup, or the generic starter set."""
     import cube_setup
-    return cube_setup.suggested_charts(cube) or STARTER
+    return (cube_setup.suggested_charts(cube) if cube else []) or STARTER
 
 
 def create_starter(dashboard_id: str, cube: str, start: date, end: date, on_done=None) -> list[str]:
     """Build a cube's starter charts (in parallel) into a dashboard. Returns the titles that failed."""
-    backend = get_backend(cube)
-    date_col = default_date_column(date_columns(backend.schema_text()), cube)
+    date_col = default_date_column(date_columns(get_backend(cube).schema_text()), cube) if cube else AUTO_DATE
     items = starter_items(cube)
 
     def build(item):

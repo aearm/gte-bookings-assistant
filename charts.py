@@ -1,7 +1,8 @@
 """Turns a result into the most suitable chart, in one consistent (Apple-like) style.
 
 suggest(df) picks a chart from the shape of the data; fit(df, spec) corrects a chart that doesn't
-suit the data (e.g. a donut with 30 slices); build_figure(df, spec) draws it with Plotly."""
+suit the data (e.g. a donut with 30 slices); build_figure(df, spec) draws it with Plotly. A chart
+the user described in words is a "custom" chart, drawn by dynamic_chart.py."""
 import re
 from functools import lru_cache
 
@@ -14,7 +15,7 @@ TYPE_LABELS = {
     "treemap": "Treemap (share, many parts)", "map": "World map (countries)",
     "heatmap": "Heatmap (two breakdowns)", "scatter": "Scatter (two numbers)", "table": "Table",
 }
-CHART_TYPES = list(TYPE_LABELS)
+CHART_TYPES = list(TYPE_LABELS)  # chosen automatically; "custom" (described in words) is separate
 
 # Categorical colours in a fixed order (checked for colour-blind safety); dark mode uses the same
 # hues stepped for a dark background. Sequential: one blue, light to dark (for maps and heatmaps).
@@ -135,6 +136,8 @@ def fit(df: pd.DataFrame, spec: dict) -> dict:
     """The chart, corrected where it doesn't suit the data (keeps the choice whenever it works)."""
     spec = {"x": "", "y": [], "color": "", **spec}
     kind = spec.get("chart_type") or "table"
+    if kind == "custom":
+        return spec if spec.get("custom") else {**spec, **suggest(df)}
     if kind == "pie":
         kind = "donut"
     nums = _numbers(df)
@@ -169,7 +172,7 @@ def trim(df: pd.DataFrame, spec: dict) -> tuple[pd.DataFrame, str]:
     time keep everything). Returns (rows, note), the note saying what was left out (or "")."""
     spec = fit(df, spec)
     limit, x, ys = SHOW_LIMIT.get(spec["chart_type"]), spec.get("x"), spec.get("y")
-    if not limit or not x or not ys or is_time_column(df[x]):
+    if not limit or not x or not ys or x not in df.columns or is_time_column(df[x]):
         return df, ""
     count = df[x].nunique()
     if count <= limit:
@@ -202,9 +205,17 @@ def _style(fig, dark: bool, height: int | None, title: str, legend: bool = True)
 
 def build_figure(df: pd.DataFrame, spec: dict, dark: bool = False, height: int | None = None,
                  show_title: bool = True):
-    """Return a Plotly figure, or None if a table is the better display."""
+    """Return a Plotly figure, or None if a table is the better display. A custom chart that can't
+    be drawn with this data (e.g. a column is gone) falls back to the best standard chart."""
     spec = fit(df, spec)
     kind, x, ys, color = spec["chart_type"], spec["x"], spec["y"], spec["color"] or None
+    if kind == "custom":
+        import dynamic_chart
+        try:
+            return dynamic_chart.build(df, spec["custom"], dark=dark, height=height,
+                                       title=spec.get("title", "") if show_title else "")
+        except dynamic_chart.ChartSpecError:
+            return build_figure(df, {**suggest(df), "title": spec.get("title", "")}, dark, height, show_title)
     if kind == "table":
         return None
     df, _ = trim(df, spec)

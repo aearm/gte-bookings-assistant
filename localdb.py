@@ -154,9 +154,19 @@ def build_schema_text() -> tuple[str, int, int]:
                 n_distinct = con.execute(f'SELECT COUNT(DISTINCT {q}) FROM "{table}"').fetchone()[0]
                 top = con.execute(f'SELECT {q}, COUNT(*) FROM "{table}" WHERE {q} IS NOT NULL '
                                   f'GROUP BY 1 ORDER BY 2 DESC LIMIT {value_index.INDEX_LIMIT + 1}').fetchall()
-                index[q] = ({"group_with": [], "values": [[str(v), n] for v, n in top]}
-                            if n_distinct <= value_index.INDEX_LIMIT else
-                            {"group_with": [], "live": True, "count": n_distinct})
+                entry = ({"group_with": [], "values": [[str(v), n] for v, n in top]}
+                         if n_distinct <= value_index.INDEX_LIMIT else
+                         {"group_with": [], "live": True, "count": n_distinct})
+                old = index.get(q)  # the same column name in another table: keep the values of both
+                if old and "values" in old and "values" in entry:
+                    counts = dict(old["values"])
+                    for v, n in entry["values"]:
+                        counts[v] = counts.get(v, 0) + n
+                    entry["values"] = [[v, n] for v, n in sorted(counts.items(), key=lambda x: -x[1])]
+                elif old:
+                    entry = {"group_with": [], "live": True,
+                             "count": max(old.get("count") or 0, entry.get("count") or 0, n_distinct)}
+                index[q] = entry
                 top = top[:25]
                 quoted = lambda v: '"' + str(v).replace('"', '""') + '"'
                 info = ("| values: " + ", ".join(f"{quoted(v)} ({n:,} rows)" for v, n in top) if n_distinct <= 25

@@ -1,9 +1,11 @@
 # Bookings Assistant
 
 Ask questions about your Analysis Services cubes in plain English and get the best-fitting chart
-(world map, trend, donut, treemap, heatmap...), a short written answer, and the data. Keep useful
-answers on named dashboards. Admins connect the cubes and set each one up once, answering a few
-plain-language questions so Claude understands your business words.
+(world map, trend, donut, treemap, heatmap...) or exactly the chart you describe, a short written
+answer, and the data. Claude works from one **data layer** that covers every cube, so it picks the
+right cube itself and can combine several cubes in one answer (e.g. sales from Bookings next to
+payments from Booking Payments, per customer). Keep useful answers on named dashboards. Admins
+connect the cubes and build the data layer once after installing.
 
 The app has two modes and picks one automatically:
 
@@ -14,8 +16,13 @@ The app has two modes and picks one automatically:
 | Needs | ADOMD.NET + server login | Nothing extra |
 
 ```
-Your question  ->  Claude writes a query  ->  runs against the live model or local files
-               ->  results saved as CSV   ->  Claude picks a chart + writes the answer
+Data layer (built once): every cube's structure + values -> Claude's profile of each cube
+                         -> shared dimensions (customer, supplier, hotel...) measured on the values
+
+Your question  ->  Claude reads the data layer, checks values, writes a plan:
+                   one query per cube (+ SQL joining them when several cubes are needed)
+               ->  runs on the live cubes or local files  ->  results saved as CSV
+               ->  Claude picks a chart (or draws the one you described) + writes the answer
 ```
 
 Queries are read-only: nothing is ever changed in the model or the files.
@@ -69,7 +76,8 @@ create a key) and the server details you use in Power BI or Excel.
 3. **In the app, open Settings** (menu › Admin), create an admin password, then enter:
    - the **Claude API key**, and click **Test Claude**,
    - the **server**, **username** and **password** you use in Power BI/Excel, and click **Test server**.
-4. **Open Cubes** (menu › Admin): tick the cubes people should use, then set each one up (below).
+4. **Open Cubes** (menu › Admin): tick the cubes people should use (or **Use all cubes**), then click
+   **Build the data layer** (once; about a minute per cube). Or run `python build_layer.py --all`.
 
 Run `setup.bat` again at any time to repair or update the installation; your settings are kept.
 If the connection test fails with every setting, `python test_connection.py` (in the folder,
@@ -87,14 +95,43 @@ before you share the app link. Only admins can change keys and the glossary.
 - Forgot the admin password? Run `python reset_admin_password.py`, then create a new one.
   Saved keys and passwords are kept.
 
-## Cubes page: connect and set up cubes (admins)
+## The data layer (built once)
+
+Before Claude answers anything it reads **one layer that describes all the data**, built once after
+installing (Cubes page › **Build the data layer**, or `python build_layer.py --all` in the app folder).
+It follows the usual layering of a semantic model:
+
+1. **Physical layer** - every cube's exact measures, columns and helper columns, and every value of every
+   text column with how much data it has (`models/<cube>/schema.md`, `value_index.json`).
+2. **Semantic layer** (`models/data_layer/layer.json`) - for each cube, Claude's profile: what it is for,
+   its grain (what one row is), its measures with business names, synonyms, units and whether they can be
+   added up, what each date means, the business entity of each dimension (customer, supplier, hotel...)
+   and common filters. Across cubes: the **shared dimensions** (a bus matrix) with the join column in
+   each cube, chosen from how well their **values actually match** (measured, not guessed from names),
+   and which cube to use for which topic. Every name in it is checked against the real cube.
+3. **Catalog** (`models/data_layer/catalog.md`) - the layer written for Claude and given with every
+   question; Claude opens a cube's exact details when it writes that cube's query.
+
+Each cube is a separate Analysis Services database, so a question that needs two cubes becomes one
+DAX query per cube, run in parallel and joined in memory on a shared dimension (aggregated to the same
+grain first, full outer join so nothing is dropped, ratios computed after the join). The query box
+under each answer shows every step and the joining SQL.
+
+Run it again after cubes change: the Cubes page says which cubes are new or changed, and **Update new
+and changed cubes** only asks Claude about those. The layer is built with `CLAUDE_LAYER_MODEL`
+(default `claude-opus-5-5`); questions use `CLAUDE_MODEL`.
+
+## Cubes page: connect cubes and build the data layer (admins)
 
 **Connected cubes:** the page lists every cube on the server your login can open; tick the ones
 people should use. Each connected cube appears in the **Data** picker in Chat and the Glossary.
 
-**Set up a cube** (once per cube, about 5 minutes):
+**Data layer:** build it once (see above); the page shows when it was built, which cubes are in it,
+and what Claude knows (shared dimensions, which cube for what, the catalog).
+
+**Business words of a cube** (optional, once per cube, about 5 minutes):
 1. **Read the structure and values** - every measure, column and value, with how much data each has
-   (about a minute). Do it again after the cube changes.
+   (about a minute; building the data layer does this for every cube).
 2. **Map the business words** - Claude works out what words like *bookings*, *sales*, *destination*
    or *valid bookings* mean in this cube.
 3. **Answer a few questions** in plain words, e.g. *"When you ask for bookings in March, which date
@@ -123,15 +160,24 @@ Mac: run `bash run_app.sh` in Terminal. Your browser opens at http://localhost:8
 
 Every dashboard is listed under **Dashboards** in the menu. Headline numbers at the top (with the
 change vs the same period last year), then charts. A dashboard can mix charts from different cubes.
-Pick a **Period** (last 7 days, this month, last month, this year, last 12 months or a custom range)
-and every chart follows it. **Refresh** gets the latest numbers; it never uses Claude, it just
+Pick the **period** three ways, and every chart follows it:
+- **Quick** - last 7 days, this week, last week, this month, last month, this year, last 12 months;
+- **Calendar** - any first and last day on a regular calendar;
+- **Week** - a year and week numbers (ISO 8601: weeks start on Monday, week 1 holds the year's first
+  Thursday), e.g. *W42 · 12 Oct – 18 Oct*. The dates and week numbers of the period are shown under it.
+
+Headline numbers compare with the same period last year; for weeks, with the same week numbers. **Refresh** gets the latest numbers; it never uses Claude, it just
 re-runs the saved queries.
 
 Admins (signed in with the admin password) use the **⋯** menus:
 - next to Refresh: **Add chart** (describe it in plain English), **New dashboard**, **Rename**,
   **Delete dashboard**;
 - on each chart: **Edit** (title, chart type, size, which date the period applies to, the question
-  or the query), **Send to another dashboard** (copy or move), **Move earlier/later**, **Delete**.
+  or the query), **Change how it looks** (describe any chart), **Send to another dashboard** (copy or
+  move), **Move earlier/later**, **Delete**.
+
+A chart can use **All data** (Claude picks and combines cubes; each cube's main date follows the period).
+Chart type **Custom** draws the chart you describe in words (see Chat).
 
 An empty dashboard offers **Create suggested charts** from a set-up cube. Dashboards are saved in
 `dashboards.json`.
@@ -143,12 +189,19 @@ always pick another type when editing a chart.
 
 ### Chat
 
-Pick the cube in the sidebar (**Data**), then type a question or click one of the suggested
-questions, e.g.:
+**Data** in the sidebar is **All data** (Claude picks the cubes, and joins them when needed) or one cube.
+Type a question or click one of the suggested questions, e.g.:
 - *Bookings by month for 2026*
 - *Top 10 destinations by revenue this year*
 - *Compare this month with the same month last year by channel*
+- *Sales and payments by customer this year* (two cubes, joined on the customer)
 - Follow-ups work: *now only for Spain*, *show it as a table*
+
+**Dynamic charts:** ask for any chart in your own words - *as a funnel*, *sales as bars and profit % as
+a line on a second axis*, *stacked area by channel as percentages*, *a sunburst of region and country*,
+*a waterfall*... Claude writes a chart description (a Plotly figure pointing at the result's columns);
+the app checks it and draws it - nothing is executed. A follow-up that only changes the chart reuses the
+data, and **Change chart** under any answer redraws it. Described charts can go on dashboards too.
 
 Claude first shows **"I understood your question as: ..."** (the exact measure, dates and
 filters) so you can check it. If the question is too unclear to answer, it asks you instead,
@@ -171,6 +224,12 @@ Claude wrote (DAX in live mode, SQL in local mode), so you can check it.
 Every answer is saved automatically:
 - `data/results/` - one CSV per question
 - `data/history.jsonl` - question, DAX, and summary log (also shown in the sidebar)
+
+### Signed in or not
+
+A bar at the top of every page says whether you are **signed in as admin** (green, with Sign out) or
+**not signed in** (amber: view only, with Sign in). Admin pages show a lock in the menu until you sign
+in. Signing in lasts until the browser tab is closed or reloaded.
 
 ## Scheduled pulls (optional, Windows live mode)
 
@@ -203,7 +262,13 @@ You can point Excel or Power BI at those CSVs, or ask the app new questions any 
 
 | File | What it does |
 |---|---|
-| `app.py` | The web app's menu: Dashboards, Ask (Chat, Glossary), Admin (Cubes, Settings) |
+| `app.py` | The web app's menu: Dashboards, Ask (Chat, Glossary), Admin (Cubes, Settings), and the signed-in bar |
+| `data_layer.py` | The data layer: reads every cube, Claude's profile of each, shared dimensions measured on the values, the catalog |
+| `build_layer.py` | Builds the data layer from the command line (`--all` connects every cube first, `--update` only changed cubes) |
+| `answering.py` | Answers a question from the data layer: plan, check values, run, retry once (Chat and dashboards) |
+| `plans.py` | Query plans: one query per cube, run in parallel, joined in memory with SQL |
+| `dynamic_chart.py` | Charts described in words: checks Claude's chart description and draws it |
+| `periods.py` | Dashboard periods: quick choices, calendar dates, ISO week numbers |
 | `dashboard_view.py` | A dashboard page (each dashboard is a page in the menu) |
 | `views/` | The Chat, Glossary, Cubes and Settings pages |
 | `cubes.py` | Which cubes are connected, and each cube's folder in `models/` |
@@ -212,7 +277,8 @@ You can point Excel or Power BI at those CSVs, or ask the app new questions any 
 | `dashboards.py` | Dashboards: saved charts (each with its cube), periods, running and building charts |
 | `ui.py` | Small pieces of UI shared by the pages, and the Apple-like styling |
 | `value_index.py` | Local index of every value in the data (built on Refresh data structure) |
-| `data_tools.py` | Read-only tools Claude uses to check the data before writing a query |
+| `data_tools.py` | Read-only tools Claude uses before writing a plan: a cube's details, finding values in every cube, test-running a query |
+| `tests/` | Automated tests (`python -m pytest`; `RUN_LIVE=1` adds tests on the live server and Claude) |
 | `value_check.py` | Checks the values a query filters on against the real data before it runs |
 | `secrets_store.py` | Saves keys and passwords from the Settings page in Windows Credential Manager |
 | `admin.py` | Admin sign-in for Settings and glossary editing |
@@ -234,4 +300,18 @@ You can point Excel or Power BI at those CSVs, or ask the app new questions any 
 | `setup.sh` / `run_app.sh` | Mac setup and start |
 | `.env` | Your settings and API key (keep private, don't share or email it; delete it before sending the folder to someone) |
 | `business_notes.example.md` | Template for each cube's notes (`models/<cube>/notes.md`) |
+| `requirements-dev.txt` | Libraries for running the tests |
 | `.gitignore` | Keeps secrets and company data (`.env`, `models/`, `dashboards.json`, results) out of Git |
+
+## Tests
+
+```
+.venv\Scripts\activate
+pip install -r requirements-dev.txt
+python -m pytest
+```
+
+The tests run on small made-up files in a temporary folder (your `models/`, dashboards and data are not
+touched) and a scripted stand-in for Claude, so they are free and take seconds. With `RUN_LIVE=1` set,
+`tests/test_live.py` also asks real questions on the live server with the real Claude API (this costs
+a little and needs the data layer to be built).

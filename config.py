@@ -52,6 +52,9 @@ def stored_secret(name: str) -> str:
 _env_api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
 ANTHROPIC_API_KEY = stored_secret("anthropic_api_key") or ("" if _env_api_key == "sk-ant-..." else _env_api_key)
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-5-5")
+# Model for building the data layer (once, after installation): it studies every cube, so it
+# gets the most capable model; questions use CLAUDE_MODEL.
+CLAUDE_LAYER_MODEL = os.getenv("CLAUDE_LAYER_MODEL", "claude-opus-5-5")
 
 # Safety limit on rows pulled per question
 MAX_ROWS = int(os.getenv("MAX_ROWS", "5000"))
@@ -59,7 +62,7 @@ MAX_ROWS = int(os.getenv("MAX_ROWS", "5000"))
 # Files. Each cube has its own folder in models/ (structure, value index, glossary, notes, setup);
 # see cubes.py. The single files below are from before several cubes were supported and are
 # moved into the cube's folder the first time the app starts.
-MODELS_DIR = BASE_DIR / "models"
+MODELS_DIR = BASE_DIR / "models"                # per cube folders, and data_layer/ (see data_layer.py)
 DASHBOARDS_FILE = BASE_DIR / "dashboards.json"  # all dashboards and their charts
 NOTES_TEMPLATE = BASE_DIR / "business_notes.example.md"
 SCHEMA_FILE = BASE_DIR / "schema.md"            # (old) live model structure

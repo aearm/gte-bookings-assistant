@@ -139,13 +139,3 @@ def check(query: str, language: str, schema_text: str, backend) -> CheckResult:
 
 class ValueProblem(RuntimeError):
     """A query filters on a value that is not in the data (message is written for users)."""
-
-
-def require_real_values(result: CheckResult) -> str:
-    """The checked query, or raises ValueProblem naming the first value that doesn't exist."""
-    if result.problems:
-        p = result.problems[0]
-        hint = f" Real values include: {', '.join(p.suggestions)}." if p.suggestions else ""
-        raise ValueProblem(f'"{p.value}" isn\'t a value of {column_label(p.column)}.{hint} '
-                           "Change the question to use a real value.")
-    return result.query

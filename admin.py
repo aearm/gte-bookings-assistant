@@ -1,5 +1,6 @@
 """Admin sign-in for the Settings page and glossary editing. The admin password is stored
-only as a salted hash in Windows Credential Manager."""
+only as a salted hash in Windows Credential Manager. Whether you are signed in is shown at the
+top of every page (ui.auth_bar)."""
 import time
 
 import streamlit as st
@@ -9,6 +10,10 @@ import secrets_store
 
 def signed_in() -> bool:
     return st.session_state.get("admin", False)
+
+
+def sign_out() -> None:
+    st.session_state.admin = False
 
 
 def sign_in_form(scope: str = "app") -> bool:
@@ -43,3 +48,20 @@ def sign_in_form(scope: str = "app") -> bool:
             time.sleep(1)  # slows down guessing
             st.error("That password isn't right. (Forgotten it? Run reset_admin_password.py on the server.)")
     return False
+
+
+@st.dialog("Sign in as admin")
+def sign_in_dialog():
+    if sign_in_form(scope="fragment"):
+        st.success("You're signed in as admin.", icon=":material/verified_user:")
+        if st.button("Continue", type="primary"):
+            st.rerun()
+
+
+def locked_page(what: str) -> None:
+    """The panel an admin page shows when nobody is signed in, then stops the page."""
+    with st.container(key="panel_locked"):
+        st.markdown("#### :material/lock: You're not signed in")
+        st.caption(f"{what} is for admins. Sign in with the admin password to continue.")
+        sign_in_form()
+    st.stop()

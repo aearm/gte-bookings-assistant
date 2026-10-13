@@ -1,8 +1,11 @@
 """Small pieces of UI shared by the pages, and the Apple-like styling."""
 import streamlit as st
 
+import admin
 import cubes
 import dashboards
+import data_layer
+import periods
 from backends import get_backend
 from errors import details, friendly
 
@@ -39,18 +42,25 @@ def table(df, height=None) -> None:
 
 # ---------------------------------------------------------------- pickers --
 
-def cube_picker(key: str = "cube", label: str = "Data", container=None) -> str:
-    """Pick one of the connected cubes. The choice is shared by Chat and the Glossary."""
+ALL_DATA = "__all__"  # picker value for "All data": Claude picks the cubes from the data layer
+
+
+def cube_picker(key: str = "cube", label: str = "Data", container=None, allow_all: bool = False) -> str:
+    """Pick one of the connected cubes, or (allow_all) all the data. The choice is shared by Chat
+    and the Glossary. Returns the cube, "" for all the data, or None when nothing is connected."""
     names = cubes.enabled()
     if not names:
-        return ""
-    if st.session_state.get("cube") not in names:
-        st.session_state.cube = names[0]
+        return None
+    options = ([ALL_DATA] if allow_all and data_layer.is_built() else []) + names
+    current = st.session_state.get("cube")
+    if current not in options:
+        current = options[0]
     where = container or st
-    chosen = where.selectbox(label, names, index=names.index(st.session_state.cube), key=f"pick_{key}",
-                             format_func=cubes.label)
+    chosen = where.selectbox(label, options, index=options.index(current), key=f"pick_{key}",
+                             format_func=lambda c: "All data (Claude picks the cubes)" if c == ALL_DATA
+                             else data_layer.cube_label(c))
     st.session_state.cube = chosen
-    return chosen
+    return "" if chosen == ALL_DATA else chosen
 
 
 def dashboard_picker(key: str, exclude: str = "") -> str:
@@ -71,14 +81,16 @@ def dashboard_link(board_id: str) -> None:
 
 
 def date_column_picker(cube: str, value: str | None, key: str) -> str:
-    cols = dashboards.date_columns(schema_text(cube))
+    """Which date the dashboard's period filters. cube "" = a chart that may combine cubes."""
+    cols = dashboards.date_columns(schema_text(cube)) if cube else [dashboards.AUTO_DATE]
     options = cols + [""]
     if value not in options:
         value = dashboards.default_date_column(cols, cube)
     return st.selectbox(
         "The dashboard's dates apply to", options, index=options.index(value), key=key,
         format_func=lambda c: dashboards.date_label(c) if c else "Nothing (always show all dates)",
-        help="Which date the period picked on the dashboard filters, e.g. when the booking was made.")
+        help="Which date the period picked on the dashboard filters, e.g. when the booking was made. "
+             "A chart that combines cubes uses each cube's main date.")
 
 
 def chart_type_picker(value: str, key: str, allow_auto: bool = True) -> str:
@@ -88,15 +100,41 @@ def chart_type_picker(value: str, key: str, allow_auto: bool = True) -> str:
                         format_func=dashboards.TYPE_LABELS.get, key=key)
 
 
+def chart_request_input(value: str, key: str) -> str:
+    return st.text_area("Describe the chart", value=value, key=key,
+                        placeholder="e.g. bars for sales by month with a line for profit % on a second axis",
+                        help="Any chart Plotly can draw: combos, two axes, stacked percentages, funnels, "
+                             "sunbursts, waterfalls... Claude draws it from the chart's data.")
+
+
 def width_picker(value: str, key: str) -> str:
     return st.radio("Size", ["half", "full"], index=1 if value == "full" else 0, horizontal=True, key=key,
                     format_func=lambda w: "Half width" if w == "half" else "Full width")
 
 
 def dashboard_period() -> tuple:
-    """The period currently picked on the dashboards (This year if none has been opened)."""
-    return dashboards.period_range(st.session_state.get("dash_period", "This year"),
-                                   st.session_state.get("dash_custom_range"))
+    """The period currently picked on the dashboards (this year if none has been picked)."""
+    return st.session_state.get("dash_range") or periods.preset_range(periods.DEFAULT_PRESET)
+
+
+# ---------------------------------------------------------------- signed in or not --
+
+def auth_bar() -> None:
+    """A bar at the top of every page that says plainly whether you are signed in as admin."""
+    with st.container(key="authbar_in" if admin.signed_in() else "authbar_out"):
+        text_col, button_col = st.columns([5, 1], vertical_alignment="center")
+        if admin.signed_in():
+            text_col.markdown(":material/verified_user: **Signed in as admin** · you can edit dashboards, "
+                              "cubes, the glossary and settings")
+            if button_col.button("Sign out", icon=":material/logout:", key="authbar_signout", width="stretch"):
+                admin.sign_out()
+                st.rerun()
+        else:
+            text_col.markdown(":material/lock: **Not signed in** · view only. Dashboards and Chat work; "
+                              "editing needs the admin password")
+            if button_col.button("Sign in", icon=":material/login:", key="authbar_signin", type="primary",
+                                 width="stretch"):
+                admin.sign_in_dialog()
 
 
 # ---------------------------------------------------------------- Apple-like styling --
@@ -130,4 +168,10 @@ header[data-testid="stHeader"] {{ background: {header}; backdrop-filter: saturat
 [data-testid="stExpander"] details {{ border-radius: 14px; }}
 [class*="st-key-card_"] [data-testid="stPopover"] button {{ padding: 0 .55rem; min-height: 1.9rem; }}
 [class*="st-key-card_"] [data-testid="stPopover"] button [data-testid="stIconMaterial"] {{ display: none; }}
+.st-key-authbar_out, .st-key-authbar_in {{ border-radius: 14px; padding: 6px 10px 6px 16px; }}
+.st-key-authbar_out {{ background: {"rgba(255,159,10,.16)" if dark else "#fff4e0"};
+    border: 1px solid {"rgba(255,159,10,.45)" if dark else "#ffd391"}; }}
+.st-key-authbar_in {{ background: {"rgba(48,209,88,.14)" if dark else "#e9f8ee"};
+    border: 1px solid {"rgba(48,209,88,.40)" if dark else "#a6e3b8"}; }}
+.st-key-authbar_out p, .st-key-authbar_in p {{ margin: 0; }}
 </style>""", unsafe_allow_html=True)
