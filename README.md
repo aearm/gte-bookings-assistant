@@ -156,6 +156,19 @@ If something goes wrong, the app shows a plain-English message; the technical te
 Windows: double-click the **Bookings Assistant** desktop shortcut (or **`run_app.bat`**).
 Mac: run `bash run_app.sh` in Terminal. Your browser opens at http://localhost:8501.
 
+### Start automatically with Windows
+
+Double-click **`autostart.bat`** (setup offers it too). The app then starts in the background, without a
+window, whenever you sign in to Windows, and restarts by itself if it stops. Open http://localhost:8501 (the
+desktop shortcut just opens the browser when it's already running). Its messages go to `data\app.log`.
+- **On a server nobody signs in to** (e.g. after Windows updates restart it): run
+  `autostart.bat -AtStartup` instead. It starts when the computer starts, before anyone signs in;
+  Windows asks for your account password once to store it with the task (the app needs your account
+  because the keys and passwords are in your Credential Manager).
+- After updating the app's code, restart it: `autostart.bat` again (or Task Scheduler › Bookings
+  Assistant › End, then Run).
+- To stop starting automatically: `autostart.bat -Remove`.
+
 ### Dashboards (open first)
 
 Every dashboard is listed under **Dashboards** in the menu. Headline numbers at the top (with the
@@ -311,6 +324,8 @@ You can point Excel or Power BI at those CSVs, or ask the app new questions any 
 | `get_adomd.py` | Backup way to get ADOMD.NET without the installer |
 | `set_password.py` | Saves your server password securely in Windows Credential Manager |
 | `setup.bat` / `run_app.bat` | Windows setup (runs `setup_windows.ps1`) and start |
+| `autostart.bat` / `install_autostart.ps1` | Start the app automatically with Windows, in the background (Task Scheduler) |
+| `start_server.py` | Runs the app in the background without a window (what Windows starts); log in `data/app.log` |
 | `setup.sh` / `run_app.sh` | Mac setup and start |
 | `.env` | Your settings and API key (keep private, don't share or email it; delete it before sending the folder to someone) |
 | `business_notes.example.md` | Template for each cube's notes (`models/<cube>/notes.md`) |

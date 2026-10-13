@@ -135,6 +135,12 @@ Write-Host "then enter the Claude API key and the bookings server details. Final
 Write-Host "tick the cubes and click 'Build the data layer' (once; or run: python build_layer.py --all)."
 Write-Host "Later, start the app with the 'Bookings Assistant' shortcut on the desktop."
 if (-not $NoStart) {
-    $answer = Read-Host "`nStart the app now? (Y/n)"
-    if ($answer -notmatch "^[nN]") { Start-Process (Join-Path $PSScriptRoot "run_app.bat") -WorkingDirectory $PSScriptRoot }
+    $auto = Read-Host "`nStart the app automatically (in the background) whenever you sign in to Windows? (Y/n)"
+    if ($auto -notmatch "^[nN]") {
+        & (Join-Path $PSScriptRoot "install_autostart.ps1")
+        Start-Process "http://localhost:8501"
+    } else {
+        $answer = Read-Host "Start the app now? (Y/n)"
+        if ($answer -notmatch "^[nN]") { Start-Process (Join-Path $PSScriptRoot "run_app.bat") -WorkingDirectory $PSScriptRoot }
+    }
 }

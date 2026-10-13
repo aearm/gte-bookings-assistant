@@ -21,3 +21,4 @@ data/value_index.json
 models/
 dashboards.json
 dashboard.json.bak
+data/app*.log
