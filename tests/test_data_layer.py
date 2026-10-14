@@ -137,7 +137,7 @@ def build_local_layer(monkeypatch):
 
 def test_build_in_local_mode(app_dirs, monkeypatch):
     layer, calls = build_local_layer(monkeypatch)
-    assert calls == [("submit_profile", {"model": data_layer.config.CLAUDE_LAYER_MODEL, "effort": "high",
+    assert calls == [("submit_profile", {"purpose": "profile", "model": data_layer.config.CLAUDE_LAYER_MODEL, "effort": "high",
                                          "max_tokens": 48000})]
     assert list(layer["cubes"]) == [cubes.LOCAL] and layer["language"] == "SQL"
     assert data_layer.LAYER_FILE.exists() and data_layer.CATALOG_FILE.exists()

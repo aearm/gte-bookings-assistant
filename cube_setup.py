@@ -117,7 +117,7 @@ def draft(cube: str) -> dict:
     known = "\n".join(f"- {r['Term']}: {r['Meaning']} ({r['Measure']})" for r in agreed) or "(none yet)"
     system = [{"type": "text", "text": INSTRUCTIONS}]
     user = f"Already agreed (don't ask again):\n{known}\n\n{schema}"
-    result = llm._structured_call(system, MAP_TOOL, user)
+    result = llm._structured_call(system, MAP_TOOL, user, purpose="setup")
 
     items, questions = [], 0
     for item in result.get("items", []):

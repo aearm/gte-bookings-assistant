@@ -157,7 +157,7 @@ def profile_cube(cube: str, schema_text: str, language: str) -> dict:
     user = f"Cube: {cube}\nQuery language: {language}\n\n{schema_text}"
     if notes.strip():
         user += "\n\n## Notes and agreed meanings from the business\n" + notes
-    profile = llm._structured_call([{"type": "text", "text": PROFILE_RULES}], PROFILE_TOOL, user,
+    profile = llm._structured_call([{"type": "text", "text": PROFILE_RULES}], PROFILE_TOOL, user, purpose="profile",
                                    model=config.CLAUDE_LAYER_MODEL, effort="high", max_tokens=48000)
     return _clean_profile(profile, schema_text, language)
 
@@ -351,7 +351,7 @@ def conform(profiles: dict[str, dict], members: dict, links: list[dict]) -> dict
         for x in links:
             lines.append(f"- {x['a']['cube']} {x['a']['column']} ~ {x['b']['cube']} {x['b']['column']}: "
                          f"{x['shared']:,} shared values ({x['of_smaller']:.0%})")
-    result = llm._structured_call([{"type": "text", "text": CONFORM_RULES}], CONFORM_TOOL, "\n".join(lines),
+    result = llm._structured_call([{"type": "text", "text": CONFORM_RULES}], CONFORM_TOOL, "\n".join(lines), purpose="conform",
                                   model=config.CLAUDE_LAYER_MODEL, effort="high", max_tokens=48000)
     return _clean_conform(result, profiles)
 
@@ -504,6 +504,23 @@ def catalog_text(layer: dict | None = None, only: list[str] | None = None) -> st
     if shared:
         lines += ["", "## Shared dimensions (join keys across cubes)"] + shared
     return "\n".join(lines) + "\n"
+
+
+_measure_words = {"key": None, "words": set()}
+
+
+def is_measure_word(phrase: str) -> bool:
+    """True when the phrase names a number in some cube ("sales", "bookings", "room nights")."""
+    layer = load()
+    if _measure_words["key"] != layer.get("built"):
+        words = set()
+        for p in layer.get("cubes", {}).values():
+            for m in p.get("measures", []):
+                for w in [m.get("label", "")] + list(m.get("synonyms", [])) + [m.get("name", "").strip("[]")]:
+                    if w:
+                        words.add(" ".join(w.lower().split()))
+        _measure_words.update(key=layer.get("built"), words=words)
+    return " ".join(phrase.lower().split()) in _measure_words["words"]
 
 
 def measure_notes(cube_names: list[str], query: str) -> str:

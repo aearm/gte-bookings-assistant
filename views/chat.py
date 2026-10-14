@@ -6,12 +6,14 @@ Any chart can be sent to any dashboard (hover over it)."""
 import streamlit as st
 
 import admin
+import answer_memory
 import answering
 import config
 import cube_setup
 import dashboards
 import data_layer
 import llm
+import routing
 import storage
 import ui
 from backends import get_backend
@@ -44,35 +46,33 @@ def answer(question: str, context: list[dict], clarification: tuple[str, str] | 
     """Question -> understanding (or a clarifying question) -> plan -> data -> chart."""
     turn = {"question": shown_as or question, "scope": scope_key}
     with st.status("Working on it...", expanded=False) as status:
-        outcome = answering.answer(question, scope, context, clarification, on_step=status.write)
+        def show_data(df):
+            status.update(label="Got the data - drawing the chart...", expanded=True)
+            status.dataframe(df.head(200), hide_index=True, height=min(300, 38 + 35 * min(len(df), 200)))
+
+        outcome = answering.ask(question, scope, context, clarification, on_step=status.write, on_data=show_data)
         turn["understanding"] = outcome.result.get("understanding", "")
         if outcome.kind == "clarify":
             turn["clarify"] = {"original": question, "question": outcome.question, "options": outcome.options}
             status.update(label="I need a bit more detail", state="complete")
             return turn
-        request = outcome.result.get("chart_request", "")
         if outcome.kind == "reuse":  # same data, shown differently
             previous = context[-1]
-            turn.update({k: previous[k] for k in ("query", "plan", "cubes", "explanation", "df", "notes")
-                         if k in previous})
-            status.write("Drawing the chart you asked for")
-            turn["spec"] = llm.describe_result(question, turn["df"], chart_request=request or question,
-                                               **chart_context(turn))
-            status.update(label="Done", state="complete")
-            return turn
-        df = outcome.df
-        turn.update(query=outcome.plan.text(), plan=outcome.plan.to_dict(), cubes=outcome.plan.cubes,
-                    explanation=outcome.result.get("explanation", ""), df=df, notes=outcome.notes)
-        if df.empty:
-            turn["spec"] = {"chart_type": "table", "title": "No results",
-                            "summary": "The query ran but returned no rows. " + (
-                                " ".join(outcome.notes) or "Try widening the filters or dates.")}
+            turn.update({k: previous[k] for k in ("query", "plan", "cubes", "explanation", "notes") if k in previous})
         else:
-            status.write("Drawing the chart you asked for" if request else "Choosing the best chart")
-            turn["spec"] = llm.describe_result(question, df, chart_request=request, **chart_context(turn))
-        turn["file"] = storage.save_result(turn["question"], turn["query"], df, turn["spec"])
+            turn.update(query=outcome.plan.text(), plan=outcome.plan.to_dict(), cubes=outcome.plan.cubes,
+                        explanation=outcome.result.get("explanation", ""), notes=outcome.notes)
+        turn.update(df=outcome.df, spec=outcome.spec, answer_id=outcome.answer_id)
+        if outcome.kind == "data":
+            turn["file"] = storage.save_result(turn["question"], turn["query"], outcome.df, turn["spec"])
         status.update(label="Done", state="complete")
     return turn
+
+
+@st.dialog("What Claude can see", width="large")
+def show_text(title: str, text: str):
+    st.caption(title)
+    st.markdown(text)
 
 
 def chart_context(turn: dict) -> dict:
@@ -179,6 +179,14 @@ def show_turn(i: int, turn: dict) -> None:
                     add_to_dashboard(i)
                 if restyle_col.button("Change chart", icon=":material/palette:", key=f"restyle_{i}"):
                     restyle(i)
+        if turn.get("answer_id") and admin.signed_in():
+            if turn.get("verified"):
+                st.caption(":material/verified: Marked as correct: Claude follows it for similar questions.")
+            elif st.button("Mark as correct", icon=":material/verified:", key=f"verify_{i}", type="tertiary",
+                           help="Claude uses answers marked correct as examples for similar questions"):
+                answer_memory.verify(turn["answer_id"])
+                turn["verified"] = True
+                st.rerun()
         with st.expander(f"Data ({len(df)} rows)"):
             ui.table(df, spec)
             st.download_button("Download CSV", df.to_csv(index=False).encode("utf-8"),
@@ -212,15 +220,15 @@ with st.sidebar:
         st.caption(backend.label)
         if backend.schema_file.exists():
             st.caption(f":material/check_circle: Ready · {cube_setup.status_label(scope)}")
-            with st.expander("What Claude can see"):
-                st.markdown(backend.schema_text())
+            if st.button("What Claude can see", icon=":material/visibility:", type="tertiary", key="see_cube"):
+                show_text("What Claude can see", backend.schema_text())
         else:
             st.warning(st.session_state.get("schema_error", "This cube isn't set up yet."))
     elif can_answer:
-        layer = data_layer.status()
-        st.caption(f":material/hub: Data layer · {len(layer['cubes'])} cubes · built {layer['built'][:10]}")
-        with st.expander("What Claude can see"):
-            st.markdown(data_layer.catalog_text())
+        built = data_layer.load()
+        st.caption(f":material/hub: Data layer · {len(data_layer.layer_cubes())} cubes · built {built.get('built', '')[:10]}")
+        if st.button("What Claude can see", icon=":material/visibility:", type="tertiary", key="see_layer"):
+            show_text("What Claude reads with every question", routing.cards_text())
     if st.button("Clear conversation", icon=":material/delete_sweep:"):
         st.session_state.turns = []
 

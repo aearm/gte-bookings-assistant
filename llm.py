@@ -3,6 +3,7 @@ several cubes), and results into a chart + short answer. What Claude knows about
 from the data layer (data_layer.py)."""
 import json
 import re
+import time
 
 import anthropic
 import pandas as pd
@@ -10,6 +11,7 @@ import pandas as pd
 import charts
 import config
 import dynamic_chart
+import usage
 
 _client = None
 _client_key = ""
@@ -32,9 +34,18 @@ def check_connection() -> None:
     _get_client().models.retrieve(config.CLAUDE_MODEL)
 
 
-def _create(**kwargs):
-    """One request (streamed, so long answers don't time out). If the model declines on safety
-    grounds, the API re-runs the request on Anthropic's recommended fallback model."""
+def _create(purpose: str = "", **kwargs):
+    """One request (streamed, so long answers don't time out), recorded in usage (tokens, cache,
+    seconds, cost) under its purpose. If the model declines on safety grounds, the API re-runs the
+    request on Anthropic's recommended fallback model."""
+    started = time.perf_counter()
+    response = _send(**kwargs)
+    usage.record_call(purpose, getattr(response, "model", "") or kwargs["model"], getattr(response, "usage", None),
+                      time.perf_counter() - started)
+    return response
+
+
+def _send(**kwargs):
     global _fallbacks_ok
     client = _get_client()
     if _fallbacks_ok and kwargs["model"] in FALLBACK_MODELS:
@@ -91,17 +102,17 @@ SQL_RULES = """Rules for SQL queries (DuckDB dialect, local data files):
 - Dates: use DATE 'YYYY-MM-DD' literals, not current_date.
 - Use the listed example values to match filters exactly (e.g. country or status spellings)."""
 
-PLAN_RULES = """You answer business questions about a travel company's data. The data layer below
-describes every cube: what it is for, its grain, its measures (with business names), what each date
-means, its dimensions, and the shared dimensions that link cubes. Today's date is TODAY_DATE; use it
-for "this year", "last month" and so on.
+PLAN_RULES = """You answer business questions about a travel company's data. The index cards below
+describe every cube in a few lines (what it is for, its main measures, dates and dimensions) and which
+cubes share dimensions. With the question you get the full details of the cubes most likely needed,
+the join path between them, and the values of the question already found in the data. Today's date is
+TODAY_DATE; use it for "this year", "last month" and so on.
 
 How to answer:
-1. Pick the cube(s) that hold the numbers asked for, using the data layer (which cube for what,
-   business names and synonyms of the measures). Prefer ONE cube; use several only when the
-   numbers asked for live in different cubes.
-2. Read the details (exact names, helper columns, values) of every cube you use with
-   get_cube_details before writing its query, unless they are already given below.
+1. Use the cube(s) given in full with the question when they hold the numbers asked for. Prefer ONE
+   cube; use several only when the numbers asked for live in different cubes.
+2. Write queries only against cubes whose full details you have. If another cube fits better, read its
+   details first with get_cube_details.
 3. Write the plan:
    - steps: one query per cube: name (short, lowercase letters and _, used as a table name in
      combine_sql), cube (exact cube name from the data layer), query.
@@ -142,8 +153,9 @@ Answering:
   differently (another chart, order, colours) and needs no new data; then leave steps empty.
 - If earlier questions are given, treat the new question as a follow-up to them."""
 
-CHECK_RULES = """Before writing the queries, check the data with your tools (at most MAX_ROUNDS rounds of checks):
-- For every word or name in the question that refers to a value (a status, market, country, channel,
+CHECK_RULES = """Check the data with your tools only where needed (at most MAX_ROUNDS rounds of checks):
+- Values of the question already found in the data are listed with it: use them, don't look them up
+  again. For any other word or name that refers to a value (a status, market, country, channel,
   customer, supplier, product...), call find_values to see which cubes and columns contain it, the
   exact value and how much data it has. Look up several words in the same turn.
 - If a phrase matches values in more than one column with different meanings (e.g. a market and a
@@ -290,9 +302,9 @@ and write custom_chart: a JSON object {"prepare": {...}, "traces": [...], "layou
 MAX_CHECK_ROUNDS = 6  # rounds of data checks (tool calls) before Claude must answer
 
 
-def _structured_call(system: list, tool: dict, user_text: str, tools: list | None = None,
+def _structured_call(system: list, tool: dict, user_text: str | list, tools: list | None = None,
                      run_tool=None, on_step=None, model: str | None = None, effort: str | None = None,
-                     max_tokens: int = 16000) -> dict:
+                     max_tokens: int = 16000, purpose: str = "") -> dict:
     """Ask Claude for JSON matching the tool's schema (structured outputs). With tools, Claude may
     first call them (e.g. to look up values); run_tool(name, input) answers each call."""
     schema = {**tool["input_schema"], "additionalProperties": False}
@@ -307,6 +319,7 @@ def _structured_call(system: list, tool: dict, user_text: str, tools: list | Non
             if check_round == MAX_CHECK_ROUNDS:
                 extra["tool_choice"] = {"type": "none"}  # enough checking: answer now
         response = _create(
+            purpose=purpose,
             model=model or config.CLAUDE_MODEL,
             max_tokens=max_tokens,  # Claude thinks before answering, and thinking counts toward this limit
             system=system,
@@ -346,26 +359,41 @@ def plan_rules(language: str, today: str) -> str:
     return rules.replace("MAX_ROWS", str(config.MAX_ROWS)).replace("TODAY_DATE", today)
 
 
-def question_to_plan(question: str, catalog: str, details: str, notes: str, today: str, language: str = "DAX",
-                     context: list[dict] | None = None, failed_plan: str | None = None, error: str | None = None,
-                     clarification: tuple[str, str] | None = None, instructions: str = "",
+def question_to_plan(question: str, cards: str, details: list[tuple[str, str]], today: str,
+                     language: str = "DAX", context: list[dict] | None = None, failed_plan: str | None = None,
+                     error: str | None = None, clarification: tuple[str, str] | None = None,
+                     instructions: str = "", hits: str = "", join: str = "", examples: list[dict] | None = None,
                      tools: list | None = None, run_tool=None, on_step=None) -> dict:
-    """The plan for a question: one query per cube (+ the SQL joining them). catalog = the data
-    layer, details = the exact structure of cubes already chosen (e.g. the one the user picked).
+    """The plan for a question: one query per cube (+ the SQL joining them).
+    cards = every cube's index card (always the same, so it stays cached); details = [(cube, full
+    details)] of the cubes picked for this question; hits = values of the question found in the data;
+    join = how the picked cubes join; examples = verified answers to similar questions.
     clarification = (question Claude asked, the user's answer). instructions = extra requirements,
-    e.g. for a dashboard chart. tools + run_tool let Claude check the data first (on_step(name,
-    input) reports each check). A result with needs_clarification or reuse_previous has no steps."""
-    system_text = plan_rules(language, today)
-    if catalog.strip():
-        system_text += "\n\n" + catalog
-    if details.strip():
-        system_text += "\n\n# Details of the cube to use\n" + details
-    if notes.strip():
-        system_text += "\n\n## Business notes from the user\n" + notes
-    # The rules and the data layer are the same every time, so they are cached (cheaper and faster).
-    system = [{"type": "text", "text": system_text, "cache_control": {"type": "ephemeral"}}]
+    e.g. for a dashboard chart. tools + run_tool let Claude check the data (on_step(name, input)
+    reports each check). A result with needs_clarification or reuse_previous has no steps."""
+    # The rules and cards are the same for every question: cached for an hour. A cube's details are
+    # re-read in the same question's later rounds: cached for 5 minutes (cheaper to write).
+    system = [{"type": "text", "text": plan_rules(language, today) + "\n\n" + cards,
+               "cache_control": {"type": "ephemeral", "ttl": "1h"}}]
+    blocks = []
+    for i, (cube, text) in enumerate(details):
+        block = {"type": "text", "text": f"# Full details of the cube \"{cube}\"\n{text}"}
+        if i < 2:  # at most 4 cache points per request: system, two cubes, and the conversation
+            block["cache_control"] = {"type": "ephemeral"}
+        blocks.append(block)
 
     parts = []
+    if details:
+        parts.append("Cubes picked for this question (full details above): "
+                     + ", ".join(f'"{c}"' for c, _ in details))
+    if join:
+        parts.append("How these cubes join:\n" + join)
+    if hits:
+        parts.append("Values of the question found in the data (cube, column = exact value (amount of data)):\n" + hits)
+    for ex in examples or []:
+        parts.append(f"A similar question answered correctly before (adapt it, including the dates, to today):\n"
+                     f"Question: {ex['question']}\nUnderstood as: {ex['understanding']}\nPlan:\n"
+                     + json.dumps(ex["plan"], ensure_ascii=False)[:3000])
     for prev in (context or [])[-3:]:
         parts.append(f"Earlier question: {prev['question']}\nEarlier plan:\n{prev['query']}")
     parts.append(f"Question: {question}")
@@ -380,7 +408,9 @@ def question_to_plan(question: str, catalog: str, details: str, notes: str, toda
                      "Do not ask for clarification.")
     if tools and run_tool:
         parts.append(CHECK_RULES.replace("MAX_ROUNDS", str(MAX_CHECK_ROUNDS)))
-    result = _structured_call(system, PLAN_TOOL, "\n\n".join(parts), tools, run_tool, on_step)
+    content = lambda: blocks + [{"type": "text", "text": "\n\n".join(parts)}]
+    result = _structured_call(system, PLAN_TOOL, content(), tools, run_tool, on_step,
+                              effort=config.CLAUDE_PLAN_EFFORT, purpose="plan")
     if result.get("needs_clarification") and result.get("clarifying_question") and not failed_plan:
         result["steps"] = []
         return result
@@ -390,7 +420,7 @@ def question_to_plan(question: str, catalog: str, details: str, notes: str, toda
     if not [s for s in result.get("steps", []) if s.get("query", "").strip()]:
         parts.append("You did not return any query. Using what you found, write the plan now "
                      "(needs_clarification false, reuse_previous false).")
-        result = _structured_call(system, PLAN_TOOL, "\n\n".join(parts))
+        result = _structured_call(system, PLAN_TOOL, content(), effort=config.CLAUDE_PLAN_EFFORT, purpose="plan")
     result["needs_clarification"] = False
     result["reuse_previous"] = False
     if language == "DAX":
@@ -474,13 +504,14 @@ def describe_result(question: str, df: pd.DataFrame, chart_request: str = "", qu
                f"\nFrom the shape of the data the best fit looks like: {hint['chart_type']} "
                f"(x={hint['x']!r}, color={hint['color']!r}). Use it unless another chart answers the question better.\n")
             + f"\nFirst rows (CSV):\n{sample}")
-    spec = _structured_call(system, CHART_TOOL, user)
+    model, effort = (config.CLAUDE_MODEL, "low") if chart_request else (config.CLAUDE_FAST_MODEL, "low")
+    spec = _structured_call(system, CHART_TOOL, user, model=model, effort=effort, purpose="chart")
     spec.setdefault("y", [])
     if spec.get("chart_type") == "custom":
         problem = _custom_problem(df, spec)
         if problem:  # one more try, with what went wrong
             spec = _structured_call(system, CHART_TOOL, user + f"\n\nYour custom_chart could not be drawn: {problem}\n"
-                                    "Fix it.")
+                                    "Fix it.", model=model, effort=effort, purpose="chart")
             spec.setdefault("y", [])
             problem = _custom_problem(df, spec) if spec.get("chart_type") == "custom" else ""
         if problem:

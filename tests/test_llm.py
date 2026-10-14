@@ -9,8 +9,9 @@ STEP = {"name": "bookings", "cube": "Bookings", "query": "EVALUATE SUMMARIZECOLU
 
 def ask(fake, monkeypatch, **kwargs):
     monkeypatch.setattr(llm, "_create", fake)
-    args = dict(question="Sales by customer", catalog="# Data layer\nCATALOG", details="", notes="",
-                today="2026-10-13", language="DAX")
+    args = dict(question="Sales by customer", cards="# The data\nCARDS", details=[("Bookings", "BOOKINGS DETAILS")],
+                today="2026-10-13", language="DAX", hits='- "UAE": Bookings Market = "UAE" (12)',
+                join="", examples=[{"question": "Sales by agency", "understanding": "Sales", "plan": {"steps": []}}])
     args.update(kwargs)
     return llm.question_to_plan(**args)
 
@@ -23,11 +24,16 @@ def test_plan_after_checking_values(monkeypatch):
     assert ran == [("find_values", {"text": "UAE", "cube": "", "column": ""})]
     assert result["steps"] == [STEP] and result["needs_clarification"] is False
     system = fake.system_text()
-    assert "CATALOG" in system and "Joining cubes" in system and "2026-10-13" in system
+    assert "CARDS" in system and "Joining cubes" in system and "2026-10-13" in system
     assert "Rules for DAX queries" in system and "TODAY_DATE" not in system and "MAX_ROWS" not in system
-    assert fake.requests[0]["system"][0]["cache_control"] == {"type": "ephemeral"}
+    assert fake.requests[0]["system"][0]["cache_control"] == {"type": "ephemeral", "ttl": "1h"}
+    assert fake.requests[0]["output_config"]["effort"] == "medium"
+    first = fake.requests[0]["messages"][0]["content"]
+    assert first[0]["text"].startswith('# Full details of the cube "Bookings"') and first[0]["cache_control"] == {"type": "ephemeral"}
+    user = fake.user_text()
+    assert "Values of the question found in the data" in user and '"UAE"' in user
+    assert "A similar question answered correctly before" in user and "Check the data with your tools" in user
     assert fake.requests[1]["messages"][-1]["content"][0]["content"] == "UAE found"
-    assert "check the data with your tools" in fake.user_text()
 
 
 def test_clarifying_question_has_no_steps(monkeypatch):
@@ -97,6 +103,7 @@ def test_standard_chart_without_a_request(monkeypatch):
     monkeypatch.setattr(llm, "_create", fake)
     spec = llm.describe_result("Sales by month", DF)
     assert spec["chart_type"] == "line" and "custom" not in spec
+    assert fake.requests[0]["model"] == llm.config.CLAUDE_FAST_MODEL  # a standard chart: the fast model
     assert "Plotly traces" not in fake.system_text()
 
 

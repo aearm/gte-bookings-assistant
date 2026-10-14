@@ -35,7 +35,9 @@ class FakeClaude:
 
     def user_text(self, i: int = 0) -> str:
         content = self.requests[i]["messages"][0]["content"]
-        return content if isinstance(content, str) else json.dumps(content)
+        if isinstance(content, str):
+            return content
+        return "\n".join(b.get("text", "") if isinstance(b, dict) else str(b) for b in content)
 
 
 def plan(steps, combine_sql="", understanding="Understood", chart_request="", **extra):

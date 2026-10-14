@@ -109,8 +109,21 @@ It follows the usual layering of a semantic model:
    and common filters. Across cubes: the **shared dimensions** (a bus matrix) with the join column in
    each cube, chosen from how well their **values actually match** (measured, not guessed from names),
    and which cube to use for which topic. Every name in it is checked against the real cube.
-3. **Catalog** (`models/data_layer/catalog.md`) - the layer written for Claude and given with every
-   question; Claude opens a cube's exact details when it writes that cube's query.
+3. **Index cards and a graph** - a few lines per cube (what it's for, its measures, dates and dimensions:
+   about 7,000 tokens for all 27 cubes) and the links between cubes (shared dimensions, join columns,
+   match quality). This is what Claude reads with every question (`routing.py`).
+
+How a question is answered, quickly and cheaply:
+- **Pick the cubes**: Claude Haiku (fast, cheap) reads the cards and picks the cube(s) the question needs;
+  the words of the question are also looked up as exact values in every cube ("UAE" -> Market = "UAE").
+- **Plan**: Claude Sonnet gets the cards, the picked cubes' full details, how they join, the values found
+  and verified examples - so it rarely needs extra rounds. The cards are cached for an hour, a cube's
+  details for 5 minutes. Planning runs at medium effort (`CLAUDE_PLAN_EFFORT`).
+- **Chart**: standard charts are formatted by Claude Haiku (`CLAUDE_FAST_MODEL`); charts described in words
+  by Claude Sonnet.
+- **Answer memory** (`data/answers.db`): the same question again on the same day reruns its saved plan,
+  with no Claude call (and no chart call when the numbers are unchanged). Admins can **Mark as correct**
+  under an answer; marked answers are given to Claude as examples for similar questions.
 
 Each cube is a separate Analysis Services database, so a question that needs two cubes becomes one
 DAX query per cube, run in parallel and joined in memory on a shared dimension (aggregated to the same
@@ -248,6 +261,13 @@ Every answer is saved automatically:
 - `data/results/` - one CSV per question
 - `data/history.jsonl` - question, DAX, and summary log (also shown in the sidebar)
 
+### Usage (admins)
+
+**Usage** in the Admin menu shows each question's time, cost, Claude calls, cache use and time per stage
+(picking cubes, planning, checks, query, chart), from `data/usage.jsonl`, and the benchmark comparisons.
+`python bench.py run <name>` asks a fixed set of 12 real questions (this costs a little) and
+`python bench.py compare <before> <after>` shows the difference in time, cost and answers.
+
 ### Signed in or not
 
 A pill at the top right of every page says whether you're signed in: amber **View only · Sign in**,
@@ -290,7 +310,12 @@ You can point Excel or Power BI at those CSVs, or ask the app new questions any 
 | `app.py` | The web app's menu: Dashboards, Ask (Chat, Glossary), Admin (Cubes, Settings), and the signed-in bar |
 | `data_layer.py` | The data layer: reads every cube, Claude's profile of each, shared dimensions measured on the values, the catalog |
 | `build_layer.py` | Builds the data layer from the command line (`--all` connects every cube first, `--update` only changed cubes) |
-| `answering.py` | Answers a question from the data layer: plan, check values, run, retry once (Chat and dashboards) |
+| `answering.py` | Answers a question: pick cubes, plan, check values, run, retry once, chart; reuses today's answers |
+| `routing.py` | Index cards and graph of the cubes; picks the cubes a question needs; finds its values in the data |
+| `answer_memory.py` | Remembers answers (SQLite): same-day repeats without Claude, verified answers as examples |
+| `usage.py` | Measures each question: Claude calls, tokens, cache, cost, time per stage (`data/usage.jsonl`) |
+| `bench.py` | Benchmark: a fixed set of real questions, run and compared between versions |
+| `warm_up.py` | At server start, in the background: the server connector and the value indexes |
 | `plans.py` | Query plans: one query per cube, run in parallel, joined in memory with SQL |
 | `dynamic_chart.py` | Charts described in words: checks Claude's chart description and draws it |
 | `periods.py` | Dashboard periods: quick choices, dates, ISO week numbers |

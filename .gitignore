@@ -22,3 +22,6 @@ models/
 dashboards.json
 dashboard.json.bak
 data/app*.log
+data/usage.jsonl
+data/answers.db
+data/bench/

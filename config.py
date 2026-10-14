@@ -52,6 +52,10 @@ def stored_secret(name: str) -> str:
 _env_api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
 ANTHROPIC_API_KEY = stored_secret("anthropic_api_key") or ("" if _env_api_key == "sk-ant-..." else _env_api_key)
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-5-5")
+# How hard Claude thinks when planning a query (low / medium / high): medium is fast and accurate enough.
+CLAUDE_PLAN_EFFORT = os.getenv("CLAUDE_PLAN_EFFORT", "medium")
+# Fast, cheap model for simple jobs: picking the cubes a question needs, and formatting standard charts.
+CLAUDE_FAST_MODEL = os.getenv("CLAUDE_FAST_MODEL", "claude-haiku-5-5")
 # Model for building the data layer (once, after installation): it studies every cube, so it
 # gets the most capable model; questions use CLAUDE_MODEL.
 CLAUDE_LAYER_MODEL = os.getenv("CLAUDE_LAYER_MODEL", "claude-opus-5-5")

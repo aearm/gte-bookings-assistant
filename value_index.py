@@ -78,6 +78,7 @@ class ValueIndex:
                 for info in data.get("columns", {}).values():
                     if "values" in info:
                         info["lookup"] = {str(v).lower().strip(): v for v, _ in info["values"]}
+                        info["counts"] = {v: n for v, n in info["values"]}
                 self._mtime, self._data = mtime, data
             return self._data
 
@@ -130,6 +131,27 @@ class ValueIndex:
 
     def live_columns(self) -> list[str]:
         return [c for c, info in self.columns().items() if info.get("live")]
+
+    def exact(self, text: str) -> list[dict]:
+        """Values that are exactly the text (ignoring case), or whose initials are (UAE -> UNITED ARAB
+        EMIRATES): [{column, value, count}]. A dictionary lookup per column, so it is instant."""
+        key = " ".join(text.lower().split())
+        hits = []
+        for col, info in self.columns().items():
+            if "values" not in info:
+                continue
+            value = info["lookup"].get(key)
+            if value is None and len(key) >= 2 and " " not in key:
+                value = self._initials(col, info).get(key)
+            if value is not None:
+                hits.append({"column": col, "value": value, "count": info["counts"].get(value)})
+        return hits
+
+    def _initials(self, column: str, info: dict) -> dict:
+        if "initials" not in info:
+            info["initials"] = {_initials(v): v for v, _ in reversed(info["values"])
+                                if len(str(v).split()) >= 2}  # most data wins when initials repeat
+        return info["initials"]
 
 
 _indexes: dict[Path, ValueIndex] = {}

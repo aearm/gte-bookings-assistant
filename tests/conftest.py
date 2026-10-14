@@ -63,6 +63,7 @@ def app_dirs(tmp_path, monkeypatch):
     monkeypatch.setattr(app_config, "DASHBOARDS_FILE", tmp_path / "dashboards.json")
     monkeypatch.setattr(app_config, "DASHBOARD_FILE", tmp_path / "dashboard.json")
     monkeypatch.setattr(app_config, "BASE_DIR", tmp_path)
+    monkeypatch.setattr(app_config, "DATA_DIR", tmp_path / "data")
     monkeypatch.setattr(app_config, "RESULTS_DIR", tmp_path / "results")
     monkeypatch.setattr(app_config, "HISTORY_FILE", tmp_path / "history.jsonl")
     monkeypatch.setattr(app_config, "LOCAL_SCHEMA_FILE", tmp_path / "schema_local.md")

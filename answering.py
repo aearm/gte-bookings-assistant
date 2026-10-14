@@ -1,16 +1,21 @@
 """Answering a question from the data layer, shared by Chat and the dashboards:
-question -> plan (Claude, after checking the data) -> values checked -> run (each cube, joined) ->
-one retry with the error if it fails. A scope of "" means all the data: Claude picks the cubes."""
+question -> the cubes it needs (routing.py) -> plan (Claude, with those cubes' details, the values of
+the question found in the data and verified examples) -> values checked -> run (each cube, joined) ->
+one retry with the error if it fails. A scope of "" means all the data. Chat's ask() also reuses the
+plan of a question already answered today (answer_memory.py)."""
 from dataclasses import dataclass, field
 from datetime import date
 
 import pandas as pd
 
+import answer_memory
 import cubes
 import data_layer
 import data_tools
 import llm
 import plans
+import routing
+import usage
 import value_check
 from backends import get_backend
 
@@ -45,15 +50,30 @@ class Outcome:
     notes: list[str] = field(default_factory=list)
     question: str = ""                          # clarify: the question to ask
     options: list[str] = field(default_factory=list)
+    spec: dict = field(default_factory=dict)    # the chart and the written answer (ask())
+    answer_id: int | None = None                # in answer_memory (to mark it verified)
 
 
-def _plan(question, names, scope, context, clarification, instructions, failed=None, error=None, on_step=None):
-    catalog = data_layer.catalog_text(only=None if scope == ALL else names)
-    details = data_layer.cube_details(names[0]) if len(names) == 1 else ""
+def _pick(question, names, context, say) -> routing.Pick:
+    """The cubes to give Claude in full: the one picked by the user, else a quick Haiku choice."""
+    if len(names) == 1:
+        return routing.Pick(list(names), "the cube picked", routing.value_hits(question, names))
+    say("Picking the cubes that answer it")
+    with usage.stage("route"):
+        picked = routing.pick(question, names, context)
+    usage.note(picked=picked.cubes)
+    return picked
+
+
+def _plan(question, names, scope, picked, context, clarification, instructions, failed=None, error=None,
+          on_step=None):
     language = get_backend(names[0]).language
-    return llm.question_to_plan(question, catalog, details, "", date.today().isoformat(), language, context,
-                                failed_plan=failed, error=error, clarification=clarification,
-                                instructions=instructions, **data_tools.checks(names, on_step))
+    details = [(c, data_layer.cube_details(c)) for c in picked.cubes]
+    return llm.question_to_plan(question, routing.cards_text(), details, date.today().isoformat(), language,
+                                context, failed_plan=failed, error=error, clarification=clarification,
+                                instructions=instructions, hits=routing.hits_text(picked.hits, picked.cubes or None),
+                                join=routing.join_path(picked.cubes), examples=answer_memory.examples(question, scope),
+                                **data_tools.checks(names, on_step))
 
 
 def answer(question: str, scope: str = ALL, context: list[dict] | None = None,
@@ -66,10 +86,14 @@ def answer(question: str, scope: str = ALL, context: list[dict] | None = None,
     if not names:
         raise RuntimeError("No cube is set up yet. An admin builds the data layer on the Cubes page.")
     say("Understanding the question")
-    result = _plan(question, names, scope, context, clarification, instructions, on_step=say)
+    picked = _pick(question, names, context, say)
+    with usage.stage("plan"):
+        result = _plan(question, names, scope, picked, context, clarification, instructions, on_step=say)
     if result.get("needs_clarification"):
+        usage.note(outcome="clarify")
         return Outcome("clarify", result, question=result["clarifying_question"], options=result.get("options", [])[:4])
     if result.get("reuse_previous"):
+        usage.note(outcome="reuse")
         return Outcome("reuse", result)
     plan = plans.Plan.from_dict(result)
     for attempt in (1, 2):
@@ -78,21 +102,93 @@ def answer(question: str, scope: str = ALL, context: list[dict] | None = None,
             if needs_dates and not plan.uses_dates():
                 raise ValueError("The plan does not use the dashboard dates. Filter the period with @START and @END.")
             say("Checking the values it filters on")
-            plan, problems, notes = plans.check_values(plan)
+            with usage.stage("check"):
+                plan, problems, notes = plans.check_values(plan)
             if problems:  # a value that isn't in the data: ask instead of returning nothing
                 p = problems[0]
+                usage.note(outcome="clarify")
                 return Outcome("clarify", result, plan=plan, question=p.question(), options=p.suggestions)
             say("Pulling the data" + (f" from {len(plan.steps)} cubes and joining them" if not plan.single else ""))
-            df = plans.run(plan.with_dates(*period) if period else plan)
+            with usage.stage("query"):
+                df = plans.run(plan.with_dates(*period) if period else plan)
+            usage.note(outcome="data", cubes=plan.cubes, rows=len(df))
             return Outcome("data", result, plan=plan, df=df, notes=notes)
         except Exception as error:
             if attempt == 2:
                 raise
             say("The query failed, asking Claude to fix it")
-            result = _plan(question, names, scope, context, clarification, instructions,
-                           failed=plan.text(), error=str(error)[:1500], on_step=say)
+            usage.note(retried=True)
+            with usage.stage("plan"):
+                result = _plan(question, names, scope, picked, context, clarification, instructions,
+                               failed=plan.text(), error=str(error)[:1500], on_step=say)
             plan = plans.Plan.from_dict(result)
     raise RuntimeError("unreachable")
+
+
+def describe(question: str, df, chart_request: str, plan: plans.Plan | None) -> dict:
+    """The chart (formatted for this data) and the written answer."""
+    query = plan.text() if plan else ""
+    return llm.describe_result(question, df, chart_request=chart_request, query=query,
+                               measures=data_layer.measure_notes(plan.cubes if plan else [], query))
+
+
+def ask(question: str, scope: str = ALL, context: list[dict] | None = None,
+        clarification: tuple[str, str] | None = None, on_step=None, on_data=None) -> Outcome:
+    """The whole answer for Chat: plan, data and chart, recorded in usage as one question.
+    context = earlier answers (dicts with "question", "query", and for a redraw "df" and "plan").
+    on_data(df) shows the numbers as soon as they arrive, before the chart is drawn."""
+    say = on_step or (lambda text: None)
+    with usage.track("question", question, scope=scope or "all"):
+        if not context and not clarification:  # asked already today: rerun its plan, no Claude
+            saved = answer_memory.same_day(question, scope)
+            again = _rerun(question, saved, say) if saved else None
+            if again:
+                return again
+        outcome = answer(question, scope, context, clarification, on_step=say)
+        request = outcome.result.get("chart_request", "")
+        if outcome.kind == "reuse":  # the same data, shown differently
+            previous = (context or [{}])[-1]
+            outcome.df = previous.get("df")
+            outcome.plan = plans.Plan.from_dict(previous["plan"]) if previous.get("plan") else None
+            request = request or question
+        if outcome.df is not None and not outcome.df.empty:
+            if on_data:
+                on_data(outcome.df)
+            say("Drawing the chart you asked for" if request else "Choosing the best chart")
+            with usage.stage("chart"):
+                outcome.spec = describe(question, outcome.df, request, outcome.plan)
+        elif outcome.df is not None:
+            outcome.spec = {"chart_type": "table", "title": "No results",
+                            "summary": "The query ran but returned no rows. " + (
+                                " ".join(outcome.notes) or "Try widening the filters or dates.")}
+        if outcome.kind == "data" and outcome.plan is not None and not context and not clarification:
+            outcome.answer_id = answer_memory.remember(question, scope, outcome.plan.to_dict(), outcome.result,
+                                                       outcome.spec, outcome.df)
+        return outcome
+
+
+def _rerun(question: str, saved: dict, say) -> Outcome | None:
+    """A question answered earlier today: run its saved plan again (fresh numbers). The chart and
+    answer are reused when the numbers are the same, else redrawn. None if the plan no longer runs."""
+    plan = plans.Plan.from_dict(saved["plan"])
+    say("Asked earlier today: running the same plan for the latest numbers")
+    try:
+        with usage.stage("query"):
+            df = plans.run(plan)
+    except Exception:
+        return None
+    usage.note(outcome="data", cubes=plan.cubes, rows=len(df), memory="same_day")
+    outcome = Outcome("data", saved["result"], plan=plan, df=df, answer_id=saved["id"])
+    if answer_memory.data_hash(df) == saved["data_hash"]:
+        outcome.spec = saved["spec"]
+    elif df.empty:
+        outcome.spec = {"chart_type": "table", "title": "No results",
+                        "summary": "The query ran but returned no rows. Try widening the filters or dates."}
+    else:
+        with usage.stage("chart"):
+            outcome.spec = describe(question, df, saved["result"].get("chart_request", ""), plan)
+        answer_memory.update_spec(saved["id"], outcome.spec, df)
+    return outcome
 
 
 def require_values(outcome: Outcome) -> Outcome:
