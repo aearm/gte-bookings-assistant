@@ -102,6 +102,49 @@ def test_dashboard_period_button_and_calendar_choices(at):
     assert period_label(at).startswith("Last week · ")
 
 
+def compare_label(at) -> str:
+    labels = [p.proto.popover.label for p in at.get("popover")]
+    return next(label for label in labels if label.startswith("vs ") or label == "Compare")
+
+
+def test_compare_button_next_to_the_period(at):
+    at.run()
+    start, end = periods.preset_range("This year")
+    assert compare_label(at) == "vs " + periods.dates_text(*periods.same_period_last_year(start, end))  # the default
+    at.session_state["dash_period"] = {"preset": "Last month"}
+    at.session_state["dash_compare"] = {"mode": "previous"}
+    at.run()
+    assert compare_label(at) == "vs " + periods.dates_text(*periods.previous_period(*periods.preset_range("Last month"), "Last month"))
+    at.session_state["dash_compare"] = {"mode": "none"}
+    at.run()
+    assert compare_label(at) == "Compare" and not at.exception
+
+
+def test_dashboard_numbers_and_charts_show_the_comparison(at):
+    import json
+
+    import dashboards
+    at.run()
+    board = dashboards.list_dashboards()[0]["id"]
+    dated = 'FROM bookings WHERE "Booking Date" >= @START AND "Booking Date" < @END'
+    for cid, kind, query, extra in [
+            ("k1", "kpi", f'SELECT COUNT(*) AS "Bookings" {dated}', {}),
+            ("b1", "bar", f'SELECT "Destination Country", COUNT(*) AS "Bookings" {dated} GROUP BY 1 ORDER BY 2 DESC',
+             {"x": "Destination Country", "y": ["Bookings"]})]:
+        dashboards.add_chart(board, {"id": cid, "title": kind, "question": kind, "chart_type": kind, "width": "half",
+                                     "date_column": '"Booking Date"', "cube": cubes.LOCAL, "style": {}, "color": "",
+                                     "plan": {"steps": [{"name": "result", "cube": cubes.LOCAL, "query": query}],
+                                              "combine_sql": ""}, **{"x": "", "y": [], **extra}})
+    at.session_state["dash_period"] = {"start": "2026-03-01", "end": "2026-06-01"}
+    at.session_state["dash_compare"] = {"mode": "custom", "start": "2026-01-01", "end": "2026-03-01"}
+    at.run()
+    assert not at.exception
+    assert compare_label(at) == "vs 1 Jan – 28 Feb 2026"
+    assert at.metric[0].value == "8" and at.metric[0].delta == "+100.0% vs 1 Jan – 28 Feb 2026"  # 8 bookings vs 4
+    figure = json.loads(at.get("plotly_chart")[0].proto.spec)
+    assert [t["name"] for t in figure["data"]] == ["1 Jan – 28 Feb 2026", "1 Mar – 31 May 2026"]  # grey, then colour
+
+
 def test_calendar_choices_are_kept(monkeypatch):
     state = {}
     monkeypatch.setattr(period_picker.st, "session_state", state)
@@ -140,6 +183,46 @@ def test_chat_with_all_the_data(at, monkeypatch):
     assert "Sara leads with 1,005.5." in texts(at)
     assert at.get("plotly_chart")  # the described chart was drawn
     assert any(b.label == "Change chart" for b in at.button)
+
+
+def test_chat_makes_a_dashboard_from_the_conversation(at, monkeypatch):
+    build_local_layer(monkeypatch)
+    monkeypatch.setattr(llm, "_structured_call", _real_structured_call)
+    at.session_state["admin"] = True
+    at.run()
+    at.switch_page("views/chat.py").run()
+    asked = [("Sales by agency in 2026", 'SELECT "Agency", SUM("Sales USD") AS "Sales" FROM bookings GROUP BY 1',
+              "Agency", "Sales", "Sales by agency, 2026"),
+             ("Bookings by status this year", 'SELECT "Status", COUNT(*) AS "Bookings" FROM bookings GROUP BY 1',
+              "Status", "Bookings", "Bookings by status this year")]
+    for question, query, x, y, title in asked:
+        monkeypatch.setattr(llm, "_create", FakeClaude(
+            plan([{"name": "result", "cube": cubes.LOCAL, "query": query}]), {**chart("bar", x=x, y=[y]), "title": title}))
+        at.chat_input[0].set_value(question).run()
+        assert not at.exception
+    assert [b.label for b in at.button if b.label == "Add to dashboard"] == ["Add to dashboard"] * 2
+    assert at.button(key="add_all_charts").label == "Make a dashboard from this conversation"
+    at.button(key="add_all_charts").click().run()
+    assert not at.exception
+    assert at.text_input(key="chat_board_name").value.startswith("From chat · ")  # always a new dashboard
+    picks = [c for c in at.checkbox if c.key.startswith("chat_board_pick_")]
+    assert [c.label for c in picks] == ["Sales by agency", "Bookings by status"] and all(c.value for c in picks)
+    assert at.button(key="chat_board_go").label == "Create dashboard with 2 charts"
+
+
+def test_settings_show_what_claude_costs(at, monkeypatch):
+    import usage
+    from datetime import datetime
+    monkeypatch.setattr(secrets_store, "api_key_status", lambda: "saved")
+    for kind, cost in [("question", 0.25), ("dashboard_chart", 0.5)]:
+        usage.save({"time": datetime.now().isoformat(timespec="seconds"), "kind": kind, "label": "x", "cost": cost,
+                    "calls": []})
+    at.session_state["admin"] = True
+    at.run()
+    at.switch_page("views/settings.py").run()
+    assert not at.exception
+    assert "Claude cost" in [s.value for s in at.subheader]
+    assert [m.value for m in at.metric] == ["$0.75"] * 4  # today, 7 days, this month, since measuring began
 
 
 def test_chat_explains_what_is_missing(at, monkeypatch):

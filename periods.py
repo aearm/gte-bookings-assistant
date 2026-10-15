@@ -128,6 +128,27 @@ def describe(start: date, end: date) -> str:
 
 # ---------------------------------------------------------------- comparisons --
 
+_DATE_WORDS = (r"(?:\b(?:on|for|in|during|since|from|as of)\s+)?(?:"
+               r"\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+)?[A-Za-z]{3,9}\.?\s+\d{4}"      # 13 Oct 2026, 12 of oct 2026
+               r"|[A-Za-z]{3,9}\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}"               # Oct 13, 2026
+               r"|\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}/\d{2,4}"                            # 2026-10-13, 13/10/2026
+               r"|(?:Q[1-4]\s+)?(?:19|20)\d{2}(?:\s+(?:so far|to date|YTD))?(?=\s*(?:$|[,;)(]))"  # 2026 at a phrase end
+               r"|(?:this|last|previous|next)\s+(?:year|month|quarter|week)|yesterday|today"
+               r"|(?:year|month)\s+to\s+date|YTD|MTD)\b")
+
+
+def without_dates(title: str) -> str:
+    """A title without the dates of the question it came from ("Sales by month, 2026" -> "Sales by
+    month"): on a dashboard the chart follows the period picked there."""
+    import re
+    text = re.sub(_DATE_WORDS, "", title, flags=re.IGNORECASE)
+    text = re.sub(r"\(\s*[,;:]?\s*\)", "", text)                     # empty brackets left behind
+    text = re.sub(r"[,;:]\s*\(", " (", text)                          # "customer, (top 25)" -> "customer (top 25)"
+    text = re.sub(r"\s+([,;:)])", r"\1", re.sub(r"\s{2,}", " ", text))
+    text = re.sub(r"[\s,;:\-–—·|]+$", "", text).strip()
+    return text or title
+
+
 def same_period_last_year(start: date, end: date, weekly: bool = False) -> tuple[date, date]:
     """The period a year earlier. Weekly periods move back 52 weeks, so Monday stays Monday
     (week 41 is compared with week 41); other periods keep their dates."""
@@ -142,3 +163,76 @@ def same_period_last_year(start: date, end: date, weekly: bool = False) -> tuple
 def is_weekly(start: date, end: date, preset: str = "") -> bool:
     """Compare with the same weeks last year: whole weeks picked on the calendar, or this/last week."""
     return preset in ("This week", "Last week") or (not preset and whole_weeks(start, end))
+
+
+# What every dashboard chart can be compared with (one choice for the whole dashboard, next to the
+# period). The default is what headline numbers have always shown: the same period last year.
+COMPARE_MODES = {"none": "No comparison", "previous": "Previous period", "last_year": "Same period last year",
+                 "custom": "Other dates"}
+DEFAULT_COMPARE = "last_year"
+# How far back "previous period" goes for each quick choice: the same days of the previous week,
+# month, quarter or year ("This month" 1-15 Oct is compared with 1-15 Sep), or the days just before.
+_PREVIOUS = {"Today": ("days", 1, "yesterday"), "Yesterday": ("days", 1, "the day before"),
+             "This week": ("days", 7, "last week"), "Last week": ("days", 7, "the week before"),
+             "Last 7 days": ("days", 7, "the 7 days before"), "Last 30 days": ("days", 30, "the 30 days before"),
+             "This month": ("months", 1, "last month"), "Last month": ("months", 1, "the month before"),
+             "This quarter": ("months", 3, "last quarter"), "Last quarter": ("months", 3, "the quarter before"),
+             "This year": ("months", 12, "last year"), "Last year": ("months", 12, "the year before"),
+             "Last 12 months": ("months", 12, "the 12 months before")}
+
+
+def shift_months(d: date, months: int) -> date:
+    """The same day some months later (negative: earlier); the month's last day if it is shorter."""
+    years, month0 = divmod(d.month - 1 + months, 12)
+    first = date(d.year + years, month0 + 1, 1)
+    days = (add_months(first, 1) - first).days
+    return first.replace(day=min(d.day, days))
+
+
+def _previous_shift(start: date, end: date, preset: str = "") -> tuple[str, int, str]:
+    if preset in _PREVIOUS:
+        return _PREVIOUS[preset]
+    if start.day == 1 and end.day == 1:  # whole months picked on the calendar
+        months = (end.year - start.year) * 12 + end.month - start.month
+        return "months", months, "the month before" if months == 1 else f"the {months} months before"
+    days = (end - start).days
+    if days == 1:
+        return "days", 1, "the day before"
+    if whole_weeks(start, end):
+        weeks = days // 7
+        return "days", days, "the week before" if weeks == 1 else f"the {weeks} weeks before"
+    return "days", days, f"the {days} days before"
+
+
+def previous_period(start: date, end: date, preset: str = "") -> tuple[date, date]:
+    """The period just before this one, of the same kind (see _PREVIOUS); end exclusive."""
+    unit, n, _ = _previous_shift(start, end, preset)
+    if unit == "months":  # a period to the end of a month compares with whole months (all of August)
+        last = shift_months(end, -n) if end.day == 1 else shift_months(end - timedelta(days=1), -n) + timedelta(days=1)
+        return shift_months(start, -n), last
+    return start - timedelta(days=n), end - timedelta(days=n)
+
+
+def compare_range(mode: str, start: date, end: date, preset: str = "",
+                  custom: tuple[date, date] | None = None) -> tuple[date, date] | None:
+    """The dates a period is compared with (end exclusive), or None for no comparison."""
+    if mode == "previous":
+        return previous_period(start, end, preset)
+    if mode == "last_year":
+        return same_period_last_year(start, end, is_weekly(start, end, preset))
+    if mode == "custom" and custom:
+        return custom
+    return None
+
+
+def compare_name(mode: str, start: date, end: date, preset: str = "",
+                 custom: tuple[date, date] | None = None) -> str:
+    """The comparison in a few words, for "+12% vs ...": 'last year', 'same weeks last year',
+    'yesterday', 'last month', or the dates."""
+    if mode == "last_year":
+        return "same weeks last year" if is_weekly(start, end, preset) else "last year"
+    if mode == "previous":
+        return _previous_shift(start, end, preset)[2]
+    if mode == "custom" and custom:
+        return dates_text(*custom)
+    return ""

@@ -14,6 +14,7 @@ sys.path.insert(0, str(ROOT))
 import config as app_config  # noqa: E402
 import cubes  # noqa: E402
 import data_layer  # noqa: E402
+import value_index  # noqa: E402
 
 
 def pytest_configure(config):
@@ -47,6 +48,16 @@ AGENCIES = pd.DataFrame({
     "Account Manager": ["Sara", "Omar", "Sara", "Lina", "Omar"],
     "Segment": ["Key account", "Standard", "Standard", "Key account", "New"],
 })
+
+
+@pytest.fixture(autouse=True)
+def private_data(tmp_path, monkeypatch):
+    """Every test writes its usage log, answer memory and history to a temporary folder, never to data/."""
+    monkeypatch.setattr(app_config, "DATA_DIR", tmp_path / "data")
+    monkeypatch.setattr(app_config, "RESULTS_DIR", tmp_path / "results")
+    monkeypatch.setattr(app_config, "HISTORY_FILE", tmp_path / "history.jsonl")
+    yield
+    value_index.close()  # so the temporary folder (and its values.db) can be deleted
 
 
 @pytest.fixture

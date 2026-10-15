@@ -169,3 +169,24 @@ def test_short_cube_labels_are_matched_to_exact_names(layer3, monkeypatch):
     assert routing._exact("booking payments", names) == names[1]
     assert routing._exact("Tickets", names) is None
     assert routing._route_tool(names)["input_schema"]["properties"]["cubes"]["items"]["enum"] == names
+
+
+def test_cost_report_for_settings(app_dirs):
+    call = lambda model, cost: {"model": model, "input": 100, "output": 10, "cache_read": 1000,
+                                "cache_write_5m": 0, "cache_write_1h": 0, "cost": cost}
+    rows = [
+        {"time": "2026-09-30T10:00:00", "kind": "layer_build", "cost": 3.0, "calls": [call("claude-opus-5-5", 3.0)]},
+        {"time": "2026-10-02T10:00:00", "kind": "question", "cost": 0.05, "calls": [call("claude-sonnet-5-5", 0.05)]},
+        {"time": "2026-10-15T09:00:00", "kind": "question", "cost": 0.04, "calls": [call("claude-sonnet-5-5", 0.04)]},
+        {"time": "2026-10-15T09:05:00", "kind": "question", "cost": 0.0, "memory": "same_day", "calls": []},
+        {"time": "2026-10-15T09:10:00", "kind": "dashboard_chart", "cost": 0.06, "calls": [call("claude-haiku-5-5", 0.06)]},
+    ]
+    report = usage.cost_report(rows, today=date(2026, 10, 15))
+    assert (report["today"], report["week"], report["month"], report["total"]) == (0.1, 0.1, 0.15, 3.15)
+    assert report["since"] == date(2026, 9, 30)
+    questions = report["activities"][0]
+    assert questions["Activity"] == "Questions in Chat" and questions["Times"] == 3
+    assert questions["From memory"] == 1 and questions["Total ($)"] == pytest.approx(0.09)
+    assert report["models"][0]["Model"] == "claude-opus-5-5" and report["models"][0]["Tokens read"] == 1100
+    assert len(report["daily"]) == 30 and report["daily"][-1] == {"Day": date(2026, 10, 15), "Cost ($)": 0.1}
+    assert usage.cost_report([])["since"] is None

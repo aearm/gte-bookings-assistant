@@ -86,8 +86,7 @@ def _is_text(col_type: str) -> bool:
 
 
 def _suggest(meta: dict, column: str, value: str, backend) -> list[str]:
-    info = backend.index.column_info(column)
-    if info and "values" in info:
+    if backend.index.indexed(column):
         hits = [h["value"] for h in backend.index.search(value, column=column, limit=12) if h["count"]]
         if hits:
             return hits[:6]

@@ -7,6 +7,10 @@ import os
 import sys
 from pathlib import Path
 
+# numpy's maths library (OpenBLAS) reserves ~30 MB per CPU core for parallel matrix maths the app never
+# does (235 MB on an 8-core machine). One thread is enough; it must be set before numpy is imported.
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+
 BASE = Path(__file__).resolve().parent
 LOG = BASE / "data" / "app.log"
 MAX_LOG_BYTES = 5_000_000

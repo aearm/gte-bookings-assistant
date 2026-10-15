@@ -1,5 +1,6 @@
 """One dashboard page: its charts for the period you pick on the calendar (period_picker.py) - a
-quick choice, days, or week numbers. Everyone can view dashboards; adding, editing, restyling,
+quick choice, days, or week numbers - compared with another period if you like (previous period, the
+same period last year or other dates: the period in colour, the comparison in grey). Everyone can view dashboards; adding, editing, restyling,
 reordering, copying/moving and deleting charts and dashboards asks for the admin password (the +
 buttons are always there; the dialog asks to sign in first). Each dashboard is a page in the menu
 (app.py builds one with page_for)."""
@@ -15,6 +16,7 @@ import dashboards
 import data_layer
 import period_picker
 import plans
+import periods
 import ui
 from backends import get_backend
 import charts
@@ -22,8 +24,8 @@ from charts import build_figure, suggest, trim
 
 
 @st.cache_data(ttl=900, show_spinner=False)
-def run_cached(keys: tuple, start: date, end: date, weekly: bool) -> dict:
-    return dashboards.run_all([dashboards.chart_from_key(k) for k in keys], start, end, weekly)
+def run_cached(keys: tuple, start: date, end: date, compare: tuple[date, date] | None) -> dict:
+    return dashboards.run_all([dashboards.chart_from_key(k) for k in keys], start, end, compare)
 
 
 @st.cache_data(ttl=900, show_spinner=False)
@@ -136,6 +138,11 @@ def edit_dialog(dashboard_id: str, chart_id: str, start: date, end: date):
     request = (ui.chart_request_input(c.get("chart_request", ""), f"edit_request_{chart_id}")
                if chart_type == "custom" else "")
     date_col = ui.date_column_picker(cube, c.get("date_column", ""), f"edit_date_{chart_id}")
+    show_compare = st.toggle("Show the comparison picked at the top of the dashboard", value=c.get("compare", True),
+                             key=f"edit_compare_{chart_id}", disabled=not date_col,
+                             help="Headline numbers show the change; columns, bars and lines of one measure show the "
+                                  "other period in grey; tables get a change column. Needs dates that follow the "
+                                  "dashboard.")
     width = ui.width_picker(c.get("width", "half"), f"edit_width_{chart_id}")
     query = c.get("query", "")
     with st.expander("Query (advanced)"):
@@ -175,6 +182,9 @@ def edit_dialog(dashboard_id: str, chart_id: str, start: date, end: date):
         except Exception as exc:
             ui.show_exception(exc)
             return
+        c.pop("compare", None)
+        if not show_compare:
+            c["compare"] = False
         dashboards.update_chart(dashboard_id, c)
         st.rerun()
 
@@ -269,7 +279,8 @@ def chart_menu(dashboard_id: str, c: dict, start: date, end: date) -> None:
 
 # ---------------------------------------------------------------- cards --
 
-def kpi_card(dashboard_id: str, c: dict, res: dict, start: date, end: date, is_admin: bool, weekly: bool) -> None:
+def kpi_card(dashboard_id: str, c: dict, res: dict, start: date, end: date, is_admin: bool,
+             versus: period_picker.Comparison | None) -> None:
     with st.container(border=True, key=f"card_{c['id']}"):
         if is_admin:
             left, right = st.columns([6, 1], vertical_alignment="top")
@@ -283,14 +294,15 @@ def kpi_card(dashboard_id: str, c: dict, res: dict, start: date, end: date, is_a
                 ui.show_error(res["error"], res.get("details", ""))
                 return
             value, prev = first_number(res["df"]), first_number(res.get("prev"))
-            than = "same weeks last year" if weekly else "last year"
-            delta = f"{(value - prev) / abs(prev):+.1%} vs {than}" if value is not None and prev else None
+            delta = f"{(value - prev) / abs(prev):+.1%} vs {versus.name}" if versus and value is not None and prev else None
             source = " + ".join(data_layer.cube_label(x) for x in chart_cubes(c))
-            st.metric(c["title"], headline(c, res["df"]), delta=delta, help=f"{c['question']} · {source}")
+            was = (f"  \n{versus.dates}: {headline(c, res['prev'])}"
+                   if versus and res.get("prev") is not None and prev is not None else "")
+            st.metric(c["title"], headline(c, res["df"]), delta=delta, help=f"{c['question']} · {source}{was}")
 
 
 def chart_card(dashboard_id: str, c: dict, res: dict, start: date, end: date, is_admin: bool,
-               several_cubes: bool) -> None:
+               several_cubes: bool, versus: period_picker.Comparison | None = None) -> None:
     with st.container(border=True, key=f"card_{c['id']}"):
         head, menu = st.columns([12, 1], vertical_alignment="top") if is_admin else (st.container(), None)
         with head:
@@ -309,14 +321,19 @@ def chart_card(dashboard_id: str, c: dict, res: dict, start: date, end: date, is
             st.info("No data for this period.")
             return
         height = 420 if c.get("chart_type") == "map" else 330
-        fig = build_figure(df, c, dark=ui.is_dark(), height=height, show_title=False)
+        prev = res.get("prev") if versus else None
+        compare = {"df": prev, "current": periods.dates_text(start, end), "name": versus.dates} if prev is not None else None
+        fig = build_figure(df, c, dark=ui.is_dark(), height=height, show_title=False, compare=compare)
         if fig is not None:
             st.plotly_chart(fig, key=f"fig_{c['id']}", config={"displayModeBar": False})
             note = trim(df, c)[1] if c.get("chart_type") != "custom" else ""
             if note:
                 st.caption(note.split(" (")[0] + ".")
         else:
-            ui.table(df, c, height=min(330, 38 + 35 * len(df)))
+            shown, spec = charts.with_changes(df, prev, c) if prev is not None else (df, c)
+            ui.table(shown, spec, height=min(330, 38 + 35 * len(df)))
+            if shown is not df:
+                st.caption(f"Change vs {versus.dates}.")
 
 
 # ---------------------------------------------------------------- page --
@@ -361,7 +378,8 @@ def render(dashboard_id: str) -> None:
 
     # one row of filters above the charts: the period, refresh, and when the data was updated
     with st.container(horizontal=True, vertical_alignment="center", key="dash_filters"):
-        start, end, weekly = period_picker.picker()
+        start, end, _ = period_picker.picker()
+        versus = period_picker.compare_picker()
         if st.button("", icon=":material/refresh:", type="tertiary", key="dash_refresh",
                      help="Get the latest numbers from the server"):
             run_cached.clear()
@@ -392,17 +410,18 @@ def render(dashboard_id: str) -> None:
         return
 
     with st.spinner("Loading the latest numbers..."):
-        results = run_cached(tuple(dashboards.run_key(c) for c in charts), start, end, weekly)
+        results = run_cached(tuple(dashboards.run_key(c) for c in charts), start, end,
+                             (versus.start, versus.end) if versus else None)
 
     kpis = [c for c in charts if c["chart_type"] == "kpi"]
     for i in range(0, len(kpis), 4):
         row = kpis[i:i + 4]
         for col, c in zip(st.columns(len(row)), row):
             with col:
-                kpi_card(dashboard_id, c, results.get(c["id"], {}), start, end, is_admin, weekly)
+                kpi_card(dashboard_id, c, results.get(c["id"], {}), start, end, is_admin, versus)
 
     several = len(board_cubes) > 1
-    draw = lambda c: chart_card(dashboard_id, c, results.get(c["id"], {}), start, end, is_admin, several)
+    draw = lambda c: chart_card(dashboard_id, c, results.get(c["id"], {}), start, end, is_admin, several, versus)
     pending = None
     for c in [c for c in charts if c["chart_type"] != "kpi"]:
         if c.get("width") == "full":

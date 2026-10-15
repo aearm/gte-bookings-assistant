@@ -89,3 +89,50 @@ def test_keep_me_signed_in_tokens(monkeypatch):
     assert not secrets_store.check_login_token(secrets_store.make_login_token(-1))  # expired
     stored["hash"] = "salt$digest-2"  # the admin password changed: every computer is signed out
     assert not secrets_store.check_login_token(token)
+
+
+def test_a_comparison_is_drawn_in_grey_beside_the_period():
+    now = DF[["Customer", "Sales"]]
+    before = pd.DataFrame({"Customer": ["Coral Bay", "Atlas", "Nile Star"], "Sales": [4_000_000.0, 1_000_000.0, 9.0]})
+    spec = {"chart_type": "bar", "x": "Customer", "y": ["Sales"], "style": STYLE}
+    compare = {"df": before, "current": "1 Jan – 15 Oct 2026", "name": "1 Jan – 15 Oct 2025"}
+    fig = charts.build_figure(now, spec, compare=compare)
+    grey, current = fig.data
+    assert (grey.name, current.name) == ("1 Jan – 15 Oct 2025", "1 Jan – 15 Oct 2026") and fig.layout.showlegend
+    assert fig.layout.legend.visible and fig.layout.margin.t >= 36  # both periods named above the chart
+    assert fig.layout.legend.traceorder == "reversed"  # this period first in the legend, as for lines
+    assert grey.marker.color == charts.COMPARE_COLOR["light"] and grey.texttemplate is None  # no value labels
+    assert dict(zip(grey.x, grey.y))["Coral Bay"] == 4_000_000 and dict(zip(grey.x, grey.y))["Lotus"] is None
+    assert dict(zip(current.x, current.customdata))["Coral Bay"] == " (+12.5%)"  # the change, on hover
+    assert list(fig.layout.xaxis.categoryarray)[:2] == ["Coral Bay", "Lotus"]  # still sorted by this period
+
+    months = pd.DataFrame({"Month": ["2026-01", "2026-02", "2026-03"], "Sales": [10.0, 20.0, 30.0]})
+    last_year = pd.DataFrame({"Month": ["2025-02", "2025-01"], "Sales": [8.0, 5.0]})
+    fig = charts.build_figure(months, {"chart_type": "line", "x": "Month", "y": ["Sales"]},
+                              compare={**compare, "df": last_year})
+    line, dotted = fig.data
+    assert list(dotted.x) == ["2026-01", "2026-02", "2026-03"] and list(dotted.y) == [5.0, 8.0, None]  # month 1 with 1
+    assert dotted.line.dash == "dot" and list(dotted.customdata) == ["2025-01", "2025-02", ""]
+
+    # month names, newest first from the query: drawn left to right in time, January with January
+    named = pd.DataFrame({"Month": ["March 2026", "February 2026", "January 2026"], "Bookings": [30.0, 20.0, 10.0]})
+    before = pd.DataFrame({"Month": ["February 2025", "March 2025", "January 2025"], "Bookings": [2.0, 3.0, 1.0]})
+    fig = charts.build_figure(named, {"chart_type": "line", "x": "Month", "y": ["Bookings"]},
+                              compare={**compare, "df": before})
+    line, dotted = fig.data
+    assert list(line.x) == ["January 2026", "February 2026", "March 2026"] and list(dotted.y) == [1.0, 2.0, 3.0]
+    assert charts.time_order(["W2", "W1"]) == [0, 1]  # not dates: kept as the query returned them
+
+    split = charts.build_figure(DF, {"chart_type": "bar", "x": "Customer", "y": ["Sales", "Margin"]}, compare=compare)
+    assert len(split.data) == 2 and "2025" not in str(split.data[0].name)  # two measures: no comparison
+
+
+def test_tables_get_a_change_column():
+    before = pd.DataFrame({"Customer": ["Atlas", "Lotus"], "Sales": [1_000_000.0, 2_500_000.0], "Margin": [0.1, 0.1]})
+    shown, spec = charts.with_changes(DF, before, {"style": STYLE})
+    assert list(shown.columns) == ["Customer", "Sales", "Sales change", "Margin", "Margin change"]
+    assert shown["Sales change"].round(3).tolist()[0] == 0.25 and pd.isna(shown["Sales change"][1])
+    assert {"column": "Sales change", "d3_format": "+.1%"} in spec["style"]["formats"]
+    by_month = pd.DataFrame({"Month": ["2026-02", "2026-01"], "Sales": [30.0, 10.0]})
+    shown, _ = charts.with_changes(by_month, pd.DataFrame({"Month": ["2025-01", "2025-02"], "Sales": [5.0, 20.0]}), {})
+    assert shown["Sales change"].tolist() == [0.5, 1.0]  # paired by position in time

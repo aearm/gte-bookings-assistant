@@ -133,13 +133,10 @@ def _phrases(question: str) -> list[str]:
 
 def value_hits(question: str, names: list[str], limit: int = 24) -> list[dict]:
     """Exact values (or initials) of the data found in the question: [{text, cube, column, value, count}]."""
+    phrases = [p for p in _phrases(question) if not data_layer.is_measure_word(p)]  # "sales" is a number
     hits = []
-    for phrase in _phrases(question):
-        if data_layer.is_measure_word(phrase):
-            continue  # "sales" or "bookings" mean a number, not a value
-        for cube in names:
-            for h in value_index.for_cube(cube).exact(phrase):
-                hits.append({"text": phrase, "cube": cube, **h})
+    for cube in names:
+        hits += [{"cube": cube, **h} for h in value_index.for_cube(cube).exact_many(phrases)] if phrases else []
     hits.sort(key=lambda h: (-len(h["text"]), -(h["count"] or 0)))
     return hits[:limit]
 

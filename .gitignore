@@ -25,3 +25,4 @@ data/app*.log
 data/usage.jsonl
 data/answers.db
 data/bench/
+data/backup/

@@ -29,6 +29,7 @@ import config
 import cubes
 import glossary
 import llm
+import usage
 import value_index
 from backends import get_backend
 
@@ -201,14 +202,13 @@ def _norm(value) -> str:
 
 
 def _value_sets(cube_names: list[str]) -> dict[tuple[str, str], set]:
-    """(cube, column) -> its normalized values, for every indexed text column."""
+    """(cube, column) -> its normalized values, for every indexed text column (in memory or on disk)."""
     sets = {}
     for cube in cube_names:
-        for column, info in value_index.for_cube(cube).columns().items():
-            if "values" in info:
-                vals = {_norm(v) for v, _ in info["values"]} - _IGNORED_VALUES
-                if len(vals) >= MIN_VALUES_FOR_MATCH:
-                    sets[(cube, column)] = vals
+        for column, values in value_index.for_cube(cube).all_values():
+            vals = {_norm(v) for v in values} - _IGNORED_VALUES
+            if len(vals) >= MIN_VALUES_FOR_MATCH:
+                sets[(cube, column)] = vals
     return sets
 
 
@@ -557,7 +557,13 @@ def build(cube_names: list[str] | None = None, reread: bool = True, only_changed
           on_progress=None) -> dict:
     """Read every cube, profile it with Claude, find the shared dimensions, and save the layer.
     reread=False uses each cube's last read structure; only_changed=True keeps the profiles of
-    cubes whose structure hasn't changed. on_progress(text) reports each step."""
+    cubes whose structure hasn't changed. on_progress(text) reports each step. Recorded in usage as one
+    "layer_build" (its Claude calls and cost)."""
+    with usage.track("layer_build", f"{len(cube_names or cubes.enabled())} cube(s)"):
+        return _build(cube_names, reread, only_changed, on_progress)
+
+
+def _build(cube_names, reread, only_changed, on_progress) -> dict:
     say = on_progress or (lambda text: None)
     names = cube_names or cubes.enabled()
     if not names:
@@ -599,7 +605,7 @@ def build(cube_names: list[str] | None = None, reread: bool = True, only_changed
                 "profiled": datetime.now().isoformat(timespec="seconds")}
     say(f"Claude is studying each cube ({len(names)})...")
     with ThreadPoolExecutor(max_workers=4) as pool:
-        futures = {pool.submit(prof, c): c for c in names}
+        futures = {pool.submit(usage.in_thread(prof), c): c for c in names}
         for i, f in enumerate(as_completed(futures), 1):
             cube = futures[f]
             try:

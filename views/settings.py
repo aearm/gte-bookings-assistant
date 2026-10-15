@@ -1,10 +1,13 @@
-"""Settings (admins only): Claude API key, bookings server login, admin password."""
+"""Settings (admins only): Claude API key and cost, bookings server login, admin password."""
+import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
 
 import admin
 import config
 import llm
 import secrets_store
+import usage
 from backends import resolve_source
 from errors import details, friendly
 
@@ -52,6 +55,42 @@ if st.button("Test Claude"):
             st.success(f"The key works (model: {config.CLAUDE_MODEL}).")
         except Exception as exc:
             show_error(exc)
+
+
+# ---------------------------------------------------------------- Claude cost --
+
+st.divider()
+st.subheader("Claude cost")
+report = usage.cost_report()
+if report["since"] is None:
+    st.info("Nothing measured yet. The cost of each question, chart and setup step appears here.")
+else:
+    a, b, c, d = st.columns(4)
+    a.metric("Today", f"${report['today']:,.2f}")
+    b.metric("Last 7 days", f"${report['week']:,.2f}")
+    c.metric("This month", f"${report['month']:,.2f}")
+    d.metric(f"Since {report['since']:%d %b %Y}", f"${report['total']:,.2f}")
+    daily = pd.DataFrame([d for d in report["daily"] if d["Day"] >= report["since"]])  # from the first measured day
+    fig = go.Figure(go.Bar(x=pd.to_datetime(daily["Day"]), y=daily["Cost ($)"], marker_color="#0a84ff",
+                           hovertemplate="%{x|%d %b %Y}: $%{y:.2f}<extra></extra>"))
+    fig.update_layout(height=190, margin=dict(l=12, r=0, t=10, b=0), bargap=0.35,
+                      paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+    fig.update_xaxes(tickformat="%d %b", dtick=86_400_000 if len(daily) <= 14 else None)
+    fig.update_yaxes(tickprefix="$", rangemode="tozero")
+    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+    money = st.column_config.NumberColumn(format="$%.2f")
+    st.dataframe(pd.DataFrame(report["activities"]), hide_index=True, width="stretch",
+                 column_config={"This month ($)": money, "Total ($)": money})
+    with st.expander("By model"):
+        st.dataframe(pd.DataFrame(report["models"]), hide_index=True, width="stretch",
+                     column_config={"Total ($)": money,
+                                    "Tokens read": st.column_config.NumberColumn(format="localized"),
+                                    "Tokens written": st.column_config.NumberColumn(format="localized")})
+    st.caption(f"Estimated from Claude's list prices for every call this app has made since "
+               f"{report['since']:%d %b %Y}, when measuring started. Questions answered from memory (asked "
+               "again the same day) cost nothing. The exact bill, including anything before that date, is at "
+               "[platform.claude.com](https://platform.claude.com/settings/billing). Per-question details "
+               "are on the **Usage** page.")
 
 
 # ---------------------------------------------------------------- bookings server --

@@ -102,7 +102,8 @@ installing (Cubes page › **Build the data layer**, or `python build_layer.py -
 It follows the usual layering of a semantic model:
 
 1. **Physical layer** - every cube's exact measures, columns and helper columns, and every value of every
-   text column with how much data it has (`models/<cube>/schema.md`, `value_index.json`).
+   text column with how much data it has (`models/<cube>/schema.md`, `value_index.json`, and
+   `models/values.db` for big columns).
 2. **Semantic layer** (`models/data_layer/layer.json`) - for each cube, Claude's profile: what it is for,
    its grain (what one row is), its measures with business names, synonyms, units and whether they can be
    added up, what each date means, the business entity of each dimension (customer, supplier, hotel...)
@@ -185,7 +186,7 @@ desktop shortcut just opens the browser when it's already running). Its messages
 ### Dashboards (open first)
 
 Every dashboard is listed under **Dashboards** in the menu. Headline numbers at the top (with the
-change vs the same period last year), then charts. A dashboard can mix charts from different cubes.
+change vs the comparison period), then charts. A dashboard can mix charts from different cubes.
 The **period button** above the charts (e.g. *This year · 1 Jan – 13 Oct 2026 · W1–42*) opens a calendar,
 and every chart follows what you pick:
 - **Quick choices** on the left - today, yesterday, this/last week, last 7 or 30 days, this/last month,
@@ -195,8 +196,18 @@ and every chart follows what you pick:
   first Thursday): click it for that week, shift-click another to add weeks; or type a year and week
   numbers at the bottom (e.g. 2025, weeks 10 to 12);
 - **A month** - click the month's name.
-Then **Apply**. Headline numbers compare with the same period last year; for weeks, with the same week
-numbers. **Refresh** (↻) gets the latest numbers; it never uses Claude, it just re-runs the saved queries.
+Then **Apply**. Every chart always follows the dashboard's dates (never the dates of the question it
+came from).
+
+**Compare** (next to the period, e.g. *vs 1 Jan – 15 Oct 2025*) sets one comparison for the whole
+dashboard: **previous period** (the same days of the previous week, month, quarter or year - "this month"
+1-15 Oct is compared with 1-15 Sep - or the days just before), **same period last year** (the default;
+for weeks, the same week numbers), **other dates**, or **no comparison**. Each choice shows its dates.
+Headline numbers show the change (*+12.3% vs last year*); columns, bars and lines of one measure show the
+other period in grey beside this one (both named by their dates in the legend, the change on hover);
+tables get a change column after each measure. Maps, donuts and charts of several measures show this
+period only. An admin can switch the comparison off for one chart (**⋯ › Edit**).
+**Refresh** (↻) gets the latest numbers; it never uses Claude, it just re-runs the saved queries.
 
 **+ Add chart** (top right, and the dashed tile after the charts) and the **+** next to **Dashboards** in
 the menu (a new dashboard) are there for everyone; dashboards are shared, so the dialog asks for the admin password first if you
@@ -241,12 +252,26 @@ data, and **Change chart** under any answer redraws it. Described charts can go 
 
 Claude first shows **"I understood your question as: ..."** (the exact measure, dates and
 filters) so you can check it. If the question is too unclear to answer, it asks you instead,
-with one-click answers. **Hover over any chart** and click **Add to dashboard** to send it to any
-dashboard, or a new one (admins only); on the dashboard it then follows the dashboard's period.
+with one-click answers. **Add to dashboard** under any chart sends it to any dashboard, or a new one
+(admins only), and **Make a dashboard from this conversation** (under a conversation with two charts or
+more) puts its charts on a new dashboard of their own and opens it (Claude prepares them at the same
+time; one that can't be prepared is reported and the rest are added). On a dashboard a chart always
+follows the dashboard's dates, and its title drops the question's dates ("Sales by month, 2026" becomes
+"Sales by month"); to compare two periods, use **Compare** next to the period. A chart described in
+words keeps its look.
+
+**What Claude costs** is on the **Settings** page: today, the last 7 days, this month and since
+measuring started, by activity (questions, dashboard charts, chart redraws, data layer builds, cube setup)
+and by model, from Claude's list prices. Questions answered from memory cost nothing. The exact bill
+is at platform.claude.com.
 
 **Claude checks the data before writing the query.** Setting up a cube also builds a local index
 of every value in every text column (statuses, markets, countries, customers, suppliers...) with how
-much data each has, saved in `models/<cube>/value_index.json` (not in git). Before answering, Claude
+much data each has (not in git). Columns with up to 2,000 values (statuses, markets, countries, channels...)
+are kept in memory from `models/<cube>/value_index.json`; bigger ones (customers, hotels, zones...) stay on
+disk in one SQLite file shared by all cubes, `models/values.db`, where each value is stored once and found
+in about a millisecond, so they cost no memory. Columns with more than 20,000 values are searched on the
+server when needed. Before answering, Claude
 looks up the words in your question in that index (you see each check, e.g. *Looking up "UAE"*) and can
 test-run a query. If a word matches different things (e.g. Market "UAE" vs agency country "UNITED ARAB
 EMIRATES") or a value nobody uses, it asks you, with the real values as options. As a final safety net,
@@ -319,7 +344,7 @@ You can point Excel or Power BI at those CSVs, or ask the app new questions any 
 | `plans.py` | Query plans: one query per cube, run in parallel, joined in memory with SQL |
 | `dynamic_chart.py` | Charts described in words: checks Claude's chart description and draws it |
 | `periods.py` | Dashboard periods: quick choices, dates, ISO week numbers |
-| `period_picker.py` | The period button and its calendar (quick choices, days, week numbers) |
+| `period_picker.py` | The period button and its calendar (quick choices, days, week numbers), and the Compare button |
 | `inline_component.py` | Small built-in components (the calendar, "keep me signed in") |
 | `dashboard_view.py` | A dashboard page (each dashboard is a page in the menu) |
 | `views/` | The Chat, Glossary, Cubes and Settings pages |
@@ -328,7 +353,7 @@ You can point Excel or Power BI at those CSVs, or ask the app new questions any 
 | `.streamlit/config.toml` | The look: Inter font, Apple-like colours, light and dark themes |
 | `dashboards.py` | Dashboards: saved charts (each with its cube), periods, running and building charts |
 | `ui.py` | Small pieces of UI shared by the pages, and the Apple-like styling |
-| `value_index.py` | Local index of every value in the data (built on Refresh data structure) |
+| `value_index.py` | Local index of every value in the data (built on Refresh data structure): small columns in memory, big ones in `models/values.db` |
 | `data_tools.py` | Read-only tools Claude uses before writing a plan: a cube's details, finding values in every cube, test-running a query |
 | `tests/` | Automated tests (`python -m pytest`; `RUN_LIVE=1` adds tests on the live server and Claude) |
 | `value_check.py` | Checks the values a query filters on against the real data before it runs |
@@ -350,7 +375,7 @@ You can point Excel or Power BI at those CSVs, or ask the app new questions any 
 | `set_password.py` | Saves your server password securely in Windows Credential Manager |
 | `setup.bat` / `run_app.bat` | Windows setup (runs `setup_windows.ps1`) and start |
 | `autostart.bat` / `install_autostart.ps1` | Start the app automatically with Windows, in the background (Task Scheduler) |
-| `start_server.py` | Runs the app in the background without a window (what Windows starts); log in `data/app.log` |
+| `start_server.py` | Runs the app in the background without a window (what Windows starts); log in `data/app.log`. Limits numpy's maths library to one thread (it would reserve ~30 MB per CPU core) |
 | `setup.sh` / `run_app.sh` | Mac setup and start |
 | `.env` | Your settings and API key (keep private, don't share or email it; delete it before sending the folder to someone) |
 | `business_notes.example.md` | Template for each cube's notes (`models/<cube>/notes.md`) |

@@ -11,7 +11,7 @@ import json
 import threading
 import time
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import date, datetime, timedelta
 
 import config
 
@@ -147,6 +147,47 @@ def load(limit: int | None = None, kind: str | None = None) -> list[dict]:
         if kind is None or row.get("kind") == kind:
             rows.append(row)
     return rows[-limit:] if limit else rows
+
+
+ACTIVITIES = {"question": "Questions in Chat", "dashboard_chart": "Dashboard charts",
+              "chart_restyle": "Chart redraws", "layer_build": "Data layer builds",
+              "cube_setup": "Cube setup", "claude_call": "Other"}
+
+
+def cost_report(rows: list[dict] | None = None, today: date | None = None, days: int = 30) -> dict:
+    """What Claude has cost: totals (today, last 7 days, this month, everything measured), by activity,
+    by model, and per day for the last `days` days (days without use are 0)."""
+    rows = load() if rows is None else rows
+    today = today or date.today()
+    day = lambda r: date.fromisoformat(r["time"][:10])
+    spent = lambda since: round(sum(r.get("cost", 0) for r in rows if day(r) >= since), 4)
+    month = today.replace(day=1)
+    activities, models = {}, {}
+    for r in rows:
+        name = ACTIVITIES.get(r.get("kind"), "Other")
+        a = activities.setdefault(name, {"Activity": name, "Times": 0, "From memory": 0,
+                                         "This month ($)": 0.0, "Total ($)": 0.0})
+        a["Times"] += 1
+        a["From memory"] += bool(r.get("memory"))
+        a["Total ($)"] += r.get("cost", 0)
+        a["This month ($)"] += r.get("cost", 0) if day(r) >= month else 0
+        for c in r.get("calls", []):
+            m = models.setdefault(c["model"], {"Model": c["model"], "Calls": 0, "Tokens read": 0,
+                                               "Tokens written": 0, "Total ($)": 0.0})
+            m["Calls"] += 1
+            m["Tokens read"] += c["input"] + c["cache_read"] + c["cache_write_5m"] + c["cache_write_1h"]
+            m["Tokens written"] += c["output"]
+            m["Total ($)"] += c["cost"]
+    per_day = {today - timedelta(days=n): 0.0 for n in range(days - 1, -1, -1)}
+    for r in rows:
+        if day(r) in per_day:
+            per_day[day(r)] += r.get("cost", 0)
+    order = list(ACTIVITIES.values())
+    return {"today": spent(today), "week": spent(today - timedelta(days=6)), "month": spent(month),
+            "total": spent(date.min), "since": min((day(r) for r in rows), default=None),
+            "activities": sorted(activities.values(), key=lambda a: order.index(a["Activity"])),
+            "models": sorted(models.values(), key=lambda m: -m["Total ($)"]),
+            "daily": [{"Day": d, "Cost ($)": round(c, 4)} for d, c in per_day.items()]}
 
 
 def in_thread(fn):

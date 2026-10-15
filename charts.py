@@ -87,6 +87,18 @@ def is_time_column(series: pd.Series) -> bool:
         len(sample) == 0 or sum(bool(_TIME_VALUE.match(v.strip())) for v in sample) >= len(sample) * 0.6)
 
 
+def time_order(values) -> list[int]:
+    """Positions of time labels from earliest to latest ("January 2026" before "February 2026", which
+    sorting the text would not do); their order as given if they aren't dates or numbers."""
+    text = pd.Series([str(v) for v in values], dtype=object)
+    when = pd.to_datetime(text, errors="coerce", format="mixed")
+    if when.isna().any():
+        when = pd.to_numeric(text, errors="coerce")
+        if when.isna().any():
+            return list(range(len(text)))
+    return list(when.sort_values(kind="stable").index)
+
+
 def _numbers(df: pd.DataFrame) -> list[str]:
     return [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c]) and not is_time_column(df[c])]
 
@@ -205,9 +217,11 @@ def _style(fig, dark: bool, height: int | None, title: str, legend: bool = True)
 
 
 def build_figure(df: pd.DataFrame, spec: dict, dark: bool = False, height: int | None = None,
-                 show_title: bool = True):
+                 show_title: bool = True, compare: dict | None = None):
     """Return a Plotly figure, or None if a table is the better display. A custom chart that can't
-    be drawn with this data (e.g. a column is gone) falls back to the best standard chart."""
+    be drawn with this data (e.g. a column is gone) falls back to the best standard chart.
+    compare = {"df": the same query for the comparison dates, "current": "1 Jan – 15 Oct 2026",
+    "name": "1 Jan – 15 Oct 2025"}: drawn in grey next to the period (see _add_comparison)."""
     spec = fit(df, spec)
     kind = spec["chart_type"]
     if kind == "custom":
@@ -226,7 +240,107 @@ def build_figure(df: pd.DataFrame, spec: dict, dark: bool = False, height: int |
         df = df.sort_values(spec["y"][0], ascending=style["sort"] == "value_asc")
     fig = _draw(df, spec, dark, height, show_title)
     _format(fig, spec, INK["dark" if dark else "light"])
+    if compare:
+        _add_comparison(fig, spec, compare, dark)
     return fig
+
+
+# ---------------------------------------------------------------- comparing --
+# One comparison for the whole dashboard (picked next to the period): the period in colour, the
+# comparison in grey, both named by their dates in the legend, the change in the tooltip. Only where it
+# reads clearly: columns, bars and lines of one measure (and tables and headline numbers, elsewhere).
+
+COMPARE_COLOR = {"light": "#b8b8bf", "dark": "#5c5c63"}
+COMPARABLE = ("bar", "horizontal_bar", "line", "area")
+
+
+def change_text(value, before) -> str:
+    """' (+12.3%)' - the change from before to value, or '' when it can't be said."""
+    if value is None or before is None or pd.isna(value) or pd.isna(before) or before == 0:
+        return ""
+    return f" ({(value - before) / abs(before):+.1%})"
+
+
+def _add_comparison(fig, spec: dict, compare: dict, dark: bool) -> None:
+    kind, x, ys = spec["chart_type"], spec.get("x"), spec.get("y") or []
+    prev = compare.get("df")
+    if (kind not in COMPARABLE or len(ys) != 1 or spec.get("color") or len(fig.data) != 1 or prev is None
+            or prev.empty or x not in prev.columns or ys[0] not in prev.columns):
+        return
+    import plotly.graph_objects as go
+    y, cur, horizontal = ys[0], fig.data[0], kind == "horizontal_bar"
+    cats, values = (list(cur.y), list(cur.x)) if horizontal else (list(cur.x), list(cur.y))
+    if kind in ("line", "area"):  # over time: the same position in each period (1st month with 1st month)
+        before = prev.iloc[time_order(prev[x])]
+        old, labels = [None] * len(cats), [""] * len(cats)
+        for slot, (when, v) in zip(time_order(cats), zip(before[x], before[y])):
+            old[slot], labels[slot] = (None if pd.isna(v) else v), str(when)
+    else:  # categories: the same category in each period
+        by_cat = prev.groupby(prev[x].astype(str))[y].sum()
+        old = [by_cat.get(str(c)) for c in cats]
+        old, labels = [None if v is None or pd.isna(v) else v for v in old], None
+    d3, prefix, suffix = number_format(spec, y)
+    shown, v = d3 or ",.0f", "x" if horizontal else "y"
+    value = f"{prefix}%{{{v}:{shown}}}{suffix}"
+    cur.update(name=compare["current"], showlegend=True, customdata=[change_text(a, b) for a, b in zip(values, old)]
+               + [""] * (len(values) - len(old)), hovertemplate=f"{compare['current']}: {value}%{{customdata}}<extra></extra>")
+    grey = COMPARE_COLOR["dark" if dark else "light"]
+    if labels is not None:
+        fig.add_trace(go.Scatter(x=cats, y=old, mode="lines", name=compare["name"], customdata=labels,
+                                 line=dict(color=grey, width=2, dash="dot"), connectgaps=True,
+                                 hovertemplate=f"{compare['name']} (%{{customdata}}): {value}<extra></extra>"))
+    else:
+        bar = dict(x=old, y=cats, orientation="h") if horizontal else dict(x=cats, y=old)
+        fig.add_trace(go.Bar(**bar, name=compare["name"], marker_color=grey,
+                             hovertemplate=f"{compare['name']}: {value}<extra></extra>"))
+        fig.data = (fig.data[1], fig.data[0])  # the comparison first: beside (or below) each period's bar
+        fig.update_layout(barmode="group", legend_traceorder="reversed")  # the legend still names this period first
+        axis = fig.layout.yaxis if horizontal else fig.layout.xaxis
+        if axis.categoryorder and axis.categoryorder.startswith("total"):  # order by this period, not both
+            ascending = axis.categoryorder == "total ascending"
+            ordered = sorted(zip(cats, values), key=lambda cv: cv[1] if cv[1] is not None else 0, reverse=not ascending)
+            axis.update(categoryorder="array", categoryarray=[c for c, _ in ordered])
+    fig.update_layout(showlegend=True, margin=dict(t=max(fig.layout.margin.t or 0, 36)),  # room for the legend
+                      legend=dict(visible=True, orientation="h", yanchor="bottom", y=1.02, x=0, title_text=""))
+
+
+def _paired(df: pd.DataFrame, prev: pd.DataFrame, nums: list[str]) -> pd.DataFrame | None:
+    """prev's numbers lined up with df's rows (same index), or None when rows can't be paired clearly:
+    by category (same name), by date (same position: 1st month with 1st month), or a single row."""
+    labels = _labels(df)
+    if any(c not in prev.columns for c in labels):
+        return None
+    time = [c for c in labels if is_time_column(df[c])]
+    keys = [c for c in labels if c not in time]
+    if time and keys:  # by date and by something else: no clear pairing
+        return None
+    if keys:
+        before = prev.assign(**{k: prev[k].astype(str) for k in keys}).groupby(keys, sort=False)[nums].sum()
+        found = df[keys].astype(str).merge(before.reset_index(), on=keys, how="left")[nums]
+        return found.set_axis(df.index)
+    if time:
+        order = df.index[time_order(df[time[0]])]
+        before = prev.iloc[time_order(prev[time[0]])][nums].reset_index(drop=True).head(len(order))
+        return before.set_axis(order[:len(before)]).reindex(df.index)
+    if len(df) == 1 and len(prev) == 1:
+        return prev[nums].set_axis(df.index)
+    return None
+
+
+def with_changes(df: pd.DataFrame, prev: pd.DataFrame | None, spec: dict) -> tuple[pd.DataFrame, dict]:
+    """A table with a change column after each measure ("Sales change", +12.3%) against the comparison
+    period, and the spec with those columns formatted as percentages. Unchanged if rows can't be paired."""
+    nums = [n for n in _numbers(df)[:4] if prev is not None and n in prev.columns]
+    before = _paired(df, prev, nums) if nums and not prev.empty else None
+    if before is None:
+        return df, spec
+    out = df.copy()
+    formats = list((spec.get("style") or {}).get("formats", []))
+    for n in reversed(nums):
+        old = before[n]
+        out.insert(out.columns.get_loc(n) + 1, f"{n} change", (df[n] - old) / old.abs().where(old != 0))
+        formats.append({"column": f"{n} change", "d3_format": "+.1%"})
+    return out, {**spec, "style": {**(spec.get("style") or {}), "formats": formats}}
 
 
 def _draw(df: pd.DataFrame, spec: dict, dark: bool, height: int | None, show_title: bool):
@@ -272,6 +386,8 @@ def _draw(df: pd.DataFrame, spec: dict, dark: bool, height: int | None, show_tit
         fig.update_traces(marker=dict(size=9, line=dict(color=ink["surface"], width=1)))
     elif kind in ("line", "area"):
         draw = px.line if kind == "line" else px.area
+        if is_time_column(df[x]):  # time reads left to right, whatever order the query returned
+            df = df.iloc[time_order(df[x])]
         fig = draw(df, x=x, y=y_arg, color=color, **common)
         fig.update_traces(line=dict(width=2))
         if kind == "line" and len(df) <= 40:

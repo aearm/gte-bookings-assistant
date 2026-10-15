@@ -6,7 +6,7 @@ import json
 import re
 import threading
 import uuid
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime
 
 import answering
@@ -14,10 +14,12 @@ import charts
 import config
 import cubes
 import data_layer
+import dynamic_chart
 import glossary
 import llm
 import periods
 import plans
+import usage
 from backends import get_backend
 from errors import details, friendly
 
@@ -204,36 +206,48 @@ def send_chart(chart: dict, to_dashboard_id: str, remove_from: str = "") -> None
 
 # ---------------------------------------------------------------- running --
 
-def _run_one(chart: dict, start: date, end: date, weekly: bool = False) -> dict:
+def compares(chart: dict) -> bool:
+    """Whether a chart shows the dashboard's comparison: a headline number, a table, or columns, bars
+    or a line of one measure not split by a second breakdown (anything more gets too busy to read),
+    whose dates follow the dashboard - unless an admin switched it off for this chart."""
+    if chart.get("compare") is False or not chart.get("date_column"):
+        return False
+    kind = chart.get("chart_type")
+    return kind in ("kpi", "table") or (kind in ("bar", "horizontal_bar", "line", "area")
+                                        and len(chart.get("y") or []) <= 1 and not chart.get("color"))
+
+
+def _run_one(chart: dict, start: date, end: date, compare: tuple[date, date] | None = None) -> dict:
     out = {"df": None, "prev": None, "error": "", "details": ""}
     try:
         plan = plans.Plan.from_chart(chart)
         out["df"] = plans.run(plan.with_dates(start, end))
-        if chart["chart_type"] == "kpi" and chart.get("date_column"):
-            out["prev"] = plans.run(plan.with_dates(*periods.same_period_last_year(start, end, weekly)))
+        if compare and chart.get("compares", compares(chart)):
+            out["prev"] = plans.run(plan.with_dates(*compare))
     except Exception as exc:
         out["error"], out["details"] = friendly(exc), details(exc)
     return out
 
 
-def run_all(charts: list[dict], start: date, end: date, weekly: bool = False) -> dict[str, dict]:
-    """Run every chart's plan (each on its own cubes) for the period. weekly = compare headline
-    numbers with the same weeks last year. Returns {chart id: {df, prev, error, details}}."""
+def run_all(charts: list[dict], start: date, end: date, compare: tuple[date, date] | None = None) -> dict[str, dict]:
+    """Run every chart's plan (each on its own cubes) for the period, and for the charts that show it
+    (compares()) also for the comparison dates. Returns {chart id: {df, prev, error, details}}."""
     workers = 4 if config.resolve_source() == "ssas" else 1  # the local database runs one query at a time
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        futures = {c["id"]: pool.submit(_run_one, c, start, end, weekly) for c in charts}
+        futures = {c["id"]: pool.submit(_run_one, c, start, end, compare) for c in charts}
     return {cid: f.result() for cid, f in futures.items()}
 
 
 def run_key(chart: dict) -> tuple:
     """What a chart's numbers depend on (for caching the results)."""
     return (chart["id"], json.dumps(plans.Plan.from_chart(chart).to_dict(), sort_keys=True),
-            chart.get("date_column", ""), chart["chart_type"])
+            chart.get("date_column", ""), chart["chart_type"], compares(chart))
 
 
 def chart_from_key(key: tuple) -> dict:
-    chart_id, plan, date_column, chart_type = key
-    return {"id": chart_id, "plan": json.loads(plan), "date_column": date_column, "chart_type": chart_type}
+    chart_id, plan, date_column, chart_type, compared = key
+    return {"id": chart_id, "plan": json.loads(plan), "date_column": date_column, "chart_type": chart_type,
+            "compares": compared}
 
 
 # ---------------------------------------------------------------- building --
@@ -242,7 +256,30 @@ def build_chart(cube: str, question: str, title: str, chart_type: str, width: st
                 start: date, end: date, base_query: str = "", base_spec: dict | None = None,
                 chart_request: str = "") -> dict:
     """Ask Claude for a dashboard plan (on one cube, or "" = any cubes), test it for the period, and
-    return the chart. chart_request = the user's own description of the chart (a custom chart)."""
+    return the chart. chart_request = the user's own description of the chart (a custom chart).
+    Its Claude calls are recorded in usage as one "dashboard_chart"."""
+    with usage.track("dashboard_chart", question):
+        return _build_chart(cube, question, title, chart_type, width, date_column, start, end, base_query,
+                            base_spec, chart_request)
+
+
+def build_many(jobs: dict, start: date, end: date, workers: int = 4):
+    """Several charts prepared at the same time (each job = build_chart's arguments except the period).
+    Yields (key, chart, None) or (key, None, exception) as each one is ready, so one that fails
+    doesn't stop the others."""
+    if not jobs:
+        return
+    with ThreadPoolExecutor(max_workers=min(workers, len(jobs))) as pool:
+        futures = {pool.submit(build_chart, start=start, end=end, **job): key for key, job in jobs.items()}
+        for future in as_completed(futures):
+            try:
+                yield futures[future], future.result(), None
+            except Exception as exc:
+                yield futures[future], None, exc
+
+
+def _build_chart(cube, question, title, chart_type, width, date_column, start, end, base_query, base_spec,
+                 chart_request) -> dict:
     ok, why = answering.ready(cube)
     if not ok:
         raise RuntimeError(why)
@@ -258,6 +295,10 @@ def build_chart(cube: str, question: str, title: str, chart_type: str, width: st
     if chart_type == "kpi":  # Claude still picks how the number is written (AED 4.5M, 12.3%...)
         style = llm.describe_result(question, df, **context).get("style", {}) if not df.empty else {}
         spec = {"chart_type": "kpi", "x": "", "y": [], "color": "", "style": style}
+    elif (chart_type in ("custom", "auto") and base_spec and base_spec.get("custom")
+          and chart_request in ("", base_spec.get("chart_request", ""))
+          and dynamic_chart.columns_used(base_spec["custom"]) <= set(map(str, df.columns))):
+        spec = dict(base_spec)  # the chart drawn in Chat, as it was
     elif chart_type == "custom" or chart_request:
         spec = llm.describe_result(question, df, chart_request=chart_request or question, **context)
     elif base_spec and (base_spec.get("x") in df.columns or base_spec.get("custom")):
@@ -270,8 +311,9 @@ def build_chart(cube: str, question: str, title: str, chart_type: str, width: st
     if chart_type not in ("auto", "", "custom"):
         spec["chart_type"] = chart_type
     spec = charts.fit(df, spec) if spec.get("chart_type") != "kpi" else spec
+    title = title.strip() or spec.get("title") or question
     chart = {"id": uuid.uuid4().hex[:8], "cube": plan.cubes[0] if len(plan.cubes) == 1 else "",
-             "title": title.strip() or spec.get("title") or question, "question": question,
+             "title": periods.without_dates(title) if date_column else title, "question": question,
              "query": plan.text(), "plan": plan.to_dict(), "date_column": date_column,
              "chart_type": spec.get("chart_type", "table"), "x": spec.get("x", ""), "y": spec.get("y", []),
              "color": spec.get("color", ""), "style": spec.get("style", {}), "width": width}
@@ -282,6 +324,11 @@ def build_chart(cube: str, question: str, title: str, chart_type: str, width: st
 
 def restyle_chart(chart: dict, chart_request: str, start: date, end: date) -> dict:
     """The same numbers drawn as the user describes (no new query)."""
+    with usage.track("chart_restyle", chart.get("title", "")):
+        return _restyle_chart(chart, chart_request, start, end)
+
+
+def _restyle_chart(chart: dict, chart_request: str, start: date, end: date) -> dict:
     plan = plans.Plan.from_chart(chart)
     df = plans.run(plan.with_dates(start, end))
     spec = llm.describe_result(chart["question"], df, chart_request=chart_request, query=plan.text(),

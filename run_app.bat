@@ -9,5 +9,7 @@ rem Already running (e.g. started automatically with Windows)? Just open it.
 powershell -NoProfile -Command "if (Get-NetTCPConnection -LocalPort 8501 -State Listen -ErrorAction SilentlyContinue) { Start-Process http://localhost:8501; exit 0 } else { exit 1 }"
 if %errorlevel%==0 exit /b 0
 call .venv\Scripts\activate
+rem numpy's maths library would reserve ~30 MB per CPU core for maths the app never does
+set OPENBLAS_NUM_THREADS=1
 echo Starting Bookings Assistant... your browser will open. Keep this window open while using the app.
 streamlit run app.py

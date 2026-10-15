@@ -4,7 +4,8 @@ right. Click a day, then another, for a range; click a week number for that week
 another week number to extend); click a month's name for the whole month; or jump to a year and
 week numbers at the bottom. Apply closes it, and every chart follows the new period.
 The calendar is a small Streamlit component (HTML, CSS and JavaScript below, no build step)."""
-from datetime import date
+from dataclasses import dataclass
+from datetime import date, timedelta
 
 import streamlit as st
 
@@ -286,3 +287,84 @@ def picker() -> tuple[date, date, bool]:
                 "presets": [{"name": n, "start": s.isoformat(), "end": e.isoformat()}
                             for n in periods.PRESETS for s, e in [periods.preset_range(n)]]})
     return start, end, periods.is_weekly(start, end, preset)
+
+
+# ---------------------------------------------------------------- comparing --
+# One comparison for the whole dashboard, next to the period: every chart that can show it does
+# (dashboards.compares). Kept for the session, like the period, so it carries over between dashboards.
+
+COMPARE_KEY = "dash_compare"       # {"mode": one of periods.COMPARE_MODES, "start"/"end": iso for other dates}
+COMPARE_MODE_KEY = "dash_compare_mode"
+COMPARE_DATES_KEY = "dash_compare_dates"
+
+
+@dataclass
+class Comparison:
+    start: date
+    end: date      # exclusive
+    name: str      # in a few words, for "+12% vs ...": "last year", "yesterday", "1 Sep – 15 Sep 2026"
+
+    @property
+    def dates(self) -> str:
+        return periods.dates_text(self.start, self.end)
+
+
+def _custom() -> tuple[date, date] | None:
+    picked = st.session_state.get(COMPARE_KEY) or {}
+    try:
+        start, end = date.fromisoformat(picked["start"]), date.fromisoformat(picked["end"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    return (start, end) if end > start else None
+
+
+def compare_mode() -> str:
+    mode = (st.session_state.get(COMPARE_KEY) or {}).get("mode", periods.DEFAULT_COMPARE)
+    return mode if mode in periods.COMPARE_MODES and (mode != "custom" or _custom()) else periods.DEFAULT_COMPARE
+
+
+def comparison() -> Comparison | None:
+    """What the dashboards compare the period with, or None."""
+    start, end, preset = current()
+    mode, custom = compare_mode(), _custom()
+    found = periods.compare_range(mode, start, end, preset, custom)
+    return Comparison(*found, periods.compare_name(mode, start, end, preset, custom)) if found else None
+
+
+def _on_compare() -> None:
+    mode = st.session_state.get(COMPARE_MODE_KEY, periods.DEFAULT_COMPARE)
+    kept = dict(st.session_state.get(COMPARE_KEY) or {})
+    picked = st.session_state.get(COMPARE_DATES_KEY)
+    if mode == "custom" and isinstance(picked, (list, tuple)) and len(picked) == 2:
+        kept.update(start=picked[0].isoformat(), end=(picked[1] + timedelta(days=1)).isoformat())
+    elif mode == "custom" and not _custom():  # until other dates are picked: the previous period
+        start, end = periods.previous_period(*current())
+        kept.update(start=start.isoformat(), end=end.isoformat())
+    kept["mode"] = mode
+    st.session_state[COMPARE_KEY] = kept
+
+
+def compare_picker() -> Comparison | None:
+    """The "Compare" button next to the period. Returns the comparison (or None)."""
+    start, end, preset = current()
+    found = comparison()
+    label = f"vs {found.dates}" if found else "Compare"
+    with st.popover(label, icon=":material/compare_arrows:",
+                    help="Compare every chart with another period: this period in colour, the other in grey"):
+        modes, custom = list(periods.COMPARE_MODES), _custom()
+        default_custom = custom or periods.previous_period(start, end, preset)
+        captions = []
+        for m in modes:
+            dates = periods.compare_range(m, start, end, preset, default_custom)
+            captions.append(periods.dates_text(*dates) if dates else "Show this period only")
+        mode = st.radio("Compare with", modes, index=modes.index(compare_mode()),
+                        format_func=periods.COMPARE_MODES.get, captions=captions, key=COMPARE_MODE_KEY,
+                        on_change=_on_compare)
+        if mode == "custom":
+            first, last = default_custom[0], default_custom[1] - timedelta(days=1)
+            st.date_input("Dates to compare with", value=(first, last), format="DD/MM/YYYY", key=COMPARE_DATES_KEY,
+                          on_change=_on_compare, help="Click the first day, then the last")
+        st.caption("Shown on headline numbers, columns, bars, lines and tables of one measure: this period in "
+                   "colour, the other in grey, with the change. Maps, donuts and charts of several measures show "
+                   "this period only.")
+    return found
