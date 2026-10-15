@@ -225,6 +225,31 @@ def test_settings_show_what_claude_costs(at, monkeypatch):
     assert [m.value for m in at.metric] == ["$0.75"] * 4  # today, 7 days, this month, since measuring began
 
 
+def test_settings_check_for_updates(at, monkeypatch):
+    import updates
+    monkeypatch.setattr(secrets_store, "api_key_status", lambda: "saved")
+    monkeypatch.setattr(updates, "last_status", lambda: None)
+    monkeypatch.setattr(updates, "updating", lambda: False)
+    monkeypatch.setattr(updates, "current_version", lambda: "1.0.0")
+    monkeypatch.setattr(updates, "latest_release", lambda: updates.Release(
+        "1.1.0", "v1.1.0", "20 Oct 2026", "Faster dashboards.", "https://zip", "https://page"))
+    monkeypatch.setattr(updates, "is_developer_copy", lambda: False)
+    at.session_state["admin"] = True
+    at.run()
+    at.switch_page("views/settings.py").run()
+    assert "App version" in [s.value for s in at.subheader] and "**Bookings Assistant 1.0.0**" in texts(at)
+    next(b for b in at.button if b.label == "Check for updates").click().run()
+    assert not at.exception
+    assert any("Version 1.1.0" in i.value for i in at.info) and "Faster dashboards." in texts(at)
+    assert any(b.label == "Update to 1.1.0" for b in at.button)
+    assert any("Kept exactly as they are" in c.value for c in at.caption)
+
+    monkeypatch.setattr(updates, "is_developer_copy", lambda: True)  # a git clone: updated with git pull
+    at.run()
+    assert not any(b.label == "Update to 1.1.0" for b in at.button)
+    assert any("git pull" in c.value for c in at.caption)
+
+
 def test_chat_explains_what_is_missing(at, monkeypatch):
     monkeypatch.setattr(data_layer, "is_built", lambda: False)
     at.run()

@@ -1,4 +1,7 @@
-"""Settings (admins only): Claude API key and cost, bookings server login, admin password."""
+"""Settings (admins only): Claude API key and cost, bookings server login, app version and updates,
+admin password."""
+from datetime import datetime
+
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -7,6 +10,7 @@ import admin
 import config
 import llm
 import secrets_store
+import updates
 import usage
 from backends import resolve_source
 from errors import details, friendly
@@ -137,6 +141,57 @@ else:
                 st.success(f"Connected. {len(found)} cubes available - choose them on the Cubes page.")
             except Exception as exc:
                 show_error(exc)
+
+
+# ---------------------------------------------------------------- app version --
+
+st.divider()
+st.subheader("App version")
+st.markdown(f"**Bookings Assistant {updates.current_version()}**")
+last = updates.last_status()
+if last:
+    when = datetime.fromisoformat(last["time"]).strftime("%d %b %Y, %H:%M").lstrip("0")
+    if last.get("ok"):
+        st.caption(f"Last update: {last['from']} → {last['to']} on {when}.")
+    else:
+        st.error(f"The update to {last['to']} on {when} didn't work: {last.get('error', '')}", icon="⚠️")
+
+if updates.updating():
+    st.info("An update is running: the app stops, updates and starts again by itself (about a minute). "
+            "This page reconnects when it's back.", icon="⏳")
+else:
+    if st.button("Check for updates", icon=":material/update:"):
+        with st.spinner("Asking GitHub for the latest version..."):
+            try:
+                st.session_state.latest_release = updates.latest_release() or "none"
+            except Exception as exc:
+                show_error(exc)
+    found = st.session_state.get("latest_release")
+    if found == "none":
+        st.caption("No version has been published on GitHub yet.")
+    elif found and not found.is_newer():
+        st.success(f"You have the latest version ({found.version}).", icon="✅")
+    elif found:
+        st.info(f"**Version {found.version}** is available (published {found.published}).", icon="🆕")
+        with st.expander("What's new", expanded=True):
+            st.markdown(found.notes or "_No description._")
+            if found.page:
+                st.caption(f"[See it on GitHub]({found.page})")
+        if updates.is_developer_copy():
+            st.caption("This folder is a developer copy (git), so it's updated with **git pull**, then a restart "
+                       "of the app - not from here.")
+        else:
+            st.caption("Kept exactly as they are: settings and keys, dashboards, the data layer, answer memory, usage "
+                       "and history. The current version is saved in data/backup first, and put back if anything "
+                       "goes wrong.")
+            if st.button(f"Update to {found.version}", type="primary", icon=":material/download:"):
+                try:
+                    with st.spinner(f"Downloading version {found.version}..."):
+                        updates.launch(updates.download(found), found.version)
+                    st.success("Updating now: the app stops, updates and starts again by itself (about a minute). "
+                               "This page reconnects when it's back.", icon="⏳")
+                except Exception as exc:
+                    show_error(exc)
 
 
 # ---------------------------------------------------------------- admin --

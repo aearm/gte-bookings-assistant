@@ -79,7 +79,26 @@ create a key) and the server details you use in Power BI or Excel.
 4. **Open Cubes** (menu › Admin): tick the cubes people should use (or **Use all cubes**), then click
    **Build the data layer** (once; about a minute per cube). Or run `python build_layer.py --all`.
 
-Run `setup.bat` again at any time to repair or update the installation; your settings are kept.
+Run `setup.bat` again at any time to repair the installation; your settings are kept.
+
+### Updating to a new version
+
+Admins update the app from inside it: **Settings › App version › Check for updates**. If GitHub has a
+newer release you see its number, date and what's new, and **Update to …** does the rest: it downloads
+the release, the app stops, the new code is put in place (new libraries are installed if needed), and
+the app starts again by itself - about a minute; the page reconnects when it's back. Users don't
+need to do anything.
+
+An update never touches what belongs to your installation: settings and keys (`.env`, Windows
+Credential Manager), dashboards (`dashboards.json`), the data layer and value lists (`models/`), answer
+memory, usage, results and history (`data/`), the glossary and saved queries, and the Python
+environment (`.venv`). The current version is saved in `data/backup/` first; if any step fails the
+previous version is put back and started, and Settings says what went wrong. A copy made with
+`git clone` (a developer copy) is updated with `git pull` instead, then a restart of the app.
+
+**Releasing a version** (for the maintainer): put the new number in `VERSION` (e.g. `1.1.0`), commit
+and push; then on GitHub open **Releases › Draft a new release**, create the tag `v1.1.0`, write what
+changed (admins read this before updating), and **Publish release**. The tag must match `VERSION`.
 If the connection test fails with every setting, `python test_connection.py` (in the folder,
 after `.venv\Scripts\activate`) tries other connection options.
 
@@ -375,6 +394,8 @@ You can point Excel or Power BI at those CSVs, or ask the app new questions any 
 | `set_password.py` | Saves your server password securely in Windows Credential Manager |
 | `setup.bat` / `run_app.bat` | Windows setup (runs `setup_windows.ps1`) and start |
 | `autostart.bat` / `install_autostart.ps1` | Start the app automatically with Windows, in the background (Task Scheduler) |
+| `updates.py` | Updating from GitHub releases (Settings › App version), keeping all of the installation's data; also the helper that stops, updates and restarts the app |
+| `VERSION` | The app's version; each GitHub release is tagged with it (`v1.1.0`) |
 | `start_server.py` | Runs the app in the background without a window (what Windows starts); log in `data/app.log`. Limits numpy's maths library to one thread (it would reserve ~30 MB per CPU core) |
 | `setup.sh` / `run_app.sh` | Mac setup and start |
 | `.env` | Your settings and API key (keep private, don't share or email it; delete it before sending the folder to someone) |

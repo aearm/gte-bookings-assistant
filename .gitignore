@@ -26,3 +26,6 @@ data/usage.jsonl
 data/answers.db
 data/bench/
 data/backup/
+data/updates/
+data/update_status.json
+data/installed_files.json
