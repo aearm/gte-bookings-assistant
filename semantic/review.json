@@ -1,0 +1,624 @@
+{
+ "version": "1.0.0",
+ "items": [
+  {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "id": "payments.market_column",
+   "question": "\"By market\" in payments: the customer's market or the market recorded on the booking?",
+   "options": [
+    "'Customers'[Market]",
+    "'Market'[Market]"
+   ],
+   "proposed": "'Customers'[Market]",
+   "why": "Matches the Bookings cube, which only has the customer's market; the two differ for a few markets (e.g. CIS).",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "id": "payments.success_rate",
+   "question": "\"Payment success rate\" = the cube's [% Success Payments], which divides successful payments by booking lines (not by payments). Keep it?",
+   "options": [
+    "[% Success Payments]",
+    "[% Payments Without Errors]"
+   ],
+   "proposed": "[% Success Payments]",
+   "why": "It is the cube's own success rate and gives about 95% for any payment-date period; only its all-time figure (54%) is distorted, and the app always filters a period.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "id": "payments.duration_meaning",
+   "question": "What does \"Diff Miliseconds\" measure on gateway transactions?",
+   "options": [
+    "time from transaction start to final status",
+    "gateway response time"
+   ],
+   "proposed": "time from transaction start to final status",
+   "why": "The average is 1.8–3.3 hours and the maximum about 92 days, far too long for a gateway response time; the app labels it \"transaction duration\" until confirmed.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Bookings",
+   "id": "bookings.sales_term",
+   "question": "Does \"sales\" mean Sale (with tax), Sale w/o Tax or Final Sales?",
+   "options": [
+    "[Sale]",
+    "[Sale w/o Tax]",
+    "[Final Sales]"
+   ],
+   "proposed": "[Sale]",
+   "why": "Sale is what the company's reports use. Final Sales only adds fixed handling fees (about AED 3.7K over all years); Sale w/o Tax is 1.5–2% lower (VAT removed).",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Bookings",
+   "id": "bookings.profit_term",
+   "question": "Does \"profit\" mean Profit, Final Profit or Base Profit?",
+   "options": [
+    "[Profit]",
+    "[Final Profit]",
+    "[Base Profit]"
+   ],
+   "proposed": "[Profit]",
+   "why": "Profit = Sale − Cost, the pair of \"sales\". Final Profit only adds handling fees (about AED 3.7K overall). Base Profit is computed on gross amounts including cancelled bookings and is much lower (negative for XML).",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Bookings",
+   "id": "bookings.markup_meaning",
+   "question": "The cube's Markup is profit ÷ sale (a margin), not profit ÷ cost. Should \"markup\" and \"margin\" both use it?",
+   "options": [
+    "[Markup]",
+    "[Final Profit %]"
+   ],
+   "proposed": "[Markup]",
+   "why": "Both are profit ÷ sale and differ by under 0.01 points; Markup pairs with Profit and Sale. If people mean profit ÷ cost by \"markup\", answers would be slightly higher (7.4% instead of 6.9% over all years).",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Bookings",
+   "id": "bookings.cancelled_in_counts",
+   "question": "Should a plain \"number of bookings\" include cancelled booking lines?",
+   "options": [
+    "include cancelled (cube default)",
+    "exclude cancelled ('Canceled' = No)"
+   ],
+   "proposed": "include cancelled (cube default)",
+   "why": "[Reservations Count] counts all lines (about 40% cancelled over all years) and matches the company's reports; questions about active or confirmed bookings get the not-cancelled filter.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - History Hotel Locks",
+   "id": "history_hotel_locks.locks_term",
+   "question": "Does a plain 'locks' mean hotel option locks in the booking flow (this cube) or supplier API connection locks (Supplier Lock API Hotel)?",
+   "options": [
+    "History Hotel Locks [Locks Number]",
+    "Supplier Lock API Hotel lock count"
+   ],
+   "proposed": "History Hotel Locks [Locks Number]; 'supplier locks' / 'api locks' go to Supplier Lock API Hotel",
+   "why": "Hotel locks are the business-facing event (about 1 million since 2025-10) that account and supplier managers follow; connection locks are a technical safeguard.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Hotel Allotments",
+   "id": "hotel_allotments.utilisation_reliability",
+   "question": "Total allotment holds very large values (thousands of rooms per room type per night, 99% on extranet contracts), so overall utilisation is about 0.1%. Should answers show utilisation as is, or limit it to non-extranet contracts?",
+   "options": [
+    "Show as is, with a caveat",
+    "Default to the 'non-extranet contracts' filter"
+   ],
+   "proposed": "Show as is, with a caveat, and let the contracting team confirm which contracts hold real allotment",
+   "why": "Non-extranet utilisation is also low (about 0.5%), so the filter does not fix the figure; hiding data would surprise users more than a stated caveat.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - KPI Change Price",
+   "id": "kpi_change_price.rate_definition",
+   "question": "Does 'price change rate' mean changes per request ([% Changes], about 4%) or changes per client request ([% Changes Client])?",
+   "options": [
+    "[% Changes]",
+    "[% Changes Client]"
+   ],
+   "proposed": "[% Changes]",
+   "why": "[Client Requests] is only recorded from 2026-09, so [% Changes Client] is infinite before and inflated over longer periods; [% Changes] is consistent over the whole history and splits by supplier.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Relocations",
+   "id": "relocations.test_rows",
+   "question": "Exclude relocations on test hotels and suppliers by default?",
+   "options": [
+    "exclude (an admin adds the test hotel values as an override)",
+    "include all rows"
+   ],
+   "proposed": "exclude (an admin adds the test hotel values as an override)",
+   "why": "At least 13 of the 34 relocations involve test hotels; they inflate the counts. Hotel names cannot be written in this public file, so the exclusion has to be an admin override.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Sales Average Per Owned Hotels",
+   "id": "sales_average_per_owned_hotels.owned_sales_source",
+   "question": "Which figure answers 'owned-hotel sales'? Sales Per Owned Hotels [Total Sales] with the owned filter is net of cancellations (2025 bookings: 71.6M AED); this cube's [Total Sale] keeps cancelled bookings at full value (134.0M AED) for the same bookings.",
+   "options": [
+    "Sales Per Owned Hotels [Total Sales] + 'owned hotels' filter",
+    "Sales Average Per Owned Hotels [Total Sale]"
+   ],
+   "proposed": "Sales Per Owned Hotels [Total Sales] + 'owned hotels' filter; this cube only for stay-night questions, labelled 'gross booked'",
+   "why": "Net sales are what finance reports; the two cubes count the same bookings, the difference is cancelled bookings.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Sales Average Per Owned Hotels",
+   "id": "sales_average_per_owned_hotels.nights_definition",
+   "question": "[Nights] is about 3x the owned-hotel room nights in Sales Per Owned Hotels (a 1-room 30-night booking shows 120), so [AVG Sale per Day] is about a third of sales / room nights. Can the cube owner confirm what [Nights] counts before it is used for room nights or ADR?",
+   "options": [
+    "Use [Nights] / [AVG Sale per Day] as room nights / ADR",
+    "Do not use them for room nights or ADR until confirmed"
+   ],
+   "proposed": "Do not use them for room nights or ADR until confirmed; answer owned-hotel room nights from Sales Per Owned Hotels [Total Room Nights] with the owned filter",
+   "why": "Verified mismatch on 2025 data and on single bookings; presenting it as ADR would understate rates about threefold.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "id": "sales_per_owned_hotels.margin_vs_markup",
+   "question": "In this cube [Markup] is profit / sales and [% Total Profit] is profit / cost (checked on the data), the opposite of what the names suggest. Which measure answers 'hotel margin %' and which 'hotel markup %'?",
+   "options": [
+    "[Markup]",
+    "[% Total Profit]"
+   ],
+   "proposed": "'hotel margin %' -> [Markup] (profit / sales); 'hotel markup %' -> [% Total Profit] (profit / cost)",
+   "why": "Matches the usual business meaning of margin (on sales) and markup (on cost); labels say what each really computes so users are not misled by the cube's names.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "id": "sales_per_owned_hotels.bookings_include_cancelled",
+   "question": "Should 'hotel bookings' / 'owned-hotel bookings' count cancelled bookings (about 43% of all hotel bookings) or only live ones?",
+   "options": [
+    "[Bookings] (all, cancelled included)",
+    "[Bookings] with the 'live bookings' filter"
+   ],
+   "proposed": "[Bookings] (all, cancelled included), with the answer saying cancelled bookings are included",
+   "why": "It is the cube's own definition and the base of [% Cancellations]; sales are already net, so the gap only shows in counts. Users who say confirmed / active get the 'live bookings' filter.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Channel Manager API",
+   "id": "channel_manager.default_date",
+   "question": "Which date should plain questions use: 'Calendar'[Date] or 'Date'[Date]?",
+   "options": [
+    "'Calendar'[Date]",
+    "'Date'[Date]"
+   ],
+   "proposed": "'Calendar'[Date]",
+   "why": "Both are the request date and match month by month. 'Calendar' has the month, week and quarter attributes used for grouping; it misses only the oldest loaded day (about 0.66 million requests, October 2025).",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Channel Manager API",
+   "id": "channel_manager.bookings_measure",
+   "question": "What do [Bookings] and [AVG Bookings] count in channel manager requests, and should they be shown at all?",
+   "options": [
+    "Keep them active, only for \"bookings in channel manager requests\"",
+    "Hide them"
+   ],
+   "proposed": "Keep them active, only for \"bookings in channel manager requests\"",
+   "why": "They have data (about 93,000 in all), but 'Get bookings' requests show none, so their meaning is unclear. They must never answer plain \"bookings\" questions.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Channel Manager API",
+   "id": "channel_manager.hotels_count",
+   "question": "\"How many hotels use channel managers\": hotel occurrences in requests, or distinct hotels?",
+   "options": [
+    "[Hotels] here (added up per request)",
+    "Distinct hotels: count of 'Hotels'[Hotel] with [Changes] in Statistics Rate Changes Channel Manager API"
+   ],
+   "proposed": "Distinct hotels: count of 'Hotels'[Hotel] with [Changes] in Statistics Rate Changes Channel Manager API",
+   "why": "[Hotels] counts a hotel once for every request (about 196 million all-time), so it measures volume, not how many hotels.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Client API Service",
+   "id": "client_api_service.exclude",
+   "question": "This cube holds a single request (January 2026) and was wrongly picked for 'API requests yesterday' (0 rows). Exclude it from automatic cube picking?",
+   "options": [
+    "Exclude from automatic picking; use only when the user names it",
+    "Keep it pickable",
+    "Remove it from the app"
+   ],
+   "proposed": "Exclude from automatic picking; use only when the user names it",
+   "why": "With one row it can only produce empty or misleading answers; client request volumes are in Statistics History Client and Statistics Real Time Client.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Client API Service",
+   "id": "client_api_service.product",
+   "question": "Does 'Service' in this cube mean the non-hotel, non-transfer service products (activities, tours, tickets), like 'Transfer' in Statistics Client API Transfer?",
+   "options": [
+    "Yes: client requests for service products (activities, tours, tickets)",
+    "No: all client API requests to the GlobalTravelEngine service"
+   ],
+   "proposed": "Yes: client requests for service products (activities, tours, tickets)",
+   "why": "The statistics cubes are split Hotel / Transfer / Service, and this cube's request types include \"Service Information\" where the transfer cube has \"Transfer Information\".",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Client API Transfer",
+   "id": "client_api_transfer.completeness",
+   "question": "This cube records only 22 client transfer requests in 12 months (6 availability, 16 cancellations, no bookings), while Statistics Supplier API Transfer records about 3,000 availability and 50 booking calls to transfer suppliers. How should the app use it?",
+   "options": [
+    "Use it only for questions that say client/customer transfer requests, and always state the low recorded volume",
+    "Use it for every transfer request question",
+    "Remove it from the app until the feed is fixed"
+   ],
+   "proposed": "Use it only for questions that say client/customer transfer requests, and always state the low recorded volume",
+   "why": "The client feed is clearly incomplete (not one booking request), but it is the only client-side source; supplier calls are a different count because one client search can go to several suppliers.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Client API Transfer",
+   "id": "client_api_transfer.results_zero",
+   "question": "[Results] and [Avg Results] are 0 for all 22 requests, including the 6 availability requests. Keep them or hide them?",
+   "options": [
+    "Keep, and say the value has been 0 for every request",
+    "Hide until a non-zero value appears"
+   ],
+   "proposed": "Keep, and say the value has been 0 for every request",
+   "why": "0 may be real (searches that found nothing) or a field that is not filled; keeping it with the warning answers the question without hiding what the cube says.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Client Web",
+   "id": "client_web.filter_results",
+   "question": "What does [Filter Results] mean: results left after the engine's filters (what the user is shown), or results removed by the filters?",
+   "options": [
+    "results left after filters",
+    "results removed by filters"
+   ],
+   "proposed": "results left after filters",
+   "why": "It is always at most [Results] and equals it for 'More Availability Options' requests, which fits 'kept' rather than 'removed'. The cube does not document it, so it stays low confidence until confirmed.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics History 3",
+   "id": "statistics_history_3.remove",
+   "question": "Statistics History 3 has no data at all (every measure empty). Remove it from the app?",
+   "options": [
+    "Remove it from the app",
+    "Keep it listed but never pick it",
+    "Keep it as is"
+   ],
+   "proposed": "Remove it from the app",
+   "why": "It can only give empty answers; Statistics History Client and Statistics History Supplier have the same structure with 13 months of data.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "id": "history_client.look_to_book",
+   "question": "Does \"look-to-book\" mean Statistics History Client [L2B] (availability requests per booking, about 613,000:1 over the last year)?",
+   "options": [
+    "Statistics History Client [L2B]",
+    "Statistics Hotel Client [L2B] (hotel-level requests per booking, about 2,000,000:1)"
+   ],
+   "proposed": "Statistics History Client [L2B]",
+   "why": "It is the request-level ratio, covers all clients and has the longest history (from 2025-10-16). Hotel Client counts every hotel inside a search and starts 2026-08-17. Supplier-side look-to-book belongs to the supplier cubes.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "id": "history_client.requests_term",
+   "question": "Does plain \"requests\" / \"API requests\" mean Statistics History Client [Requests] (all API request types), while \"searches\" stays Statistics Zone [Total Requests]?",
+   "options": [
+    "Statistics History Client [Requests]",
+    "Statistics Zone [Total Requests]"
+   ],
+   "proposed": "Statistics History Client [Requests]",
+   "why": "History Client counts every API call type (availability, cancellation policy, hotel information, booking...) with 12 months of history; Statistics Zone starts 2026-07-18 and is the agreed source for searches.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "id": "history_supplier.supplier_requests_term",
+   "question": "Does \"supplier requests\" mean request messages ([Requests]) or hotels asked ([Hotels Request], about 5 per message)?",
+   "options": [
+    "[Requests]",
+    "[Hotels Request]"
+   ],
+   "proposed": "[Requests]",
+   "why": "It is the cube's main count and what time-outs, errors and response times are measured on; hotels asked has its own term.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "id": "history_supplier.look_to_book_term",
+   "question": "Should \"supplier look-to-book\" be shown as requests per booking ([L2B], about 1 million) or as a conversion percentage ([% L2B], about 0.0001%)?",
+   "options": [
+    "[L2B]",
+    "[% L2B]"
+   ],
+   "proposed": "[L2B]",
+   "why": "Look-to-book is conventionally looks per booking; the percentage is its exact inverse and is hard to read.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "id": "history_supplier.error_rate_definition",
+   "question": "Does \"supplier error rate\" include 'No results' answers?",
+   "options": [
+    "errors and time-outs only",
+    "errors, time-outs and no results"
+   ],
+   "proposed": "errors and time-outs only",
+   "why": "'No results' is a valid answer meaning no availability (about 28% of requests) and would swamp the real failures (about 2%).",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "id": "history_supplier.time_zone",
+   "question": "Should plain date questions use the UAE-time calendar or the CET calendar?",
+   "options": [
+    "'Calendario'[Fecha] (UAE time)",
+    "'Calendar CET'[Date CET] (CET)"
+   ],
+   "proposed": "'Calendario'[Fecha] (UAE time)",
+   "why": "The company runs on UAE time; daily totals differ slightly between the two because days cut at different hours.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Hotel Client",
+   "id": "hotel_client.hotels_requested_term",
+   "question": "Should \"hotels requested\" stay Statistics Zone [Hotels Requests], with Statistics Hotel Client [Total Hotel Requests] used only when the question needs hotel-level detail (by hotel, hotel country/city, supplier code)?",
+   "options": [
+    "Statistics Zone [Hotels Requests]",
+    "Statistics Hotel Client [Total Hotel Requests]"
+   ],
+   "proposed": "Statistics Zone [Hotels Requests]",
+   "why": "Both count hotels asked for inside searches (Sep 2026: 25.0 bn vs 26.0 bn, about 4% apart). Statistics Zone has the longer history (from 2026-07-18) and the search context; Hotel Client is the only one with hotel-level detail and starts 2026-08-17.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "id": "hotel_supplier.failed_requests",
+   "question": "Does \"failed supplier hotel requests\" mean all KO (no results + other failures) or only OTH (errors)?",
+   "options": [
+    "[Hotel Requests KO]",
+    "[Hotel Requests OTH]"
+   ],
+   "proposed": "[Hotel Requests KO]",
+   "why": "KO is the cube's own opposite of OK; 'supplier hotel error rate' is kept for OTH and 'no-results rate' for NR, so each word has one measure.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "id": "hotel_supplier.look_to_book_owner",
+   "question": "For supplier look-to-book in periods both cubes cover (from 2026-08-17), which cube answers: Statistics History Supplier (requests per booking) or this cube (hotel requests per booking)?",
+   "options": [
+    "Statistics History Supplier [L2B]",
+    "Statistics Hotel Supplier [L2B]"
+   ],
+   "proposed": "Statistics History Supplier [L2B]",
+   "why": "History has a year of data and a request-level basis; the two cubes count bookings differently (about 1.5 million vs 4 million per booking in September), so one definition must be used everywhere.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "id": "hotel_supplier.travel_window_measure",
+   "question": "[Avg Days Travel Window] returns about 0 and negative values. Keep it hidden until the cube is fixed?",
+   "options": [
+    "keep hidden",
+    "show it"
+   ],
+   "proposed": "keep hidden",
+   "why": "Its values contradict the travel-window bands (nearly half of the hotel requests are 1 to 6 months ahead); showing it would give wrong lead times.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Rate Changes Channel Manager API",
+   "id": "rate_changes.include_rejected",
+   "question": "Does \"rate changes\" (or \"rate updates\") mean every change received, or only accepted ones?",
+   "options": [
+    "All received ([Changes] with no filter)",
+    "Only accepted ('successful rate changes' filter)"
+   ],
+   "proposed": "All received ([Changes] with no filter)",
+   "why": "That is what the measure counts and what hotels sent. Accepted or rejected changes are asked for explicitly, using the named filter or the error breakdown.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Rate Changes Channel Manager API",
+   "id": "rate_changes.default_date",
+   "question": "Which date should plain questions use: 'Calendar'[Date] or 'Date'[Date]?",
+   "options": [
+    "'Calendar'[Date]",
+    "'Date'[Date]"
+   ],
+   "proposed": "'Calendar'[Date]",
+   "why": "Both are the receipt date and match month by month. 'Calendar' has the month, week and quarter attributes; it misses only the oldest loaded day (about 0.65 million changes).",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Real Time 3",
+   "id": "statistics_real_time_3.remove",
+   "question": "Statistics Real Time 3 has no data at all (every measure empty). Remove it from the app?",
+   "options": [
+    "Remove it from the app",
+    "Keep it listed but never pick it",
+    "Keep it as is"
+   ],
+   "proposed": "Remove it from the app",
+   "why": "It can only give empty answers; Statistics Real Time Client and Statistics Real Time Supplier have the same structure with current data.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Real Time Client",
+   "id": "real_time_client.searches_today",
+   "question": "Statistics Zone (the source for \"searches\") has no data for today. For \"searches today\", should the app use Statistics Real Time Client [Requests] filtered to request type Availability?",
+   "options": [
+    "yes, labelled as real-time API availability requests",
+    "no, say today's searches are not available yet"
+   ],
+   "proposed": "yes, labelled as real-time API availability requests",
+   "why": "It is the only cube with today's traffic (verified: only 2026-10-16, hours 00-16 at reading). Its feed is the same as Statistics History Client, which is close to but not identical with Statistics Zone (about 9% higher).",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Real Time Client",
+   "id": "real_time_client.periods_including_today",
+   "question": "When a period includes today (e.g. \"this week\"), should today's Real Time [Requests] be added to Statistics History Client [Requests] (which stops at yesterday)?",
+   "options": [
+    "yes, for counts only, stating both sources",
+    "no, report up to yesterday"
+   ],
+   "proposed": "yes, for counts only, stating both sources",
+   "why": "The two cubes share the same measure definitions and do not overlap (history to yesterday, real time today). Ratios and averages ([L2B], [AVG ...]) cannot be added.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Real Time Supplier",
+   "id": "realtime_supplier.today_vs_earlier",
+   "question": "When a question compares today's supplier traffic with an earlier day, should the earlier day be cut to the same hours as today?",
+   "options": [
+    "same hours only",
+    "full earlier day"
+   ],
+   "proposed": "same hours only",
+   "why": "Today is partial (loaded up to about an hour ago); comparing with a full day always shows a false drop.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Supplier API Service",
+   "id": "supplier_api_service.response_time",
+   "question": "[Avg Response Time Sec] in this cube is 1000 times too small (requests in the '1 - 2' second band average 0.001). Keep it hidden until the cube is fixed, or show it multiplied by 1000 as seconds?",
+   "options": [
+    "keep hidden",
+    "show x 1000 as seconds"
+   ],
+   "proposed": "keep hidden",
+   "why": "As stored it reads 0.0002 s; a silent x1000 correction would become wrong the day the BI team fixes the measure. The response-time bands give a reliable picture meanwhile.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Supplier API Service",
+   "id": "supplier_api_service.scope",
+   "question": "This cube only holds activity/excursion/ticket supplier connections (no hotels). Should it be labelled and used as the 'activity supplier API' cube?",
+   "options": [
+    "activity supplier API",
+    "general service supplier API"
+   ],
+   "proposed": "activity supplier API",
+   "why": "The two connections with data are activity and excursion connections; hotel supplier traffic lives in Statistics History Supplier and Statistics Hotel Supplier.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Supplier API Transfer",
+   "id": "supplier_api_transfer.response_time",
+   "question": "[Avg Response Time Sec] in this cube is 1000 times too small (requests in the '1 - 2' second band average 0.001). Keep it hidden until the cube is fixed, or show it multiplied by 1000 as seconds?",
+   "options": [
+    "keep hidden",
+    "show x 1000 as seconds"
+   ],
+   "proposed": "keep hidden",
+   "why": "As stored it reads 0.0002 s; a silent x1000 correction would become wrong the day the BI team fixes the measure. The response-time bands give a reliable picture meanwhile.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Supplier Error API Hotel",
+   "id": "supplier_errors.error_scope",
+   "question": "Which outcomes count as \"supplier API errors\" (and in the error rate)?",
+   "options": [
+    "Time Outs + SUPPLIER GENERAL ERROR + Not Mapped",
+    "Every outcome except Correct (also No results)",
+    "Time Outs + SUPPLIER GENERAL ERROR only"
+   ],
+   "proposed": "Time Outs + SUPPLIER GENERAL ERROR + Not Mapped",
+   "why": "'No results' is a valid answer (no availability), not a failure. 'Not Mapped' is a failed request even though the cause is mapping rather than the supplier.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Supplier Error API Hotel",
+   "id": "supplier_errors.supplier_errors_word",
+   "question": "Does plain \"supplier errors\" mean only the SUPPLIER GENERAL ERROR outcome, or every failed request?",
+   "options": [
+    "SUPPLIER GENERAL ERROR only",
+    "All failed requests (the 'supplier api errors' filter)"
+   ],
+   "proposed": "SUPPLIER GENERAL ERROR only",
+   "why": "It matches the stored category. Time-outs have their own word, and \"supplier API errors\" or \"failed requests\" covers all failures.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "id": "zone.searches_term",
+   "question": "Does \"searches\" (\"hotel searches\", \"search requests\") mean Statistics Zone [Total Requests] (number of search requests) and never [Hotels Requests] (hotels asked for inside those searches)?",
+   "options": [
+    "[Total Requests]",
+    "[Hotels Requests]"
+   ],
+   "proposed": "[Total Requests]",
+   "why": "Verified on real data: [Hotels Requests] is about 5x [Total Requests] because each search asks for several hotels, and using it for searches gave wrong answers. 99.7% of [Total Requests] are Availability requests, so it already is the search count.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "id": "zone.searches_before_july_2026",
+   "question": "Statistics Zone has data only from 2026-07-18 (plus one day in Nov 2025). For searches in earlier periods, should the app say there is no data, or show Statistics History Client [Requests] filtered to request type Availability (from 2025-10-16) as a separately labelled figure?",
+   "options": [
+    "say no data",
+    "show History Client availability requests, labelled"
+   ],
+   "proposed": "show History Client availability requests, labelled",
+   "why": "History Client counts the same client API traffic from a different feed (Sep 2026: 5.19 bn requests vs 4.74 bn here, about 9% more), so it answers the question but must not be mixed into one series with Statistics Zone.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Supplier Lock API Hotel",
+   "id": "supplier_locks.count_term",
+   "question": "Does \"how many supplier locks\" mean lock occurrences or distinct locks?",
+   "options": [
+    "[Locked Times]",
+    "[Locks]"
+   ],
+   "proposed": "[Locked Times]",
+   "why": "It is the cube's main measure and adds up across suppliers, months and rules. [Locks] is a distinct count (about 30% lower) and cannot be summed.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Supplier Lock API Hotel",
+   "id": "supplier_locks.error_limit_column",
+   "question": "For \"error limit\" or threshold questions, should we use the lock-level 'Errors Limit' table or the rule's 'Lock Rules'[Errors Limit]?",
+   "options": [
+    "'Errors Limit'[Errors Limit]",
+    "'Lock Rules'[Errors Limit]"
+   ],
+   "proposed": "'Errors Limit'[Errors Limit]",
+   "why": "The two disagree (only the lock-level column has 50%, and the counts per value differ). The lock-level one appears to record the threshold in force when the lock happened.",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Supplier Lock API Hotel",
+   "id": "supplier_locks.hotel_locks_word",
+   "question": "When someone says just \"hotel locks\", do they mean booking-flow hotel locks or supplier connection locks?",
+   "options": [
+    "History Hotel Locks (booking-flow events)",
+    "Supplier Lock API Hotel (supplier connection locks)"
+   ],
+   "proposed": "History Hotel Locks (booking-flow events)",
+   "why": "That cube is literally about hotel locks. This cube is used only for \"supplier locks\", \"supplier connection locks\" or \"supplier API locks\".",
+   "status": "proposed"
+  },
+  {
+   "cube": "GlobalTravelEngine - Tickets",
+   "id": "tickets.historical_use",
+   "question": "Keep the historical Tickets cube (data 2015–2021) available for questions?",
+   "options": [
+    "keep for 2015–2021 questions only",
+    "hide the cube"
+   ],
+   "proposed": "keep for 2015–2021 questions only",
+   "why": "It is the only source of visa and tour sales before they appear in Bookings; the coverage note stops the app from using it for recent periods.",
+   "status": "proposed"
+  }
+ ]
+}

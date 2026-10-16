@@ -1,5 +1,5 @@
 """Answering a question from the data layer, shared by Chat and the dashboards:
-question -> the cubes it needs (routing.py) -> plan (Claude, with those cubes' details, the values of
+question -> standalone question with its periods' dates (rewrite.py) -> the cubes it needs (routing.py) -> plan (Claude, with those cubes' details, the values of
 the question found in the data and verified examples) -> values checked -> run (each cube, joined) ->
 one retry with the error if it fails. A scope of "" means all the data. Chat's ask() also reuses the
 plan of a question already answered today (answer_memory.py)."""
@@ -14,7 +14,9 @@ import data_layer
 import data_tools
 import llm
 import plans
+import rewrite
 import routing
+import semantic
 import usage
 import value_check
 from backends import get_backend
@@ -57,7 +59,8 @@ class Outcome:
 def _pick(question, names, context, say) -> routing.Pick:
     """The cubes to give Claude in full: the one picked by the user, else a quick Haiku choice."""
     if len(names) == 1:
-        return routing.Pick(list(names), "the cube picked", routing.value_hits(question, names))
+        return routing.Pick(list(names), "the cube picked",
+                            semantic.term_hits(question) + routing.value_hits(question, names))
     say("Picking the cubes that answer it")
     with usage.stage("route"):
         picked = routing.pick(question, names, context)
@@ -66,14 +69,14 @@ def _pick(question, names, context, say) -> routing.Pick:
 
 
 def _plan(question, names, scope, picked, context, clarification, instructions, failed=None, error=None,
-          on_step=None):
+          on_step=None, periods=""):
     language = get_backend(names[0]).language
     details = [(c, data_layer.cube_details(c)) for c in picked.cubes]
     return llm.question_to_plan(question, routing.cards_text(), details, date.today().isoformat(), language,
                                 context, failed_plan=failed, error=error, clarification=clarification,
                                 instructions=instructions, hits=routing.hits_text(picked.hits, picked.cubes or None),
                                 join=routing.join_path(picked.cubes), examples=answer_memory.examples(question, scope),
-                                **data_tools.checks(names, on_step))
+                                periods=periods, **data_tools.checks(names, on_step))
 
 
 def answer(question: str, scope: str = ALL, context: list[dict] | None = None,
@@ -86,9 +89,23 @@ def answer(question: str, scope: str = ALL, context: list[dict] | None = None,
     if not names:
         raise RuntimeError("No cube is set up yet. An admin builds the data layer on the Cubes page.")
     say("Understanding the question")
+    prepared = None
+    if not period and not instructions:  # a dashboard chart's question and period are set already
+        with usage.stage("rewrite"):
+            prepared = rewrite.rewrite(question, context, clarification)
+    if prepared and prepared.kind == "chart_only":  # the same numbers shown differently: no planning
+        usage.note(outcome="reuse")
+        return Outcome("reuse", {"understanding": "The same numbers, shown differently.",
+                                 "chart_request": prepared.chart_request or question})
+    if prepared:  # from here on the standalone question stands for the conversation
+        question, context = prepared.question, None
+    dates = prepared.periods_text() if prepared else ""
     picked = _pick(question, names, context, say)
     with usage.stage("plan"):
-        result = _plan(question, names, scope, picked, context, clarification, instructions, on_step=say)
+        result = _plan(question, names, scope, picked, context, clarification, instructions, on_step=say,
+                       periods=dates)
+    if prepared and prepared.chart_request:
+        result["chart_request"] = prepared.chart_request
     if result.get("needs_clarification"):
         usage.note(outcome="clarify")
         return Outcome("clarify", result, question=result["clarifying_question"], options=result.get("options", [])[:4])
@@ -99,6 +116,8 @@ def answer(question: str, scope: str = ALL, context: list[dict] | None = None,
     for attempt in (1, 2):
         try:
             plans.validate(plan, names)
+            if prepared:
+                plans.check_periods(plan, prepared.periods)
             if needs_dates and not plan.uses_dates():
                 raise ValueError("The plan does not use the dashboard dates. Filter the period with @START and @END.")
             say("Checking the values it filters on")
@@ -111,18 +130,42 @@ def answer(question: str, scope: str = ALL, context: list[dict] | None = None,
             say("Pulling the data" + (f" from {len(plan.steps)} cubes and joining them" if not plan.single else ""))
             with usage.stage("query"):
                 df = plans.run(plan.with_dates(*period) if period else plan)
+            if df.empty and attempt == 1 and not period:  # usually a filter or join that matches nothing
+                raise EmptyResult(empty_result_error(plan))
             usage.note(outcome="data", cubes=plan.cubes, rows=len(df))
             return Outcome("data", result, plan=plan, df=df, notes=notes)
         except Exception as error:
             if attempt == 2:
+                error.plan = plan  # the plan that failed, for whoever reports it (the test set)
                 raise
-            say("The query failed, asking Claude to fix it")
-            usage.note(retried=True)
+            say("No rows came back, asking Claude to check the filters" if isinstance(error, EmptyResult)
+                else "The query failed, asking Claude to fix it")
+            usage.note(retried="empty" if isinstance(error, EmptyResult) else True)
             with usage.stage("plan"):
                 result = _plan(question, names, scope, picked, context, clarification, instructions,
-                               failed=plan.text(), error=str(error)[:1500], on_step=say)
+                               failed=plan.text(), error=str(error)[:1500], on_step=say, periods=dates)
+                if prepared and prepared.chart_request:
+                    result["chart_request"] = prepared.chart_request
             plan = plans.Plan.from_dict(result)
     raise RuntimeError("unreachable")
+
+
+class EmptyResult(RuntimeError):
+    """The plan ran but returned no rows: Claude gets one chance to fix it (the second time it stands)."""
+
+
+def empty_result_error(plan: plans.Plan) -> str:
+    """What to check when a plan returns nothing, with each cube's data range from its meaning layer."""
+    ranges = []
+    for c in plan.cubes:
+        cov = (semantic.cube(c) or {}).get("coverage", {})
+        if cov.get("first"):
+            ranges.append(f'"{c}" has data from {cov["first"]} to {cov.get("last", "?")} on {cov.get("main_date", "its main date")}')
+    return ("The plan ran but returned no rows. Check that each filter value matches the data exactly (e.g. the "
+            "format of month names), that the period is on the right date and inside the data's range, and that "
+            "joins match (an INNER JOIN on keys that differ between cubes returns nothing). "
+            + ("Data ranges: " + "; ".join(ranges) + ". " if ranges else "")
+            + "If there really is no data for this question, return the same plan.")
 
 
 def describe(question: str, df, chart_request: str, plan: plans.Plan | None) -> dict:

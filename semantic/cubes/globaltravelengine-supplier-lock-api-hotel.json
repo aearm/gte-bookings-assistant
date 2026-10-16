@@ -1,0 +1,520 @@
+{
+  "cube": "GlobalTravelEngine - Supplier Lock API Hotel",
+  "label": "Supplier connection locks",
+  "purpose": "How often hotel supplier API connections were locked (temporarily blocked) by lock rules after too many errors or time-outs. Also gives the rule that fired and its error threshold and timing settings.",
+  "grain": "One lock occurrence: a lock rule blocking a supplier connection (credential), dated by lock day and hour.",
+  "use_for": [
+    "supplier connection locks by supplier, credential or lock rule",
+    "lock trends by day, week, month or hour of day",
+    "which lock rules and error thresholds fire most",
+    "distinct locks compared with lock occurrences"
+  ],
+  "not_for": [
+    "hotel locks in the booking flow, where a hotel option failed for a customer (History Hotel Locks)",
+    "supplier request volumes, errors or time-outs (Statistics Supplier Error API Hotel)",
+    "customer, market or channel analysis: about 97% of locks have no customer",
+    "bookings, sales or revenue (Bookings)"
+  ],
+  "coverage": {
+    "main_date": "'Locked Date'[Locked Date]",
+    "first": "2023-03",
+    "last": "2026-10",
+    "note": "Sparse before mid-2025: about 1,500 locks in all from March 2023 to May 2025, with several empty months. Regular volumes (about 1,000 to 3,000 a month) start in July 2025, so trends and year-on-year comparisons are meaningful only from then."
+  },
+  "dates": [
+    {
+      "column": "'Locked Date'[Locked Date]",
+      "role": "lock_date",
+      "label": "Lock date",
+      "meaning": "Day the supplier connection was locked (the cube's only day-level date).",
+      "default": true,
+      "words": [
+        "locked",
+        "lock date",
+        "blocked"
+      ],
+      "first": "2023-03",
+      "last": "2026-10"
+    }
+  ],
+  "measures": [
+    {
+      "name": "[Locked Times]",
+      "label": "Lock occurrences",
+      "definition": "Number of times a supplier connection was locked by a lock rule.",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [
+        "supplier connection locks",
+        "supplier locks",
+        "supplier api locks",
+        "times locked",
+        "lock occurrences"
+      ],
+      "default_date_role": "lock_date",
+      "date_roles": [
+        "lock_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": "Main measure (measure group 'Locks'). The cube gives it no format. 29,707 locks all-time, 22,520 in the last 12 months."
+    },
+    {
+      "name": "[Locks]",
+      "label": "Distinct locks",
+      "definition": "Distinct count of locks: a lock that appears in several rows counts once.",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "distinct_count",
+      "terms": [
+        "distinct supplier locks",
+        "unique supplier locks"
+      ],
+      "default_date_role": "lock_date",
+      "date_roles": [
+        "lock_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "medium",
+      "notes": "Measure group 'Distinct Locks'. Never add it across rows or periods; query the total directly. 20,635 distinct locks against 29,707 occurrences all-time. What makes a lock distinct is not documented."
+    }
+  ],
+  "breakdowns": [
+    {
+      "column": "'Suppliers'[Supplier]",
+      "label": "Supplier",
+      "entity": "supplier",
+      "kind": "name",
+      "meaning": "Hotel supplier whose connection was locked.",
+      "needs_columns": [
+        "'Suppliers'[Supplier.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 114,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Suppliers'[Supplier Code]",
+      "label": "Supplier code",
+      "entity": "supplier",
+      "kind": "code",
+      "meaning": "Short code of the supplier.",
+      "needs_columns": [
+        "'Suppliers'[Supplier Code.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 114,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Credentials'[Credential]",
+      "label": "Supplier credential",
+      "entity": "supplier_credential",
+      "kind": "name",
+      "meaning": "Supplier connection account (credential) that was locked.",
+      "needs_columns": [
+        "'Credentials'[Credential.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 206,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Lock Rules'[Rule Name]",
+      "label": "Lock rule",
+      "entity": "lock_rule",
+      "kind": "name",
+      "meaning": "Lock rule that fired. The name usually gives the supplier and the kind of failure it watches (performance errors or time-outs).",
+      "needs_columns": [
+        "'Lock Rules'[Rule Name.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 67,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Lock Rules'[Active]",
+      "label": "Rule active",
+      "entity": "lock_rule",
+      "kind": "enum",
+      "meaning": "Whether the lock rule is active.",
+      "needs_columns": [
+        "'Lock Rules'[Active.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 3,
+      "sample_values": [
+        "Yes",
+        "No",
+        "Unknown"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Errors Limit'[Errors Limit]",
+      "label": "Error limit",
+      "entity": "lock_threshold",
+      "kind": "enum",
+      "meaning": "Error-rate threshold that triggered the lock. It appears to be recorded with each lock.",
+      "needs_columns": [
+        "'Errors Limit'[Errors Limit.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 5,
+      "sample_values": [
+        "15.000%",
+        "20.000%",
+        "50.000%",
+        "75.000%",
+        "Unknown"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Lock Rules'[Errors Limit]",
+      "label": "Rule error limit (rule setting)",
+      "entity": "lock_threshold",
+      "kind": "enum",
+      "meaning": "Error limit as set on the lock rule. It does not match 'Errors Limit'[Errors Limit] (it has no 50% value and has different counts), so it is probably the rule's current setting. Hidden in favour of the lock-level column.",
+      "needs_columns": [
+        "'Lock Rules'[Errors Limit.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 4,
+      "sample_values": [
+        "15.000%",
+        "20.000%",
+        "75.000%",
+        "Unknown"
+      ],
+      "status": "hidden"
+    },
+    {
+      "column": "'Max Errors'[Max Errors]",
+      "label": "Max errors",
+      "entity": "lock_threshold",
+      "kind": "enum",
+      "meaning": "Number of errors allowed before the connection is locked.",
+      "needs_columns": [],
+      "sort_by": "",
+      "distinct": null,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Recollection Times'[Recollection Time Seconds]",
+      "label": "Error window (seconds)",
+      "entity": "lock_threshold",
+      "kind": "enum",
+      "meaning": "Window, in seconds, over which errors are counted for the rule.",
+      "needs_columns": [],
+      "sort_by": "",
+      "distinct": null,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Lock Rules'[Lock Time Seconds]",
+      "label": "Lock duration (seconds)",
+      "entity": "lock_threshold",
+      "kind": "enum",
+      "meaning": "How long, in seconds, the rule keeps the connection locked.",
+      "needs_columns": [],
+      "sort_by": "",
+      "distinct": null,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Request Types'[Request Type]",
+      "label": "Request type",
+      "entity": "request_type",
+      "kind": "enum",
+      "meaning": "Type of request that was locked.",
+      "needs_columns": [
+        "'Request Types'[Request Type.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 65,
+      "sample_values": [
+        "Availability",
+        "Reservation/Booking",
+        "Cancel",
+        "Read booking",
+        "Unknown"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Channels'[Channel]",
+      "label": "Sale channel",
+      "entity": "sale_channel",
+      "kind": "enum",
+      "meaning": "Sale channel of the customer linked to the lock. About 97% are 'Unknown'; the only other value with data is XML.",
+      "needs_columns": [
+        "'Channels'[Channel.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 4,
+      "sample_values": [
+        "XML - GTE - Global Travel Engine",
+        "B2B - GTE - Global Travel Engine",
+        "B2C - GTE - Global Travel Engine",
+        "Unknown"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Customer]",
+      "label": "Customer",
+      "entity": "customer",
+      "kind": "name",
+      "meaning": "Customer linked to the lock. About 97% of locks are 'Unknown'.",
+      "needs_columns": [
+        "'Customers'[Customer.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 6772,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Master Agency Code]",
+      "label": "Master agency code",
+      "entity": "master_agency",
+      "kind": "code",
+      "meaning": "Master agency code: the only key that links these customers to other cubes, and only partly.",
+      "needs_columns": [
+        "'Customers'[Master Agency Code.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 143,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Market]",
+      "label": "Market",
+      "entity": "market",
+      "kind": "enum",
+      "meaning": "Market of the customer linked to the lock. About 97% of locks are 'Unknown'.",
+      "needs_columns": [
+        "'Customers'[Market.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 24,
+      "sample_values": [
+        "EUROPE",
+        "Middle East",
+        "GCC - Except UAE and Local Residence",
+        "ROW",
+        "Unknown"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Locked Date'[Year]",
+      "label": "Year",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Year of the lock (number).",
+      "needs_columns": [],
+      "sort_by": "'Locked Date'[Year.Fecha ISO DESC_Year]",
+      "distinct": null,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Locked Date'[Quarter]",
+      "label": "Quarter",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Quarter, written \"Quarter 1, 2026\".",
+      "needs_columns": [
+        "'Locked Date'[Quarter.UniqueName]"
+      ],
+      "sort_by": "'Locked Date'[Quarter.Fecha ISO DESC_Quarter]",
+      "distinct": 109,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Locked Date'[Month]",
+      "label": "Month",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Month, written \"November 2025\".",
+      "needs_columns": [
+        "'Locked Date'[Month.UniqueName]"
+      ],
+      "sort_by": "'Locked Date'[Month.Month DESC]",
+      "distinct": 323,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Locked Date'[Week Year]",
+      "label": "Week",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Week with its year, written \"51 (2025)\".",
+      "needs_columns": [
+        "'Locked Date'[Week Year.UniqueName]"
+      ],
+      "sort_by": "'Locked Date'[Week Year.Fecha ISO DESC_WeekTear]",
+      "distinct": 1422,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Locked Date'[Day Week]",
+      "label": "Weekday",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Day of the week (Monday to Sunday).",
+      "needs_columns": [
+        "'Locked Date'[Day Week.UniqueName]"
+      ],
+      "sort_by": "'Locked Date'[Day Week.Day Week DESC]",
+      "distinct": 8,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Locked Hours'[Hour]",
+      "label": "Hour of day",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Hour of the lock, \"00\" to \"23\".",
+      "needs_columns": [
+        "'Locked Hours'[Hour.UniqueName]"
+      ],
+      "sort_by": "'Locked Hours'[Hour.Hour Order]",
+      "distinct": 25,
+      "sample_values": [],
+      "status": "active"
+    }
+  ],
+  "named_filters": [
+    {
+      "name": "active lock rules",
+      "meaning": "Locks fired by rules that are active.",
+      "column": "'Lock Rules'[Active]",
+      "values": [
+        "Yes"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "inactive lock rules",
+      "meaning": "Locks fired by rules that are now inactive.",
+      "column": "'Lock Rules'[Active]",
+      "values": [
+        "No"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "name": "availability locks",
+      "meaning": "Locks on availability (search) requests.",
+      "column": "'Request Types'[Request Type]",
+      "values": [
+        "Availability"
+      ],
+      "confidence": "medium"
+    }
+  ],
+  "rules": [
+    "These are supplier connection locks: a lock rule blocked a supplier connection for a while after too many errors or time-outs. They are not \"hotel locks\" (History Hotel Locks: a hotel option failed for a customer in the booking flow). Never answer a \"hotel locks\" question from this cube, nor a \"supplier locks\" question from History Hotel Locks.",
+    "[Locks] is a distinct count: never add it across rows, months or cubes. Use [Locked Times] for totals and shares.",
+    "Customer, market and channel are 'Unknown' for about 97% of locks. Customers match other cubes only by master agency code, and only partly: do not compare customers across cubes from this cube.",
+    "Data is sparse before July 2025. Do not read trends or year-on-year changes from earlier periods.",
+    "Use the 'Errors Limit', 'Max Errors' and 'Recollection Times' tables for the thresholds behind a lock. The same-named 'Lock Rules' columns hold the rule's settings and do not match.",
+    "'Locked Minutes' and 'Lock Rules'[Credential Name] have no usable data, and 'Lock Rules'[Request Type] is always Availability. Week Of Year has no year, so use 'Locked Date'[Week Year]."
+  ],
+  "examples": [
+    {
+      "question": "Which suppliers were locked most often last month?",
+      "measures": [
+        "[Locked Times]"
+      ],
+      "breakdowns": [
+        "'Suppliers'[Supplier]"
+      ],
+      "date_role": "lock_date"
+    },
+    {
+      "question": "Supplier connection locks per month in 2026",
+      "measures": [
+        "[Locked Times]"
+      ],
+      "breakdowns": [
+        "'Locked Date'[Month]"
+      ],
+      "date_role": "lock_date"
+    },
+    {
+      "question": "At which hours of the day do supplier locks peak?",
+      "measures": [
+        "[Locked Times]"
+      ],
+      "breakdowns": [
+        "'Locked Hours'[Hour]"
+      ],
+      "date_role": "lock_date"
+    },
+    {
+      "question": "Distinct supplier locks by lock rule this quarter",
+      "measures": [
+        "[Locks]"
+      ],
+      "breakdowns": [
+        "'Lock Rules'[Rule Name]"
+      ],
+      "date_role": "lock_date"
+    }
+  ],
+  "review": [
+    {
+      "id": "supplier_locks.count_term",
+      "question": "Does \"how many supplier locks\" mean lock occurrences or distinct locks?",
+      "options": [
+        "[Locked Times]",
+        "[Locks]"
+      ],
+      "proposed": "[Locked Times]",
+      "why": "It is the cube's main measure and adds up across suppliers, months and rules. [Locks] is a distinct count (about 30% lower) and cannot be summed."
+    },
+    {
+      "id": "supplier_locks.error_limit_column",
+      "question": "For \"error limit\" or threshold questions, should we use the lock-level 'Errors Limit' table or the rule's 'Lock Rules'[Errors Limit]?",
+      "options": [
+        "'Errors Limit'[Errors Limit]",
+        "'Lock Rules'[Errors Limit]"
+      ],
+      "proposed": "'Errors Limit'[Errors Limit]",
+      "why": "The two disagree (only the lock-level column has 50%, and the counts per value differ). The lock-level one appears to record the threshold in force when the lock happened."
+    },
+    {
+      "id": "supplier_locks.hotel_locks_word",
+      "question": "When someone says just \"hotel locks\", do they mean booking-flow hotel locks or supplier connection locks?",
+      "options": [
+        "History Hotel Locks (booking-flow events)",
+        "Supplier Lock API Hotel (supplier connection locks)"
+      ],
+      "proposed": "History Hotel Locks (booking-flow events)",
+      "why": "That cube is literally about hotel locks. This cube is used only for \"supplier locks\", \"supplier connection locks\" or \"supplier API locks\"."
+    }
+  ]
+}

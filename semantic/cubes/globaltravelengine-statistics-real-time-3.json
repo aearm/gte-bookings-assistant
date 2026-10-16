@@ -1,0 +1,606 @@
+{
+  "cube": "GlobalTravelEngine - Statistics Real Time 3",
+  "label": "Statistics Real Time 3 (empty)",
+  "purpose": "Older (v3) real-time cube of request statistics (requests, response time and size by client, supplier, interface, request type, platform layer, outcome and zone). It has no data at all and must not be used; use Statistics Real Time Client (client requests) and Statistics Real Time Supplier (supplier requests) instead.",
+  "grain": "One aggregated row of requests per request date and hour, client, supplier, interface, request type, platform layer, outcome, response-time band and zone (structure only: the cube holds no rows).",
+  "use_for": [],
+  "not_for": [
+    "anything: the cube has no data",
+    "request statistics (Statistics Real Time Client (client requests) and Statistics Real Time Supplier (supplier requests))",
+    "searches (Statistics Zone)"
+  ],
+  "coverage": {
+    "main_date": "'Calendario'[Fecha]",
+    "first": null,
+    "last": null,
+    "note": "No data at all: every measure is empty for every date (checked 16 October 2026). Do not use this cube; Statistics Real Time Client (client requests) and Statistics Real Time Supplier (supplier requests) have the same structure with data."
+  },
+  "dates": [
+    {
+      "column": "'Calendario'[Fecha]",
+      "role": "request_date",
+      "label": "Request date",
+      "meaning": "Day the request was handled, local time (the cube's main date). No data.",
+      "default": true,
+      "words": [
+        "request date"
+      ],
+      "first": null,
+      "last": null
+    },
+    {
+      "column": "'Calendar CET'[Date CET]",
+      "role": "request_date_cet",
+      "label": "Request date (CET)",
+      "meaning": "The same request date in Central European Time. No data.",
+      "default": false,
+      "words": [
+        "cet"
+      ],
+      "first": null,
+      "last": null
+    },
+    {
+      "column": "'Calendar CET'[Date CET LY]",
+      "role": "last_year_date",
+      "label": "Request date (CET) last year",
+      "meaning": "Same CET date one year earlier; last-year helper, never used for questions.",
+      "default": false,
+      "words": [],
+      "first": null,
+      "last": null
+    },
+    {
+      "column": "'Calendar CET'[Date CET LY Slided]",
+      "role": "last_year_date",
+      "label": "Request date (CET) last year, same weekday",
+      "meaning": "Same weekday one year earlier (CET); last-year helper, never used for questions.",
+      "default": false,
+      "words": [],
+      "first": null,
+      "last": null
+    }
+  ],
+  "measures": [
+    {
+      "name": "[Numero de peticiones]",
+      "label": "Requests",
+      "definition": "Number of requests ('número de peticiones').",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet"
+      ],
+      "status": "hidden",
+      "hidden_reason": "no data: every value of this cube is empty",
+      "confidence": "medium",
+      "notes": ""
+    },
+    {
+      "name": "[Avg Response Time (sec)]",
+      "label": "Average response time",
+      "definition": "Average time in seconds to answer a request.",
+      "unit": "seconds",
+      "format": ",.2f",
+      "prefix": "",
+      "suffix": " s",
+      "aggregation": "average",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet"
+      ],
+      "status": "hidden",
+      "hidden_reason": "no data: every value of this cube is empty",
+      "confidence": "medium",
+      "notes": ""
+    },
+    {
+      "name": "[Size in KB]",
+      "label": "Response size (KB)",
+      "definition": "Total response size in kilobytes.",
+      "unit": "kilobytes",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet"
+      ],
+      "status": "hidden",
+      "hidden_reason": "no data: every value of this cube is empty",
+      "confidence": "medium",
+      "notes": ""
+    },
+    {
+      "name": "[Size in MB]",
+      "label": "Response size (MB)",
+      "definition": "Total response size in megabytes.",
+      "unit": "megabytes",
+      "format": ",.2f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet"
+      ],
+      "status": "hidden",
+      "hidden_reason": "no data: every value of this cube is empty",
+      "confidence": "medium",
+      "notes": ""
+    },
+    {
+      "name": "[Size in GB]",
+      "label": "Response size (GB)",
+      "definition": "Total response size in gigabytes.",
+      "unit": "gigabytes",
+      "format": ",.3f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet"
+      ],
+      "status": "hidden",
+      "hidden_reason": "no data: every value of this cube is empty",
+      "confidence": "medium",
+      "notes": ""
+    },
+    {
+      "name": "[Size in KB AVG]",
+      "label": "Average response size (KB)",
+      "definition": "Average response size per request in kilobytes.",
+      "unit": "kilobytes",
+      "format": ",.2f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "average",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet"
+      ],
+      "status": "hidden",
+      "hidden_reason": "no data: every value of this cube is empty",
+      "confidence": "medium",
+      "notes": ""
+    },
+    {
+      "name": "[Size in MB AVG]",
+      "label": "Average response size (MB)",
+      "definition": "Average response size per request in megabytes.",
+      "unit": "megabytes",
+      "format": ",.3f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "average",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet"
+      ],
+      "status": "hidden",
+      "hidden_reason": "no data: every value of this cube is empty",
+      "confidence": "medium",
+      "notes": ""
+    },
+    {
+      "name": "[Size in GB AVG]",
+      "label": "Average response size (GB)",
+      "definition": "Average response size per request in gigabytes.",
+      "unit": "gigabytes",
+      "format": ",.5f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "average",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet"
+      ],
+      "status": "hidden",
+      "hidden_reason": "no data: every value of this cube is empty",
+      "confidence": "medium",
+      "notes": ""
+    }
+  ],
+  "breakdowns": [
+    {
+      "column": "'Cliente'[Cliente]",
+      "label": "Customer",
+      "entity": "customer",
+      "kind": "name",
+      "meaning": "Client that sent the request.",
+      "needs_columns": [
+        "'Cliente'[Cliente.Key0]"
+      ],
+      "sort_by": "",
+      "distinct": 6822,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Cliente'[Master Agency]",
+      "label": "Master agency",
+      "entity": "master_agency",
+      "kind": "name",
+      "meaning": "Parent agency grouping the customer's branches.",
+      "needs_columns": [
+        "'Cliente'[Master Agency.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 143,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Cliente'[Integrator Name]",
+      "label": "Integrator",
+      "entity": "integrator",
+      "kind": "name",
+      "meaning": "Technology integrator the client connects through.",
+      "needs_columns": [
+        "'Cliente'[Integrator Name.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 69,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Cliente'[Market]",
+      "label": "Market",
+      "entity": "market",
+      "kind": "enum",
+      "meaning": "Sales market of the customer.",
+      "needs_columns": [
+        "'Cliente'[Market.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 24,
+      "sample_values": [
+        "UAE",
+        "GCC - Except UAE and Local Residence",
+        "Middle East",
+        "Turkish Market",
+        "North Africa",
+        "EUROPE",
+        "CIS",
+        "ROW"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Tipo Proveedor'[Proveedor]",
+      "label": "Supplier",
+      "entity": "supplier",
+      "kind": "name",
+      "meaning": "Supplier connection the request went to.",
+      "needs_columns": [
+        "'Tipo Proveedor'[Proveedor.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 1524,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Interfaces'[Interfaz]",
+      "label": "Interface",
+      "entity": "api_interface",
+      "kind": "enum",
+      "meaning": "Channel of the request: XML, WEB or CLC.",
+      "needs_columns": [
+        "'Interfaces'[Interfaz.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 4,
+      "sample_values": [
+        "XML",
+        "WEB",
+        "CLC"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Tipo Peticion'[Tipo Peticion]",
+      "label": "Request type",
+      "entity": "request_type",
+      "kind": "name",
+      "meaning": "Type or source of the request (65 values).",
+      "needs_columns": [
+        "'Tipo Peticion'[Tipo Peticion.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 65,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Jerarquia'[Jerarquia Desc]",
+      "label": "Platform layer",
+      "entity": "platform_layer",
+      "kind": "enum",
+      "meaning": "Layer of the platform the timing was measured at; the same request is counted once per layer.",
+      "needs_columns": [
+        "'Jerarquia'[Jerarquia Desc.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 10,
+      "sample_values": [
+        "Booking Engine",
+        "Web Services",
+        "Supplier Proxy",
+        "Customer Proxy",
+        "Integrations",
+        "Load Balancing",
+        "Front Side",
+        "Request Per Supplier"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Tipo Fallos'[Fallo]",
+      "label": "Request outcome",
+      "entity": "request_outcome",
+      "kind": "enum",
+      "meaning": "Outcome / error type of the request.",
+      "needs_columns": [
+        "'Tipo Fallos'[Fallo.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 255,
+      "sample_values": [
+        "Already cancelled",
+        "Blocked ip",
+        "Blocked login",
+        "Cancel fail"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Intervalo'[Intervalo]",
+      "label": "Response-time band",
+      "entity": "response_time_band",
+      "kind": "enum",
+      "meaning": "Response time band in seconds, plus \"Timeout\".",
+      "needs_columns": [
+        "'Intervalo'[Intervalo.UniqueName]"
+      ],
+      "sort_by": "'Intervalo'[Intervalo.Orden]",
+      "distinct": 45,
+      "sample_values": [
+        "0.0 - 0.1",
+        "0.5 - 0.6",
+        "1 - 2",
+        "2 - 3",
+        "5 - 6",
+        "10 - 11",
+        "> 32",
+        "Timeout"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Availability Type'[Availability Type]",
+      "label": "Availability type",
+      "entity": "availability_type",
+      "kind": "enum",
+      "meaning": "Kind of availability search.",
+      "needs_columns": [
+        "'Availability Type'[Availability Type.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 4,
+      "sample_values": [
+        "One Hotel",
+        "Multi-Hotel",
+        "Zone"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Cached Data'[Cached Data]",
+      "label": "Cached",
+      "entity": "cached",
+      "kind": "enum",
+      "meaning": "Whether the answer came from cache.",
+      "needs_columns": [
+        "'Cached Data'[Cached Data.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 3,
+      "sample_values": [
+        "Yes",
+        "No"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Travel Window'[Name]",
+      "label": "Travel window",
+      "entity": "travel_window",
+      "kind": "enum",
+      "meaning": "Days between the request and the travel date, banded.",
+      "needs_columns": [],
+      "sort_by": "",
+      "distinct": 10,
+      "sample_values": [
+        "Last Minute",
+        "Last Week",
+        "Two Weeks",
+        "Three Weeks",
+        "One Month",
+        "Two Months",
+        "Three Months",
+        "Four to Six Months"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Zonas'[Zona]",
+      "label": "Destination zone",
+      "entity": "destination",
+      "kind": "name",
+      "meaning": "Destination zone of the request.",
+      "needs_columns": [
+        "'Zonas'[Zona.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 140861,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Zonas'[ZonaParent]",
+      "label": "Destination region",
+      "entity": "destination_region",
+      "kind": "name",
+      "meaning": "Parent zone of the destination zone.",
+      "needs_columns": [
+        "'Zonas'[ZonaParent.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 8486,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Horas'[Hora]",
+      "label": "Hour",
+      "entity": "hour",
+      "kind": "date_part",
+      "meaning": "Hour of day of the request, local time (00-23).",
+      "needs_columns": [
+        "'Horas'[Hora.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 25,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Horas CET'[Hora]",
+      "label": "Hour (CET)",
+      "entity": "hour_cet",
+      "kind": "date_part",
+      "meaning": "Hour of day of the request, CET (00-23).",
+      "needs_columns": [
+        "'Horas CET'[Hora.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 25,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendario'[Año]",
+      "label": "Year",
+      "entity": "year",
+      "kind": "date_part",
+      "meaning": "Year of the request date (\"Calendar 2026\").",
+      "needs_columns": [
+        "'Calendario'[Año.Key0]"
+      ],
+      "sort_by": "'Calendario'[Año.Key0]",
+      "distinct": 20,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendario'[Trimestre]",
+      "label": "Quarter",
+      "entity": "quarter",
+      "kind": "date_part",
+      "meaning": "Quarter of the request date (\"Quarter 1, 2026\").",
+      "needs_columns": [
+        "'Calendario'[Trimestre.Key0]"
+      ],
+      "sort_by": "'Calendario'[Trimestre.Key0]",
+      "distinct": 77,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendario'[Mes]",
+      "label": "Month",
+      "entity": "month",
+      "kind": "date_part",
+      "meaning": "Month of the request date (\"January 2026\").",
+      "needs_columns": [
+        "'Calendario'[Mes.Key0]"
+      ],
+      "sort_by": "'Calendario'[Mes.Key0]",
+      "distinct": 229,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendario'[Semana]",
+      "label": "Week",
+      "entity": "week",
+      "kind": "date_part",
+      "meaning": "Week of the request date (\"Week 01, Calendar 2026\").",
+      "needs_columns": [
+        "'Calendario'[Semana.Key0]"
+      ],
+      "sort_by": "'Calendario'[Semana.Key0]",
+      "distinct": 993,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendario'[Día De La Semana]",
+      "label": "Weekday",
+      "entity": "weekday",
+      "kind": "date_part",
+      "meaning": "Weekday of the request date (\"Day 1\" to \"Day 7\").",
+      "needs_columns": [
+        "'Calendario'[Día De La Semana.Key0]"
+      ],
+      "sort_by": "'Calendario'[Día De La Semana.Key0]",
+      "distinct": 8,
+      "sample_values": [],
+      "status": "active"
+    }
+  ],
+  "named_filters": [],
+  "rules": [
+    "Never query this cube: it has no data. Use Statistics Real Time Client (client requests) and Statistics Real Time Supplier (supplier requests).",
+    "'Fecha'[Fecha] and 'Date CET'[Date CET] repeat 'Calendario'[Fecha] and 'Calendar CET'[Date CET]; 'Calendar CET'[Ten Days CET] and the 'Calendario' *.Value columns are period keys, not day dates.",
+    "If it ever fills: the same request is counted once per 'Jerarquia' layer, so always filter one layer before counting requests."
+  ],
+  "examples": [],
+  "review": [
+    {
+      "id": "statistics_real_time_3.remove",
+      "question": "Statistics Real Time 3 has no data at all (every measure empty). Remove it from the app?",
+      "options": [
+        "Remove it from the app",
+        "Keep it listed but never pick it",
+        "Keep it as is"
+      ],
+      "proposed": "Remove it from the app",
+      "why": "It can only give empty answers; Statistics Real Time Client and Statistics Real Time Supplier have the same structure with current data."
+    }
+  ]
+}

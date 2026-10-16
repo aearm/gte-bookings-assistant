@@ -1,0 +1,815 @@
+{
+  "cube": "GlobalTravelEngine - Statistics Client Web",
+  "label": "B2B web portal requests",
+  "purpose": "Requests made through the GlobalTravelEngine B2B web portal (the agency website): volumes, results returned, response times, response sizes and outcomes. Every request in the cube is channel WEB; XML/API traffic is in Statistics Zone and Statistics History Client.",
+  "grain": "Web requests aggregated per request day and hour, customer, request type, product type, availability type, outcome, response-time band, destination/origin zone and travel date.",
+  "use_for": [
+    "B2B web portal traffic: logins, searches, product details, bookings made on the website",
+    "web response times and slow web requests",
+    "web outcomes: correct, no results, errors, failed logins",
+    "web traffic by customer, market, product type or hour"
+  ],
+  "not_for": [
+    "searches from XML/API clients (Statistics Zone)",
+    "API requests and look-to-book (Statistics History Client)",
+    "bookings, sales or revenue (Bookings)",
+    "supplier-side traffic (supplier statistics cubes)"
+  ],
+  "coverage": {
+    "main_date": "'Calendar'[Date]",
+    "first": "2025-10",
+    "last": "2026-10",
+    "note": "Daily from 2025-10-17 up to today so far (UAE time). Only channel WEB has data (about 1.5 million requests a year)."
+  },
+  "dates": [
+    {
+      "column": "'Calendar'[Date]",
+      "role": "request_date",
+      "label": "Request date",
+      "meaning": "Day the web request was made, UAE time (the cube's main date).",
+      "default": true,
+      "words": [
+        "request date",
+        "requested on",
+        "on the website on"
+      ],
+      "first": "2025-10",
+      "last": "2026-10"
+    },
+    {
+      "column": "'Calendar CET'[Date]",
+      "role": "request_date_cet",
+      "label": "Request date (CET)",
+      "meaning": "The same request date in Central European Time (the engine's server time); differs from the UAE date only around midnight. Use only when CET is asked for.",
+      "default": false,
+      "words": [
+        "cet",
+        "central european time",
+        "spain time"
+      ],
+      "first": "2025-10",
+      "last": "2026-10"
+    },
+    {
+      "column": "'Travel Date'[Travel Date]",
+      "role": "travel_date",
+      "label": "Travel date",
+      "meaning": "Service/check-in date the user searched or booked for.",
+      "default": false,
+      "words": [
+        "travel date",
+        "check-in",
+        "for travel in",
+        "arrival"
+      ],
+      "first": "2025-05",
+      "last": "2028-04"
+    }
+  ],
+  "measures": [
+    {
+      "name": "[AVG Response Time Sec]",
+      "label": "Web average response time",
+      "definition": "Average time the engine took to answer a web portal request, in seconds.",
+      "unit": "seconds",
+      "format": ",.2f",
+      "prefix": "",
+      "suffix": " s",
+      "aggregation": "average",
+      "terms": [
+        "web response time",
+        "website response time",
+        "web portal response time"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet",
+        "travel_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": "The cube's own format shows no decimals; typical value is about 4 s."
+    },
+    {
+      "name": "[AVG Results]",
+      "label": "Results per web request",
+      "definition": "Average results returned per web request ([Results] / [Requests]).",
+      "unit": "count",
+      "format": ",.1f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "average",
+      "terms": [
+        "results per web request",
+        "average web results"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet",
+        "travel_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[AVG Size Bytes Response]",
+      "label": "Web average response size (bytes)",
+      "definition": "Average response size per web request in bytes.",
+      "unit": "bytes",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "average",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet",
+        "travel_date"
+      ],
+      "status": "hidden",
+      "hidden_reason": "duplicate of [AVG Size Kb Response] in bytes",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[AVG Size Kb Response]",
+      "label": "Web average response size",
+      "definition": "Average response size per web request in KB (bytes / 1024).",
+      "unit": "kilobytes",
+      "format": ",.1f",
+      "prefix": "",
+      "suffix": " KB",
+      "aggregation": "average",
+      "terms": [
+        "average web response size"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet",
+        "travel_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[Filter Results]",
+      "label": "Web filtered results",
+      "definition": "Results left after the engine's filters (most likely what the user was shown); never more than [Results].",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [
+        "web filtered results"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet",
+        "travel_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "low",
+      "notes": "Not documented; equals [Results] for 'More Availability Options' requests. See review."
+    },
+    {
+      "name": "[Requests]",
+      "label": "Web requests",
+      "definition": "Number of requests made through the B2B web portal: logins, availability searches (live and cached), more options, product details, cancellation policies, shopping basket and bookings.",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [
+        "web requests",
+        "website requests",
+        "web portal requests",
+        "web traffic",
+        "b2b web traffic"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet",
+        "travel_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[Results]",
+      "label": "Web results returned",
+      "definition": "Number of results (product options) returned to web requests.",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [
+        "web results",
+        "web results returned"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet",
+        "travel_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[Size Bytes Response]",
+      "label": "Web response data (bytes)",
+      "definition": "Total size of web responses in bytes.",
+      "unit": "bytes",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet",
+        "travel_date"
+      ],
+      "status": "hidden",
+      "hidden_reason": "duplicate of [Size Gb Response] in bytes",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[Size Gb Response]",
+      "label": "Web response data volume",
+      "definition": "Total size of web responses in GB (binary: bytes / 1024^3).",
+      "unit": "gigabytes",
+      "format": ",.2f",
+      "prefix": "",
+      "suffix": " GB",
+      "aggregation": "sum",
+      "terms": [
+        "web data volume",
+        "web response data"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet",
+        "travel_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[Size Kb Response]",
+      "label": "Web response data (KB)",
+      "definition": "Total size of web responses in KB.",
+      "unit": "kilobytes",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet",
+        "travel_date"
+      ],
+      "status": "hidden",
+      "hidden_reason": "duplicate of [Size Gb Response] in KB",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[Size Mb Response]",
+      "label": "Web response data (MB)",
+      "definition": "Total size of web responses in MB.",
+      "unit": "megabytes",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet",
+        "travel_date"
+      ],
+      "status": "hidden",
+      "hidden_reason": "duplicate of [Size Gb Response] in MB",
+      "confidence": "high",
+      "notes": ""
+    }
+  ],
+  "breakdowns": [
+    {
+      "column": "'Customers'[Cliente]",
+      "label": "Customer",
+      "entity": "customer",
+      "kind": "name",
+      "meaning": "Agency (customer account) using the web portal.",
+      "needs_columns": [
+        "'Customers'[Cliente.Key0]"
+      ],
+      "sort_by": "",
+      "distinct": 6822,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Customer Code]",
+      "label": "Customer code",
+      "entity": "customer",
+      "kind": "code",
+      "meaning": "Customer code (same codes as the Bookings cube).",
+      "needs_columns": [
+        "'Customers'[Customer Code.Key0]"
+      ],
+      "sort_by": "",
+      "distinct": 6851,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Market]",
+      "label": "Market",
+      "entity": "market",
+      "kind": "enum",
+      "meaning": "Commercial market of the customer.",
+      "needs_columns": [
+        "'Customers'[Market.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 24,
+      "sample_values": [
+        "UAE",
+        "GCC - Except UAE and Local Residence",
+        "North Africa",
+        "Middle East",
+        "ROW",
+        "EUROPE",
+        "Turkish Market",
+        "B2C American Market"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Country]",
+      "label": "Customer country",
+      "entity": "customer_country",
+      "kind": "name",
+      "meaning": "Country of the agency.",
+      "needs_columns": [
+        "'Customers'[Country.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 96,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Account Manager]",
+      "label": "Account manager",
+      "entity": "account_manager",
+      "kind": "name",
+      "meaning": "Account manager responsible for the customer.",
+      "needs_columns": [
+        "'Customers'[Account Manager.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 19,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Agency Group]",
+      "label": "Agency group",
+      "entity": "agency_group",
+      "kind": "name",
+      "meaning": "Commercial group of the customer (region and markup tier).",
+      "needs_columns": [
+        "'Customers'[Agency Group.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 130,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Master Agency]",
+      "label": "Master agency",
+      "entity": "master_agency",
+      "kind": "name",
+      "meaning": "Parent agency that groups several customer accounts.",
+      "needs_columns": [
+        "'Customers'[Master Agency.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 143,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Category]",
+      "label": "Customer category",
+      "entity": "customer_category",
+      "kind": "enum",
+      "meaning": "Customer category.",
+      "needs_columns": [
+        "'Customers'[Category.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 5,
+      "sample_values": [
+        "Dubai Link Category",
+        "Final Client Category",
+        "DL Business Trip - No Markup"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Request Types'[Request Type]",
+      "label": "Request type",
+      "entity": "request_type",
+      "kind": "enum",
+      "meaning": "What the user did: login, availability search (live or cached), more options, product details, cancellation policies, shopping basket, booking.",
+      "needs_columns": [
+        "'Request Types'[Request Type.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 14,
+      "sample_values": [
+        "Availability",
+        "Cached Availability",
+        "More Availability Options",
+        "Product Details",
+        "Login",
+        "Booking",
+        "Cancelation Policies",
+        "Confirm Shopping Basket"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Product Types'[Product Type]",
+      "label": "Product type",
+      "entity": "product_type",
+      "kind": "enum",
+      "meaning": "Product requested; mostly Hotel ('None' for logins and similar).",
+      "needs_columns": [
+        "'Product Types'[Product Type.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 13,
+      "sample_values": [
+        "Hotel",
+        "None",
+        "Activity",
+        "Transfer"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Availability Type'[Availability Type]",
+      "label": "Search mode",
+      "entity": "availability_type",
+      "kind": "enum",
+      "meaning": "Zone (destination search), MonoAvail (single hotel), Promoted, or None (not a search).",
+      "needs_columns": [
+        "'Availability Type'[Availability Type.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 5,
+      "sample_values": [
+        "Zone",
+        "MonoAvail",
+        "Promoted",
+        "None"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Error Types'[Error Type]",
+      "label": "Outcome",
+      "entity": "request_outcome",
+      "kind": "enum",
+      "meaning": "Outcome of the request: Correct, No Results, or an error type.",
+      "needs_columns": [
+        "'Error Types'[Error Type.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 51,
+      "sample_values": [
+        "Correct",
+        "No Results",
+        "Unavailable",
+        "Generic Error",
+        "Login KO",
+        "Price Changed",
+        "Bad Parameters"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Range Times'[Range Time]",
+      "label": "Response-time band (ms)",
+      "entity": "response_time_band",
+      "kind": "enum",
+      "meaning": "Response time in milliseconds, in bands; 'Timeout' when the request timed out.",
+      "needs_columns": [
+        "'Range Times'[Range Time.UniqueName]"
+      ],
+      "sort_by": "'Range Times'[Range Time.Orden]",
+      "distinct": 22,
+      "sample_values": [
+        "0 - 100",
+        "100 - 200",
+        "200 - 300",
+        "1000 - 2000",
+        "> 10000",
+        "Timeout"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Destination Zones'[Zone Parent]",
+      "label": "Destination",
+      "entity": "destination",
+      "kind": "name",
+      "meaning": "Destination searched, parent-zone level.",
+      "needs_columns": [
+        "'Destination Zones'[Zone Parent.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 8486,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Destination Zones'[Zone]",
+      "label": "Destination zone",
+      "entity": "destination",
+      "kind": "name",
+      "meaning": "Exact zone searched.",
+      "needs_columns": [
+        "'Destination Zones'[Zone.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 143452,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Hours'[Hour]",
+      "label": "Request hour",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Hour of the request, 00-23 (UAE time).",
+      "needs_columns": [
+        "'Hours'[Hour.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 25,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendar'[Month Year]",
+      "label": "Request month",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Month of the request date (M-YYYY).",
+      "needs_columns": [
+        "'Calendar'[Month Year.UniqueName]"
+      ],
+      "sort_by": "'Calendar'[Month Year.Fecha ISO DESC MonthYear]",
+      "distinct": 14,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendar'[Day Week]",
+      "label": "Request weekday",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Weekday of the request date.",
+      "needs_columns": [
+        "'Calendar'[Day Week.UniqueName]"
+      ],
+      "sort_by": "'Calendar'[Day Week.Day Week DESC]",
+      "distinct": 8,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Travel Date'[Month Year]",
+      "label": "Travel month",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Month of the travel date (M-YYYY).",
+      "needs_columns": [
+        "'Travel Date'[Month Year.UniqueName]"
+      ],
+      "sort_by": "'Travel Date'[Month Year.Fecha ISO DESC MonthYear]",
+      "distinct": 493,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Channels'[Channel]",
+      "label": "Sale channel",
+      "entity": "sale_channel",
+      "kind": "enum",
+      "meaning": "Every request in this cube is WEB, so this breakdown adds nothing.",
+      "needs_columns": [
+        "'Channels'[Channel.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 4,
+      "sample_values": [
+        "WEB"
+      ],
+      "status": "hidden"
+    }
+  ],
+  "named_filters": [
+    {
+      "name": "successful web requests",
+      "meaning": "Web requests answered correctly.",
+      "column": "'Error Types'[Error Type]",
+      "values": [
+        "Correct"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "web requests with no results",
+      "meaning": "Web searches that returned nothing.",
+      "column": "'Error Types'[Error Type]",
+      "values": [
+        "No Results"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "failed web requests",
+      "meaning": "Web requests that ended in an error (the error values that occur in the data).",
+      "column": "'Error Types'[Error Type]",
+      "values": [
+        "Unavailable",
+        "Generic Error",
+        "Login KO",
+        "Price Changed",
+        "Bad Parameters",
+        "Avail Changed"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "name": "failed web logins",
+      "meaning": "Login attempts that failed.",
+      "column": "'Error Types'[Error Type]",
+      "values": [
+        "Login KO"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "web searches",
+      "meaning": "Availability searches on the web portal, live and cached.",
+      "column": "'Request Types'[Request Type]",
+      "values": [
+        "Availability",
+        "Cached Availability"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "name": "web booking requests",
+      "meaning": "Booking requests made on the web portal.",
+      "column": "'Request Types'[Request Type]",
+      "values": [
+        "Booking"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "web logins",
+      "meaning": "Logins to the web portal.",
+      "column": "'Request Types'[Request Type]",
+      "values": [
+        "Login"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "hotel web requests",
+      "meaning": "Web requests for hotel products.",
+      "column": "'Product Types'[Product Type]",
+      "values": [
+        "Hotel"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "slow web requests",
+      "meaning": "Web requests that took more than 10 seconds.",
+      "column": "'Range Times'[Range Time]",
+      "values": [
+        "> 10000"
+      ],
+      "confidence": "medium"
+    }
+  ],
+  "rules": [
+    "This cube is B2B web portal traffic only (all channel WEB). Never add its [Requests] to Statistics Zone searches or Statistics History Client API requests.",
+    "[AVG Results], [AVG Response Time Sec] and [AVG Size Kb Response] are averages: ask the cube at the level needed; never sum or average them across rows.",
+    "[Size Gb Response] is binary GB (bytes / 1024^3); the bytes/KB/MB size measures are hidden duplicates.",
+    "Show response times with 2 decimals (the cube's own format rounds them to whole seconds).",
+    "Use 'Hours'[Hour] and 'Calendar'[Date] (UAE time); 'Hours CET'[Hour] and 'Calendar CET' are the same traffic in CET, only when CET is asked for.",
+    "Use the cube's measures only; never SUM a column."
+  ],
+  "examples": [
+    {
+      "question": "How many web portal requests did we have last month?",
+      "measures": [
+        "[Requests]"
+      ],
+      "breakdowns": [],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Web requests by request type in September 2026",
+      "measures": [
+        "[Requests]"
+      ],
+      "breakdowns": [
+        "'Request Types'[Request Type]"
+      ],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Average web response time by hour last week",
+      "measures": [
+        "[AVG Response Time Sec]"
+      ],
+      "breakdowns": [
+        "'Hours'[Hour]"
+      ],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Web requests by outcome this year",
+      "measures": [
+        "[Requests]"
+      ],
+      "breakdowns": [
+        "'Error Types'[Error Type]"
+      ],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Top 10 customers by web booking requests this month",
+      "measures": [
+        "[Requests]"
+      ],
+      "breakdowns": [
+        "'Customers'[Cliente]"
+      ],
+      "date_role": "request_date"
+    }
+  ],
+  "review": [
+    {
+      "id": "client_web.filter_results",
+      "question": "What does [Filter Results] mean: results left after the engine's filters (what the user is shown), or results removed by the filters?",
+      "options": [
+        "results left after filters",
+        "results removed by filters"
+      ],
+      "proposed": "results left after filters",
+      "why": "It is always at most [Results] and equals it for 'More Availability Options' requests, which fits 'kept' rather than 'removed'. The cube does not document it, so it stays low confidence until confirmed."
+    }
+  ]
+}

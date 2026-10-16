@@ -105,3 +105,31 @@ def test_validate(two_cubes):
         plans.validate(plans.Plan())
     assert plans.Plan.from_dict(PLAN).uses_dates()
     assert not plans.Plan.from_dict({"steps": [{"name": "a", "cube": "Bookings", "query": "EVALUATE 1"}]}).uses_dates()
+
+
+SCHEMA = """- [Sale] (in 'Bookings') | format: #,##0
+- [Reservations Count] (in 'Bookings')
+- 'Calendar'[Date] (Date) | group with 'Calendar'[Date.UniqueName]
+- 'Areas'[Area Parent] (Text) | group with 'Areas'[Area Parent.UniqueName] | 8,486 values
+"""
+
+
+def test_names_a_cube_does_not_have_are_caught_with_the_closest_real_one(monkeypatch, tmp_path):
+    schema = tmp_path / "schema.md"
+    schema.write_text(SCHEMA, encoding="utf-8")
+    backend = FakeBackend(pd.DataFrame())
+    backend.schema_text = lambda: SCHEMA
+    monkeypatch.setattr(plans, "get_backend", lambda cube: backend)
+    monkeypatch.setattr(plans.cubes, "schema_file", lambda cube: schema)
+    good = ("EVALUATE TOPN(10, SUMMARIZECOLUMNS('Areas'[Area Parent], 'Areas'[Area Parent.UniqueName], "
+            "KEEPFILTERS(FILTER(ALL('Calendar'[Date]), 'Calendar'[Date] >= DATE(2026,9,1))), "
+            "\"Bookings\", [Reservations Count], \"Sales\", 'Bookings'[Sale]), [Bookings], DESC) ORDER BY [Bookings] DESC")
+    check = lambda query: plans.unknown_names(plans.Step("s", "Cube", query))
+    assert check(good) == []  # labels, helper columns and table-qualified measures are fine
+    assert check(good.replace("[Reservations Count]", "[Reservation Count]")) == [
+        "[Reservation Count] (did you mean [Reservations Count]?)"]
+    assert check(good.replace("'Calendar'[Date]", "'Calender'[Date]", 1)) == [
+        "'Calender'[Date] (did you mean 'Calendar'[Date]?)"]
+    assert check(good.replace("ORDER BY [Bookings]", "ORDER BY [Booking]")) == ["[Booking] (did you mean [Bookings]?)"]
+    with pytest.raises(ValueError, match="not in the cube"):
+        plans.validate(plans.Plan([plans.Step("s", "Cube", good.replace("[Sale]", "[Sales]"))]))

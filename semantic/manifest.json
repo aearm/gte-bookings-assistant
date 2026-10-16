@@ -1,0 +1,330 @@
+{
+ "version": "1.0.0",
+ "built": "2026-10-16",
+ "cubes": {
+  "GlobalTravelEngine - Booking Payments": {
+   "label": "Booking Payments",
+   "fingerprint": "8d18519e21a1378b",
+   "active_measures": 18,
+   "hidden_measures": 24,
+   "coverage": {
+    "main_date": "'Payment Date'[Payment Date]",
+    "first": "2022-01",
+    "last": "2026-10",
+    "note": "Payments only from January 2022 (no earlier history); the current month is partial. By booking or travel date, recent months look low because many bookings are paid later."
+   }
+  },
+  "GlobalTravelEngine - Bookings": {
+   "label": "Bookings",
+   "fingerprint": "1a953a5f97c91025",
+   "active_measures": 28,
+   "hidden_measures": 94,
+   "coverage": {
+    "main_date": "'Calendar'[Date]",
+    "first": "2014-07",
+    "last": "2026-10",
+    "note": "Complete monthly data since mid-2014 (very small volumes in 2014); the current month is partial. 2020 is low (pandemic). Counts, nights and passengers include cancelled lines."
+   }
+  },
+  "GlobalTravelEngine - History Hotel Locks": {
+   "label": "Hotel Locks History",
+   "fingerprint": "57ca863e36ed759a",
+   "active_measures": 1,
+   "hidden_measures": 0,
+   "coverage": {
+    "main_date": "'Calendar'[Date]",
+    "first": "2025-10",
+    "last": "2026-10",
+    "note": "Data starts mid-October 2025 (the calendar shows empty years back to 2021); the current month is partial. Volumes grew strongly during 2026, so compare periods with care."
+   }
+  },
+  "GlobalTravelEngine - Hotel Allotments": {
+   "label": "Hotel Allotments",
+   "fingerprint": "cf9a5bf961f98482",
+   "active_measures": 5,
+   "hidden_measures": 0,
+   "coverage": {
+    "main_date": "'Occupancy Calendar'[Occupancy Date]",
+    "first": "2026-04",
+    "last": "2027-12",
+    "note": "Stay nights from 2026-04 to 2027-12, mostly future nights: months far ahead have allotment but almost no usage yet. Booking dates of used allotment run from 2025-06 to 2026-10."
+   }
+  },
+  "GlobalTravelEngine - KPI Change Price": {
+   "label": "Price Changes (KPI Change Price)",
+   "fingerprint": "8bf12c66a2cc802e",
+   "active_measures": 7,
+   "hidden_measures": 1,
+   "coverage": {
+    "main_date": "'Create Date'[Create Date]",
+    "first": "2025-10",
+    "last": "2026-10",
+    "note": "Data starts mid-October 2025; the current month is partial. Monthly volumes grew about sixfold between January and September 2026. [Client Requests] only from 2026-09."
+   }
+  },
+  "GlobalTravelEngine - Relocations": {
+   "label": "Relocations (historical)",
+   "fingerprint": "f4c62f23ae9de687",
+   "active_measures": 11,
+   "hidden_measures": 9,
+   "coverage": {
+    "main_date": "'Booking Date'[Booking Date]",
+    "first": "2015-01",
+    "last": "2022-08",
+    "note": "Very sparse historical data: 34 relocations in 9 months only (13 in January–March 2015, 19 in April–September 2021, 2 in August 2022), none since. Sales and cost amounts are filled for only a few 2021 relocations, and several rows use test hotels and suppliers."
+   }
+  },
+  "GlobalTravelEngine - Sales Average Per Owned Hotels": {
+   "label": "Owned Hotels Sales Averages (by stay night)",
+   "fingerprint": "c419060353c059b0",
+   "active_measures": 8,
+   "hidden_measures": 0,
+   "coverage": {
+    "main_date": "'Booking Date'[Booking Date]",
+    "first": "2014-08",
+    "last": "2026-10",
+    "note": "Meaningful from 2015 (2014 has a few dozen bookings); 2016 has unusually high average values. Stay nights run to 2027-12. The current month is partial."
+   }
+  },
+  "GlobalTravelEngine - Sales Per Owned Hotels": {
+   "label": "Hotel Sales (owned and third-party hotels)",
+   "fingerprint": "6d6d6c1d1c31e6d6",
+   "active_measures": 19,
+   "hidden_measures": 57,
+   "coverage": {
+    "main_date": "'Booking Date'[Booking Date]",
+    "first": "2014-10",
+    "last": "2026-10",
+    "note": "Meaningful from 2015 (2014 has only a few dozen bookings); the current month is partial. Arrival dates run to 2028-09 for bookings already made. 2026 sales run well below 2025 from February."
+   }
+  },
+  "GlobalTravelEngine - Statistics Channel Manager API": {
+   "label": "Channel manager API",
+   "fingerprint": "77b631f10b00724d",
+   "active_measures": 8,
+   "hidden_measures": 1,
+   "coverage": {
+    "main_date": "'Calendar'[Date]",
+    "first": "2025-10",
+    "last": "2026-10",
+    "note": "Rolling window of about one year: the oldest day drops off every day (on 2026-10-16 the Calendar started around 2025-10-17), so October 2025 is partial and last-year comparisons are not possible. The oldest day still loaded (about 0.66 million requests) has no 'Calendar' date: all-time totals and 'Date'[Date] include it, and monthly figures from 'Calendar' do not."
+   }
+  },
+  "GlobalTravelEngine - Statistics Client API Service": {
+   "label": "Client API Service requests",
+   "fingerprint": "05b2c0effaac8132",
+   "active_measures": 8,
+   "hidden_measures": 4,
+   "coverage": {
+    "main_date": "'Calendar'[Date]",
+    "first": "2026-01",
+    "last": "2026-01",
+    "note": "Almost empty: one request in total, in January 2026 (a second one, from October 2025, dropped out between 13 and 16 October 2026, so the cube keeps a rolling ~12 months and will likely be empty by about January 2027). Any other period returns no rows: answer that this cube has no data for it (not 0) and do not use it for recent questions. The matching supplier-side cube (Statistics Supplier API Service) records about 2,200 calls over the same year, so this client feed looks broken."
+   }
+  },
+  "GlobalTravelEngine - Statistics Client API Transfer": {
+   "label": "Client API Transfer requests",
+   "fingerprint": "c5efeaade27befbb",
+   "active_measures": 8,
+   "hidden_measures": 4,
+   "coverage": {
+    "main_date": "'Calendar'[Date]",
+    "first": "2025-10",
+    "last": "2026-10",
+    "note": "Tiny volume: 22 requests in 9 of 13 months (1-6 a month; none in 2025-11, 2025-12, 2026-02, 2026-09): 16 Cancel Booking and 6 Availability, no Reservation/Booking. Statistics Supplier API Transfer records about 3,000 availability and 50 booking calls to transfer suppliers over the same period, so this client feed is very likely incomplete. The cube appears to keep a rolling 12 months (the October 2025 request will drop out). Service date is known only for the 6 availability requests (all March 2026)."
+   }
+  },
+  "GlobalTravelEngine - Statistics Client Web": {
+   "label": "B2B web portal requests",
+   "fingerprint": "f922179d3f93e767",
+   "active_measures": 7,
+   "hidden_measures": 4,
+   "coverage": {
+    "main_date": "'Calendar'[Date]",
+    "first": "2025-10",
+    "last": "2026-10",
+    "note": "Daily from 2025-10-17 up to today so far (UAE time). Only channel WEB has data (about 1.5 million requests a year)."
+   }
+  },
+  "GlobalTravelEngine - Statistics History 3": {
+   "label": "Statistics History 3 (empty)",
+   "fingerprint": "530614591e8d2db2",
+   "active_measures": 0,
+   "hidden_measures": 8,
+   "coverage": {
+    "main_date": "'Calendario'[Fecha]",
+    "first": null,
+    "last": null,
+    "note": "No data at all: every measure is empty for every date (checked 16 October 2026). Do not use this cube; Statistics History Client (client requests) and Statistics History Supplier (supplier requests) have the same structure with data."
+   }
+  },
+  "GlobalTravelEngine - Statistics History Client": {
+   "label": "Client API requests (history)",
+   "fingerprint": "330106b2137ff59f",
+   "active_measures": 12,
+   "hidden_measures": 4,
+   "coverage": {
+    "main_date": "'Calendario'[Fecha]",
+    "first": "2025-10",
+    "last": "2026-10",
+    "note": "Daily from 2025-10-16 to yesterday (UAE date); today's traffic is only in Statistics Real Time Client."
+   }
+  },
+  "GlobalTravelEngine - Statistics History Supplier": {
+   "label": "Supplier requests (history)",
+   "fingerprint": "b8e952515ae11552",
+   "active_measures": 12,
+   "hidden_measures": 0,
+   "coverage": {
+    "main_date": "'Calendario'[Fecha]",
+    "first": "2025-10",
+    "last": "2026-10",
+    "note": "Rolling window of about one year that ends yesterday: on 2026-10-16 it held 2025-10-16 to 2026-10-15, and the first day moves forward daily. 2025-10 and the current month are partial; today is only in Statistics Real Time Supplier."
+   }
+  },
+  "GlobalTravelEngine - Statistics Hotel Client": {
+   "label": "Hotel-level client requests",
+   "fingerprint": "78adfddc51b2215f",
+   "active_measures": 9,
+   "hidden_measures": 1,
+   "coverage": {
+    "main_date": "'Request Calendar'[Request Day]",
+    "first": "2026-08",
+    "last": "2026-10",
+    "note": "Daily from 2026-08-17 to yesterday; 2026-08-21 and 2026-08-22 have no data."
+   }
+  },
+  "GlobalTravelEngine - Statistics Hotel Supplier": {
+   "label": "Hotel supplier requests (hotel level)",
+   "fingerprint": "65f6ae3c57040300",
+   "active_measures": 19,
+   "hidden_measures": 1,
+   "coverage": {
+    "main_date": "'Request Calendar'[Request Day]",
+    "first": "2026-08",
+    "last": "2026-10",
+    "note": "Recent only: data starts on 2026-08-17 and ends yesterday (2026-10-15 when read on 2026-10-16), so 2026-08 is partial and there is no earlier history. For older periods use Statistics History Supplier."
+   }
+  },
+  "GlobalTravelEngine - Statistics Rate Changes Channel Manager API": {
+   "label": "Channel manager rate changes",
+   "fingerprint": "b954aa06f90f0329",
+   "active_measures": 1,
+   "hidden_measures": 0,
+   "coverage": {
+    "main_date": "'Calendar'[Date]",
+    "first": "2025-10",
+    "last": "2026-10",
+    "note": "Rolling window of about one year: the oldest day drops off every day (on 2026-10-16 the Calendar started around 2025-10-17), so October 2025 is partial and last-year comparisons are not possible. The oldest day still loaded (about 0.65 million changes) falls in the Calendar's 'Unknown' member: all-time totals and 'Date'[Date] include it, and monthly figures from 'Calendar' do not."
+   }
+  },
+  "GlobalTravelEngine - Statistics Real Time 3": {
+   "label": "Statistics Real Time 3 (empty)",
+   "fingerprint": "530614591e8d2db2",
+   "active_measures": 0,
+   "hidden_measures": 8,
+   "coverage": {
+    "main_date": "'Calendario'[Fecha]",
+    "first": null,
+    "last": null,
+    "note": "No data at all: every measure is empty for every date (checked 16 October 2026). Do not use this cube; Statistics Real Time Client (client requests) and Statistics Real Time Supplier (supplier requests) have the same structure with data."
+   }
+  },
+  "GlobalTravelEngine - Statistics Real Time Client": {
+   "label": "Client API requests today (real time)",
+   "fingerprint": "12caa30cea945688",
+   "active_measures": 12,
+   "hidden_measures": 4,
+   "coverage": {
+    "main_date": "'Calendario'[Fecha]",
+    "first": "2026-10",
+    "last": "2026-10",
+    "note": "Only the current day (UAE date) so far, refreshed during the day; no history. At reading (2026-10-16) it held 2026-10-16 only, hours 00-16."
+   }
+  },
+  "GlobalTravelEngine - Statistics Real Time Supplier": {
+   "label": "Supplier requests (today, real time)",
+   "fingerprint": "333c62e0c3300ea0",
+   "active_measures": 12,
+   "hidden_measures": 0,
+   "coverage": {
+    "main_date": "'Calendario'[Fecha]",
+    "first": "2026-10",
+    "last": "2026-10",
+    "note": "Real time: only the current day (UAE time), loaded with about an hour's delay. On 2026-10-16 at about 17:00 UAE time it held 2026-10-16, hours 00 to 16. Each day replaces the previous one, so there is no history and 'last 12 months' totals are empty by design."
+   }
+  },
+  "GlobalTravelEngine - Statistics Supplier API Service": {
+   "label": "Activity supplier API requests",
+   "fingerprint": "21369043b5808640",
+   "active_measures": 5,
+   "hidden_measures": 3,
+   "coverage": {
+    "main_date": "'Calendar'[Date]",
+    "first": "2025-10",
+    "last": "2026-10",
+    "note": "Rolling window of about one year ending yesterday (2025-10-17 to 2026-10-15 when read on 2026-10-16); 2025-10 and the current month are partial. Sparse: about 2,200 requests in the whole year, so monthly figures are small. Service dates run into 2027-01."
+   }
+  },
+  "GlobalTravelEngine - Statistics Supplier API Transfer": {
+   "label": "Transfer supplier API requests",
+   "fingerprint": "17c5c03f1d0f4301",
+   "active_measures": 5,
+   "hidden_measures": 1,
+   "coverage": {
+    "main_date": "'Calendar'[Date]",
+    "first": "2025-10",
+    "last": "2026-10",
+    "note": "Rolling window of about one year ending yesterday (2025-10-17 to 2026-10-15 when read on 2026-10-16); 2025-10 and the current month are partial. Sparse: about 3,100 requests in the whole year, so monthly figures are small. Service dates run into 2027-03."
+   }
+  },
+  "GlobalTravelEngine - Statistics Supplier Error API Hotel": {
+   "label": "Supplier API errors (hotels)",
+   "fingerprint": "8b97ce101d48a9b9",
+   "active_measures": 1,
+   "hidden_measures": 0,
+   "coverage": {
+    "main_date": "'Calendar'[Fecha]",
+    "first": "2025-10",
+    "last": "2026-10",
+    "note": "About one year of data, from October 2025 (that first month looks partial: 0.30 billion requests against 0.49 billion in November). Monthly volumes are 0.3 to 1.2 billion requests. Totals above 2,147,483,647 overflow in the cube, so quarters, years and all-time must be added up from months (see rules)."
+   }
+  },
+  "GlobalTravelEngine - Statistics Zone": {
+   "label": "Searches (Statistics Zone)",
+   "fingerprint": "f1e19afa30404b21",
+   "active_measures": 9,
+   "hidden_measures": 0,
+   "coverage": {
+    "main_date": "'Request Date'[Request Date]",
+    "first": "2025-11",
+    "last": "2026-10",
+    "note": "Continuous daily data only from 2026-07-18 to yesterday; 2025-11 holds one isolated day (2025-11-19). Nothing between 2025-11-20 and 2026-07-17 and nothing for today."
+   }
+  },
+  "GlobalTravelEngine - Supplier Lock API Hotel": {
+   "label": "Supplier connection locks",
+   "fingerprint": "9d831e6864da0e83",
+   "active_measures": 2,
+   "hidden_measures": 0,
+   "coverage": {
+    "main_date": "'Locked Date'[Locked Date]",
+    "first": "2023-03",
+    "last": "2026-10",
+    "note": "Sparse before mid-2025: about 1,500 locks in all from March 2023 to May 2025, with several empty months. Regular volumes (about 1,000 to 3,000 a month) start in July 2025, so trends and year-on-year comparisons are meaningful only from then."
+   }
+  },
+  "GlobalTravelEngine - Tickets": {
+   "label": "Tickets (historical)",
+   "fingerprint": "23692899ec8babe9",
+   "active_measures": 8,
+   "hidden_measures": 8,
+   "coverage": {
+    "main_date": "'Booking Date'[Booking Date]",
+    "first": "2015-02",
+    "last": "2022-06",
+    "note": "Historical cube: data stops in 2022 (last booking June 2022). Steady monthly data mid-2015 to 2019 (busiest year by bookings 2019); 2020 has no data April–July and a sales spike September–November; 2021 has only a few bookings a month; 2022 a single booking. Never use it for 2022 or later."
+   }
+  }
+ }
+}

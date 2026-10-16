@@ -136,3 +136,65 @@ def test_tables_get_a_change_column():
     by_month = pd.DataFrame({"Month": ["2026-02", "2026-01"], "Sales": [30.0, 10.0]})
     shown, _ = charts.with_changes(by_month, pd.DataFrame({"Month": ["2025-01", "2025-02"], "Sales": [5.0, 20.0]}), {})
     assert shown["Sales change"].tolist() == [0.5, 1.0]  # paired by position in time
+
+
+def test_several_measures_of_different_size_get_one_panel_each():
+    # the question: requests, bookings and sales per customer, "3 bars for each day"
+    codes, days = ["1042", "5555", "8114"], ["2026-10-14", "2026-10-15"]
+    df = pd.DataFrame([{"Date": d, "Customer Code": c, "Requests": 40_000_000 / (i + 1) + k, "Bookings": 60 - i * 20 + k,
+                        "Sales": 140_000.0 / (i + 1)} for k, d in enumerate(days) for i, c in enumerate(codes)])
+    style = {"formats": [{"column": "Sales", "d3_format": ",.0f", "prefix": "AED ", "suffix": ""}], "sort": "value_desc"}
+    spec = {"chart_type": "bar", "x": "Customer Code", "y": ["Requests", "Bookings", "Sales"], "color": "Date",
+            "style": style, "title": "Requests, bookings and sales by customer"}
+    assert charts.needs_panels(df, spec)
+    fig = charts.build_figure(df, spec)
+    assert len(fig.data) == 6  # 3 measures x 2 days: nothing dropped
+    assert [t.name for t in fig.data if t.showlegend] == days  # one legend, the days
+    assert [a.text for a in fig.layout.annotations] == ["Requests", "Bookings", "Sales (AED)"]
+    assert fig.layout.yaxis3.tickprefix == "AED " and fig.layout.xaxis.type == "category"
+    assert list(fig.layout.xaxis.categoryarray) == codes  # by requests, biggest first
+    assert list(fig.data[0].x) == codes and fig.layout.height >= 3 * 175
+
+    sales_profit = pd.DataFrame({"Month": ["2026-01", "2026-02"], "Sales": [100.0, 120.0], "Profit": [20.0, 25.0]})
+    same_axis = {"chart_type": "line", "x": "Month", "y": ["Sales", "Profit"]}
+    assert not charts.needs_panels(sales_profit, same_axis)  # same size and unit: one axis is clearer
+    # a measure whose name says "month" and whose numbers have 4 digits is still a measure, not years
+    used = pd.DataFrame({"Month": ["July 2026", "August 2026"], "Used Allotment (by stay month)": [5926, 7810],
+                         "Bookings": [9018, 11039], "Year": [2026, 2026]})
+    assert not charts.is_time_column(used["Used Allotment (by stay month)"]) and charts.is_time_column(used["Year"])
+    fig = charts.build_figure(used, {"chart_type": "bar", "x": "Month", "y": ["Used Allotment (by stay month)", "Bookings"]})
+    assert {t.name for t in fig.data} >= {"Used Allotment (by stay month)", "Bookings"}  # both drawn
+    margin = sales_profit.assign(Margin=[0.2, 0.21])
+    assert charts.needs_panels(margin, {**same_axis, "y": ["Sales", "Margin"],
+                                        "style": {"formats": [{"column": "Margin", "d3_format": ".1%"}]}})
+
+
+def test_codes_are_labels_and_the_title_has_room_for_the_legend():
+    df = pd.DataFrame({"Customer Code": ["1042", "1142", "9001"], "Requests": [3.0, 2.0, 1.0],
+                       "Day": ["14 Oct", "14 Oct", "15 Oct"]})
+    fig = charts.build_figure(df, {"chart_type": "bar", "x": "Customer Code", "y": ["Requests"], "title": "Requests"})
+    assert fig.layout.xaxis.type == "category"  # not 1142 ... 9001 on a number line
+    fig = charts.build_figure(df, {"chart_type": "bar", "x": "Customer Code", "y": ["Requests"], "color": "Day",
+                                   "title": "Requests by day"})
+    assert fig.layout.margin.t >= 70 and fig.layout.title.yanchor == "top"  # legend on its own line
+
+
+def test_measures_together_in_one_chart_get_an_axis_each():
+    # "6 bars for each customer: 3 for the previous day and 3 for the other day"
+    days = ["2026-10-14", "2026-10-15"]
+    df = pd.DataFrame([{"Day": d, "Customer": c, "Requests": 4e7 / (i + 1), "Bookings": 60.0 - i * 20, "Sales": 1.4e5 / (i + 1)}
+                       for d in days for i, c in enumerate(["A", "B", "C"])])
+    style = {"measures": "one_chart", "formats": [{"column": "Sales", "d3_format": "~s", "prefix": "AED ", "suffix": ""}]}
+    spec = {"chart_type": "bar", "x": "Customer", "y": ["Requests", "Bookings", "Sales"], "color": "Day", "style": style}
+    assert charts.wants_one_chart(df, spec)
+    fig = charts.build_figure(df, spec)
+    assert len(fig.data) == 6 and len({t.offsetgroup for t in fig.data}) == 6  # side by side, none dropped
+    assert [t.yaxis for t in fig.data] == ["y", "y", "y2", "y2", "y3", "y3"]
+    assert fig.layout.yaxis2.overlaying == "y" and fig.layout.yaxis3.overlaying == "y"
+    assert fig.layout.yaxis2.tickmode == "auto" and fig.layout.yaxis3.tickprefix == "AED "
+    assert [(t.legendgroup, t.name) for t in fig.data[:2]] == [("Requests", days[0]), ("Requests", days[1])]
+    assert fig.data[1].marker.color == charts.PALETTE["light"][0] != fig.data[0].marker.color  # the later day darker
+    assert fig.layout.yaxis.title.font.color == charts.PALETTE["light"][0]  # each axis in its bars' colour
+    four = {**spec, "y": ["Requests", "Bookings", "Sales", "Margin"]}
+    assert not charts.wants_one_chart(df.assign(Margin=0.1), four)  # more than 3 axes can't be read: panels
+    assert charts.needs_panels(df.assign(Margin=0.1), four)

@@ -1,0 +1,534 @@
+{
+  "cube": "GlobalTravelEngine - Statistics Supplier Error API Hotel",
+  "label": "Supplier API errors (hotels)",
+  "purpose": "Number of hotel API requests the platform sent to suppliers, classified by outcome (correct, time-out, supplier error, not mapped, no results) and by detailed and raw supplier error codes. Used to monitor supplier reliability: error and time-out counts and rates by supplier, credential, customer and request type.",
+  "grain": "Aggregated count of hotel API requests per day, supplier, credential, customer, request type and outcome/error code.",
+  "use_for": [
+    "supplier api errors and error rates",
+    "supplier timeouts",
+    "requests by outcome (correct, time-out, supplier error, not mapped, no results)",
+    "most frequent detailed or raw supplier error codes",
+    "which suppliers, credentials, customers or request types cause the most failures"
+  ],
+  "not_for": [
+    "response times, results or response sizes of supplier requests (Statistics Supplier API Service, Statistics Hotel Supplier)",
+    "supplier connection locks (Supplier Lock API Hotel)",
+    "hotel locks in the booking flow (History Hotel Locks)",
+    "bookings, sales or revenue (Bookings)",
+    "anything before October 2025"
+  ],
+  "coverage": {
+    "main_date": "'Calendar'[Fecha]",
+    "first": "2025-10",
+    "last": "2026-10",
+    "note": "About one year of data, from October 2025 (that first month looks partial: 0.30 billion requests against 0.49 billion in November). Monthly volumes are 0.3 to 1.2 billion requests. Totals above 2,147,483,647 overflow in the cube, so quarters, years and all-time must be added up from months (see rules)."
+  },
+  "dates": [
+    {
+      "column": "'Calendar'[Fecha]",
+      "role": "request_date",
+      "label": "Request date",
+      "meaning": "Day the request was sent to the supplier (the cube's only day-level date).",
+      "default": true,
+      "words": [
+        "request date",
+        "requested",
+        "sent",
+        "day"
+      ],
+      "first": "2025-10",
+      "last": "2026-10"
+    }
+  ],
+  "measures": [
+    {
+      "name": "[Requests]",
+      "label": "Supplier requests",
+      "definition": "Number of hotel API requests sent to suppliers, whatever the outcome. Filter by 'Error Types'[Error Type] to count time-outs, supplier errors, not-mapped requests, empty answers or correct responses.",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [
+        "supplier api errors",
+        "supplier timeouts",
+        "supplier errors",
+        "supplier error codes",
+        "not mapped requests",
+        "supplier requests by outcome"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": "Only measure of the cube. Error words need the named filter of the same name. Stored as a 32-bit integer: any total above 2,147,483,647 wraps to a wrong, often negative, number (the all-time total reads -335,023,693 instead of about 8.25 billion; the last 12 months read -743,745,675). Query by month or finer and add up in the app."
+    }
+  ],
+  "breakdowns": [
+    {
+      "column": "'Error Types'[Error Type]",
+      "label": "Outcome",
+      "entity": "request_outcome",
+      "kind": "enum",
+      "meaning": "Outcome of the request: Correct, Time Outs, SUPPLIER GENERAL ERROR (the supplier returned an error), Not Mapped (hotel or room not mapped), No results (valid empty answer) or Unknown.",
+      "needs_columns": [
+        "'Error Types'[Error Type.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 6,
+      "sample_values": [
+        "Correct",
+        "Time Outs",
+        "SUPPLIER GENERAL ERROR",
+        "Not Mapped",
+        "No results",
+        "Unknown"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Error Types'[Detail Error Type]",
+      "label": "Detailed error",
+      "entity": "error_type",
+      "kind": "enum",
+      "meaning": "Detailed error category inside the outcome (74 values).",
+      "needs_columns": [
+        "'Error Types'[Detail Error Type.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 74,
+      "sample_values": [
+        "Server Fallen",
+        "Invalid TimeOut too low",
+        "HTTP Unsupported Media Type",
+        "Incorrect booking status",
+        "Unknown"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Error Types'[Supplier Error Code]",
+      "label": "Supplier error code",
+      "entity": "supplier_error_code",
+      "kind": "code",
+      "meaning": "Raw error code returned by the supplier (about 1,400 codes).",
+      "needs_columns": [
+        "'Error Types'[Supplier Error Code.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 1435,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Suppliers'[Supplier]",
+      "label": "Supplier",
+      "entity": "supplier",
+      "kind": "name",
+      "meaning": "Hotel supplier the request was sent to.",
+      "needs_columns": [
+        "'Suppliers'[Supplier.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 105,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Suppliers'[Supplier Code]",
+      "label": "Supplier code",
+      "entity": "supplier",
+      "kind": "code",
+      "meaning": "Short code of the supplier.",
+      "needs_columns": [
+        "'Suppliers'[Supplier Code.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 105,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Credentials'[Credential]",
+      "label": "Supplier credential",
+      "entity": "supplier_credential",
+      "kind": "name",
+      "meaning": "Supplier connection account (credential) used for the request.",
+      "needs_columns": [
+        "'Credentials'[Credential.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 206,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Request Types'[Request Type]",
+      "label": "Request type",
+      "entity": "request_type",
+      "kind": "enum",
+      "meaning": "Type of request, e.g. Availability (same 64-value list as 'Context'[Context]).",
+      "needs_columns": [],
+      "sort_by": "",
+      "distinct": 64,
+      "sample_values": [
+        "Availability"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Customer]",
+      "label": "Customer",
+      "entity": "customer",
+      "kind": "name",
+      "meaning": "Client agency or integrator whose activity generated the request.",
+      "needs_columns": [
+        "'Customers'[Customer.Key0]"
+      ],
+      "sort_by": "",
+      "distinct": 6822,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Customer Code]",
+      "label": "Customer code",
+      "entity": "customer",
+      "kind": "code",
+      "meaning": "Customer code; the key that matches customers in the other cubes.",
+      "needs_columns": [
+        "'Customers'[Customer Code.Key0]"
+      ],
+      "sort_by": "",
+      "distinct": 6851,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Master Agency]",
+      "label": "Master agency",
+      "entity": "master_agency",
+      "kind": "name",
+      "meaning": "Parent agency of the customer.",
+      "needs_columns": [
+        "'Customers'[Master Agency.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 143,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Integrator Name]",
+      "label": "Integrator",
+      "entity": "integrator",
+      "kind": "name",
+      "meaning": "Technology integrator the customer connects through.",
+      "needs_columns": [
+        "'Customers'[Integrator Name.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 69,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Market]",
+      "label": "Market",
+      "entity": "market",
+      "kind": "enum",
+      "meaning": "Commercial market of the customer.",
+      "needs_columns": [
+        "'Customers'[Market.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 24,
+      "sample_values": [
+        "UAE",
+        "EUROPE",
+        "Middle East",
+        "CIS",
+        "GCC - Except UAE and Local Residence",
+        "ROW",
+        "B2C UAE",
+        "Market for Testing Purposes"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Country]",
+      "label": "Customer country",
+      "entity": "country",
+      "kind": "enum",
+      "meaning": "Country of the customer (upper case).",
+      "needs_columns": [
+        "'Customers'[Country.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 96,
+      "sample_values": [
+        "BAHRAIN",
+        "RWANDA",
+        "IRAN, ISLAMIC REPUBLIC OF",
+        "Unknown"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Is Webservice Administrator'[Is Webservice Administrator]",
+      "label": "Via web-service administrator",
+      "entity": "webservice_administrator",
+      "kind": "enum",
+      "meaning": "Whether the request went through a third-party web-service administrator tool that manages the supplier connection.",
+      "needs_columns": [
+        "'Is Webservice Administrator'[Is Webservice Administrator.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 3,
+      "sample_values": [
+        "Yes",
+        "No",
+        "Unknown"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Webservice Administrator'[Webservice Administrator]",
+      "label": "Web-service administrator",
+      "entity": "webservice_administrator",
+      "kind": "name",
+      "meaning": "Third-party tool that managed the supplier connection (company names).",
+      "needs_columns": [
+        "'Webservice Administrator'[Webservice Administrator.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 5,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendar'[Año]",
+      "label": "Year",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Year of the request, written \"Calendar 2026\".",
+      "needs_columns": [
+        "'Calendar'[Año.Key0]"
+      ],
+      "sort_by": "'Calendar'[Año.Key0]",
+      "distinct": 20,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendar'[Trimestre]",
+      "label": "Quarter",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Quarter, written \"Quarter 3, 2026\".",
+      "needs_columns": [
+        "'Calendar'[Trimestre.Key0]"
+      ],
+      "sort_by": "'Calendar'[Trimestre.Key0]",
+      "distinct": 77,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendar'[Mes]",
+      "label": "Month",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Month, written \"September 2026\".",
+      "needs_columns": [
+        "'Calendar'[Mes.Key0]"
+      ],
+      "sort_by": "'Calendar'[Mes.Key0]",
+      "distinct": 229,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendar'[Semana]",
+      "label": "Week",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Week of the year, written \"Week 38, Calendar 2026\".",
+      "needs_columns": [
+        "'Calendar'[Semana.Key0]"
+      ],
+      "sort_by": "'Calendar'[Semana.Key0]",
+      "distinct": 993,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendar'[Día De La Semana]",
+      "label": "Weekday",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Day of the week, written \"Day 1\" to \"Day 7\" (which weekday is Day 1 is not documented).",
+      "needs_columns": [
+        "'Calendar'[Día De La Semana.Key0]"
+      ],
+      "sort_by": "'Calendar'[Día De La Semana.Key0]",
+      "distinct": 8,
+      "sample_values": [],
+      "status": "active"
+    }
+  ],
+  "named_filters": [
+    {
+      "name": "correct responses",
+      "meaning": "Requests the supplier answered correctly.",
+      "column": "'Error Types'[Error Type]",
+      "values": [
+        "Correct"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "timeouts",
+      "meaning": "Requests where the supplier did not answer in time (supplier timeouts).",
+      "column": "'Error Types'[Error Type]",
+      "values": [
+        "Time Outs"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "supplier errors",
+      "meaning": "Requests where the supplier returned an error (SUPPLIER GENERAL ERROR).",
+      "column": "'Error Types'[Error Type]",
+      "values": [
+        "SUPPLIER GENERAL ERROR"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "not mapped",
+      "meaning": "Requests that failed because the hotel or room is not mapped for the supplier.",
+      "column": "'Error Types'[Error Type]",
+      "values": [
+        "Not Mapped"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "no results",
+      "meaning": "Requests the supplier answered with no availability (a valid empty answer, not a failure).",
+      "column": "'Error Types'[Error Type]",
+      "values": [
+        "No results"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "supplier api errors",
+      "meaning": "All failed requests: time-outs, supplier errors and not-mapped. Excludes 'No results' and 'Unknown' (see review).",
+      "column": "'Error Types'[Error Type]",
+      "values": [
+        "Time Outs",
+        "SUPPLIER GENERAL ERROR",
+        "Not Mapped"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "name": "test customers",
+      "meaning": "Requests from customers in the testing market.",
+      "column": "'Customers'[Market]",
+      "values": [
+        "Market for Testing Purposes"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "requests via web-service administrators",
+      "meaning": "Requests that went through a third-party web-service administrator tool.",
+      "column": "'Is Webservice Administrator'[Is Webservice Administrator]",
+      "values": [
+        "Yes"
+      ],
+      "confidence": "medium"
+    }
+  ],
+  "rules": [
+    "[Requests] is a 32-bit integer in the cube: any total above 2,147,483,647 comes back wrapped (wrong, often negative). One month is safe (largest about 1.2 billion); quarters, years and all-time are not (Q1 2026 is about 2.4 billion). For periods longer than a month, query by month (or finer) and add up in the app. Never show a negative count.",
+    "Error, time-out and supplier-error rates = [Requests] with the outcome filter ÷ [Requests] without it, for the same period and breakdown. The cube has no rate measure.",
+    "Filter periods on 'Calendar'[Fecha]. Calendar column names are Spanish: Año = year, Trimestre = quarter, Mes = month, Semana = week, Día De La Semana = weekday, Cuatrimestre = four-month period. The *.Value date columns are period keys and fail when queried on their own.",
+    "These are outcomes of requests to suppliers. They are not supplier connection locks (Supplier Lock API Hotel: a lock rule blocked a supplier connection) and not hotel locks (History Hotel Locks: a hotel option failed for a customer in the booking flow).",
+    "Only request counts are stored here: no response times, results, bookings or money.",
+    "'Context'[Context] has the same value list as 'Request Types'[Request Type]; use Request Type."
+  ],
+  "examples": [
+    {
+      "question": "Supplier timeouts by supplier last month",
+      "measures": [
+        "[Requests]"
+      ],
+      "breakdowns": [
+        "'Suppliers'[Supplier]"
+      ],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Hotel supplier requests by outcome in September 2026",
+      "measures": [
+        "[Requests]"
+      ],
+      "breakdowns": [
+        "'Error Types'[Error Type]"
+      ],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Most frequent detailed errors for supplier errors this month",
+      "measures": [
+        "[Requests]"
+      ],
+      "breakdowns": [
+        "'Error Types'[Detail Error Type]"
+      ],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Supplier API error rate by month this year",
+      "measures": [
+        "[Requests]"
+      ],
+      "breakdowns": [
+        "'Calendar'[Mes]",
+        "'Error Types'[Error Type]"
+      ],
+      "date_role": "request_date"
+    }
+  ],
+  "review": [
+    {
+      "id": "supplier_errors.error_scope",
+      "question": "Which outcomes count as \"supplier API errors\" (and in the error rate)?",
+      "options": [
+        "Time Outs + SUPPLIER GENERAL ERROR + Not Mapped",
+        "Every outcome except Correct (also No results)",
+        "Time Outs + SUPPLIER GENERAL ERROR only"
+      ],
+      "proposed": "Time Outs + SUPPLIER GENERAL ERROR + Not Mapped",
+      "why": "'No results' is a valid answer (no availability), not a failure. 'Not Mapped' is a failed request even though the cause is mapping rather than the supplier."
+    },
+    {
+      "id": "supplier_errors.supplier_errors_word",
+      "question": "Does plain \"supplier errors\" mean only the SUPPLIER GENERAL ERROR outcome, or every failed request?",
+      "options": [
+        "SUPPLIER GENERAL ERROR only",
+        "All failed requests (the 'supplier api errors' filter)"
+      ],
+      "proposed": "SUPPLIER GENERAL ERROR only",
+      "why": "It matches the stored category. Time-outs have their own word, and \"supplier API errors\" or \"failed requests\" covers all failures."
+    }
+  ]
+}

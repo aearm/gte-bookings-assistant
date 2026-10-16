@@ -1,0 +1,809 @@
+{
+  "cube": "GlobalTravelEngine - Statistics Client API Service",
+  "label": "Client API Service requests",
+  "purpose": "API requests that clients sent for 'service' products (non-hotel, non-transfer services such as activities and tickets): counts, results, response time, response size and passengers. It holds a single request (January 2026), so it cannot answer questions about any other period and must not be used for client API traffic in general.",
+  "grain": "One aggregated row of client service requests per request date and hour, customer, request type, interface, outcome, response-time band, destination zone, service date and passenger mix.",
+  "use_for": [
+    "client api service requests in January 2026 (the only data)"
+  ],
+  "not_for": [
+    "client API or request volumes for any period except January 2026 (Statistics History Client, Statistics Real Time Client)",
+    "hotel client API traffic (Statistics Hotel Client)",
+    "transfer client API traffic (Statistics Client API Transfer)",
+    "searches (Statistics Zone)",
+    "requests sent to suppliers (Statistics Supplier API Service)",
+    "bookings, sales or revenue (Bookings)"
+  ],
+  "coverage": {
+    "main_date": "'Calendar'[Date]",
+    "first": "2026-01",
+    "last": "2026-01",
+    "note": "Almost empty: one request in total, in January 2026 (a second one, from October 2025, dropped out between 13 and 16 October 2026, so the cube keeps a rolling ~12 months and will likely be empty by about January 2027). Any other period returns no rows: answer that this cube has no data for it (not 0) and do not use it for recent questions. The matching supplier-side cube (Statistics Supplier API Service) records about 2,200 calls over the same year, so this client feed looks broken."
+  },
+  "dates": [
+    {
+      "column": "'Calendar'[Date]",
+      "role": "request_date",
+      "label": "Request date",
+      "meaning": "Day the client sent the request, UAE time (the cube's main date; hour in 'Hours'[Hour]).",
+      "default": true,
+      "words": [
+        "request date",
+        "requested on",
+        "sent on",
+        "received on"
+      ],
+      "first": "2026-01",
+      "last": "2026-01"
+    },
+    {
+      "column": "'Calendar CET'[Date]",
+      "role": "request_date_cet",
+      "label": "Request date (CET)",
+      "meaning": "The same request date in Central European Time (hour in 'Hours CET'[Hour CET]); use only when the question asks for CET.",
+      "default": false,
+      "words": [
+        "cet",
+        "central european time",
+        "spain time"
+      ],
+      "first": "2026-01",
+      "last": "2026-01"
+    },
+    {
+      "column": "'Service Dates'[Service Date]",
+      "role": "travel_date",
+      "label": "Service date",
+      "meaning": "Date of the service asked for in the request.",
+      "default": false,
+      "words": [
+        "service date",
+        "travel date",
+        "date of service"
+      ],
+      "first": "2026-01",
+      "last": "2026-01"
+    }
+  ],
+  "measures": [
+    {
+      "name": "[Requests]",
+      "label": "Client requests",
+      "definition": "Number of API requests that clients sent for service products.",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [
+        "client api service requests"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet",
+        "travel_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[Results]",
+      "label": "Results returned",
+      "definition": "Total number of options (results) returned to clients in the responses.",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [
+        "client api service results"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet",
+        "travel_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "low",
+      "notes": "0 for every request loaded so far (also the availability requests); it may not be filled. Say so instead of presenting 0 as a finding."
+    },
+    {
+      "name": "[Avg Results]",
+      "label": "Results per request",
+      "definition": "Average number of results returned per request ([Results] / [Requests]).",
+      "unit": "count",
+      "format": ",.2f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "average",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet",
+        "travel_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "low",
+      "notes": "0 for every request loaded so far (also the availability requests); it may not be filled. Say so instead of presenting 0 as a finding."
+    },
+    {
+      "name": "[Avg Response Time Sec]",
+      "label": "Average response time",
+      "definition": "Average time in seconds GlobalTravelEngine took to answer a client request.",
+      "unit": "seconds",
+      "format": ",.2f",
+      "prefix": "",
+      "suffix": " s",
+      "aggregation": "average",
+      "terms": [
+        "client api service response time"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet",
+        "travel_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": "An average: never add or average it across rows; query it at the level asked."
+    },
+    {
+      "name": "[Size Bytes Response]",
+      "label": "Response size",
+      "definition": "Total size of the responses sent back to clients, in bytes.",
+      "unit": "bytes",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": " bytes",
+      "aggregation": "sum",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet",
+        "travel_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": "KB / MB / GB versions exist (hidden): divide by 1024, 1024^2 or 1024^3."
+    },
+    {
+      "name": "[Avg Bytes Response]",
+      "label": "Average response size",
+      "definition": "Average size of one response, in bytes ([Size Bytes Response] / [Requests]).",
+      "unit": "bytes",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": " bytes",
+      "aggregation": "average",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet",
+        "travel_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[Total Pax Number]",
+      "label": "Passengers requested",
+      "definition": "Total passengers (adults + children) asked for in the requests.",
+      "unit": "people",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet",
+        "travel_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "medium",
+      "notes": "Only availability requests carry passengers; cancellation requests count 0."
+    },
+    {
+      "name": "[Avg Pax Number]",
+      "label": "Passengers per request",
+      "definition": "Average passengers per request ([Total Pax Number] / [Requests]).",
+      "unit": "people",
+      "format": ",.2f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "average",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet",
+        "travel_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "medium",
+      "notes": "Averaged over all requests, including ones without passengers (cancellations); filter Request Type = \"Availability\" for passengers per search."
+    },
+    {
+      "name": "[Size Kb Response]",
+      "label": "Response size (KB)",
+      "definition": "Total response size in kilobytes.",
+      "unit": "kilobytes",
+      "format": ",.1f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet",
+        "travel_date"
+      ],
+      "status": "hidden",
+      "hidden_reason": "duplicate of [Size Bytes Response] in KB (bytes / 1024)",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[Size Mb Response]",
+      "label": "Response size (MB)",
+      "definition": "Total response size in megabytes.",
+      "unit": "megabytes",
+      "format": ",.2f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet",
+        "travel_date"
+      ],
+      "status": "hidden",
+      "hidden_reason": "duplicate of [Size Bytes Response] in MB (bytes / 1024^2)",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[Size Gb Response]",
+      "label": "Response size (GB)",
+      "definition": "Total response size in gigabytes.",
+      "unit": "gigabytes",
+      "format": ",.3f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet",
+        "travel_date"
+      ],
+      "status": "hidden",
+      "hidden_reason": "duplicate of [Size Bytes Response] in GB (bytes / 1024^3); the cube's whole-number format shows 0",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[Avg Kb Response]",
+      "label": "Average response size (KB)",
+      "definition": "Average response size in kilobytes.",
+      "unit": "kilobytes",
+      "format": ",.2f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "average",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet",
+        "travel_date"
+      ],
+      "status": "hidden",
+      "hidden_reason": "duplicate of [Avg Bytes Response] in KB (bytes / 1024)",
+      "confidence": "high",
+      "notes": ""
+    }
+  ],
+  "breakdowns": [
+    {
+      "column": "'Request Types'[Request Type]",
+      "label": "Request type",
+      "entity": "request_type",
+      "kind": "enum",
+      "meaning": "API operation the client called: availability search, booking, cancellation, booking read, etc.",
+      "needs_columns": [
+        "'Request Types'[Request Type.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 11,
+      "sample_values": [
+        "Availability",
+        "Reservation/Booking",
+        "Cancel Booking",
+        "Read Booking",
+        "Modify Reservation/Booking",
+        "Cancellation Policy",
+        "Check Availability",
+        "Service Information"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Interfaces'[Interface]",
+      "label": "Interface",
+      "entity": "api_interface",
+      "kind": "enum",
+      "meaning": "Channel the request came through: XML (API integration), WEB (web front-end) or CLC.",
+      "needs_columns": [
+        "'Interfaces'[Interface.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 4,
+      "sample_values": [
+        "XML",
+        "WEB",
+        "CLC"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Error Types'[Error Type]",
+      "label": "Request outcome",
+      "entity": "request_outcome",
+      "kind": "enum",
+      "meaning": "Outcome of the request: \"Correct\" for success, otherwise the error (no results, time-out, failures).",
+      "needs_columns": [
+        "'Error Types'[Error Type.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 255,
+      "sample_values": [
+        "Correct",
+        "No results",
+        "Time Outs",
+        "Generic Failure"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Error Types'[Invoiceable]",
+      "label": "Invoiceable",
+      "entity": "invoiceable",
+      "kind": "enum",
+      "meaning": "Whether a request with this outcome counts as invoiceable (billable) traffic.",
+      "needs_columns": [
+        "'Error Types'[Invoiceable.Key0]"
+      ],
+      "sort_by": "",
+      "distinct": 3,
+      "sample_values": [
+        "True",
+        "False"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Range Times'[Range Time]",
+      "label": "Response-time band",
+      "entity": "response_time_band",
+      "kind": "enum",
+      "meaning": "Response time band in seconds, plus \"Timeout\".",
+      "needs_columns": [
+        "'Range Times'[Range Time.UniqueName]"
+      ],
+      "sort_by": "'Range Times'[Range Time.Orden]",
+      "distinct": 14,
+      "sample_values": [
+        "0 - 1",
+        "1 - 2",
+        "2 - 3",
+        "3 - 4",
+        "5 - 6",
+        "9 - 10",
+        "> 10",
+        "Timeout"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Pax Requested'[Pax Requested]",
+      "label": "Passenger mix",
+      "entity": "pax_mix",
+      "kind": "enum",
+      "meaning": "Adults - children asked for in the request (\"2 - 1\" = 2 adults, 1 child); \"Unknown\" when the request has no passengers.",
+      "needs_columns": [
+        "'Pax Requested'[Pax Requested.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 9,
+      "sample_values": [
+        "1 - 0",
+        "2 - 0",
+        "3 - 0",
+        "1 - 1",
+        "2 -1",
+        "1 - 2",
+        "2 - 2",
+        "Other"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Customer]",
+      "label": "Customer",
+      "entity": "customer",
+      "kind": "name",
+      "meaning": "Client (agency, B2C site or integrator account) that sent the request.",
+      "needs_columns": [
+        "'Customers'[Customer.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 6772,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Master Agency]",
+      "label": "Master agency",
+      "entity": "master_agency",
+      "kind": "name",
+      "meaning": "Parent agency grouping the customer's branches.",
+      "needs_columns": [
+        "'Customers'[Master Agency.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 143,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Integrator Name]",
+      "label": "Integrator",
+      "entity": "integrator",
+      "kind": "name",
+      "meaning": "Technology integrator / platform the client connects through (\"n/a\" for direct clients).",
+      "needs_columns": [
+        "'Customers'[Integrator Name.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 69,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Market]",
+      "label": "Market",
+      "entity": "market",
+      "kind": "enum",
+      "meaning": "Sales market of the customer.",
+      "needs_columns": [
+        "'Customers'[Market.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 24,
+      "sample_values": [
+        "UAE",
+        "GCC - Except UAE and Local Residence",
+        "Middle East",
+        "Turkish Market",
+        "North Africa",
+        "EUROPE",
+        "CIS",
+        "ROW"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Country]",
+      "label": "Customer country",
+      "entity": "country",
+      "kind": "name",
+      "meaning": "Country of the customer (upper case, e.g. UNITED ARAB EMIRATES).",
+      "needs_columns": [
+        "'Customers'[Country.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 96,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Category]",
+      "label": "Customer category",
+      "entity": "customer_category",
+      "kind": "enum",
+      "meaning": "Customer category (agency vs final client).",
+      "needs_columns": [
+        "'Customers'[Category.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 5,
+      "sample_values": [
+        "Dubai Link Category",
+        "Final Client Category",
+        "DL Business Trip - No Markup",
+        "n/a"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Destination Zones'[Zone]",
+      "label": "Destination zone",
+      "entity": "destination",
+      "kind": "name",
+      "meaning": "Destination zone (city/area) of the request.",
+      "needs_columns": [
+        "'Destination Zones'[Zone.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 143452,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Destination Zones'[Zone Parent]",
+      "label": "Destination region",
+      "entity": "destination_region",
+      "kind": "name",
+      "meaning": "Parent zone (region or country) of the destination zone.",
+      "needs_columns": [
+        "'Destination Zones'[Zone Parent.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 8486,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Hours'[Hour]",
+      "label": "Hour (UAE time)",
+      "entity": "hour",
+      "kind": "date_part",
+      "meaning": "Hour of day the request was received, UAE time (00-23).",
+      "needs_columns": [
+        "'Hours'[Hour.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 25,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Hours CET'[Hour CET]",
+      "label": "Hour (CET)",
+      "entity": "hour_cet",
+      "kind": "date_part",
+      "meaning": "Hour of day the request was received, Central European Time (00-23).",
+      "needs_columns": [
+        "'Hours CET'[Hour CET.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 25,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendar'[Year]",
+      "label": "Year",
+      "entity": "year",
+      "kind": "date_part",
+      "meaning": "Year of the request date.",
+      "needs_columns": [],
+      "sort_by": "'Calendar'[Year.Fecha ISO DESC Year]",
+      "distinct": null,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendar'[Quarter]",
+      "label": "Quarter",
+      "entity": "quarter",
+      "kind": "date_part",
+      "meaning": "Quarter of the request date (\"Quarter 1, 2026\").",
+      "needs_columns": [
+        "'Calendar'[Quarter.UniqueName]"
+      ],
+      "sort_by": "'Calendar'[Quarter.Fecha ISO DESC Quarter]",
+      "distinct": 6,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendar'[Month]",
+      "label": "Month",
+      "entity": "month",
+      "kind": "date_part",
+      "meaning": "Month of the request date (\"January 2026\").",
+      "needs_columns": [
+        "'Calendar'[Month.UniqueName]"
+      ],
+      "sort_by": "'Calendar'[Month.Month DESC]",
+      "distinct": 14,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendar'[Week Of Year]",
+      "label": "Week of year",
+      "entity": "week",
+      "kind": "date_part",
+      "meaning": "ISO-style week number of the request date (\"03\").",
+      "needs_columns": [
+        "'Calendar'[Week Of Year.UniqueName]"
+      ],
+      "sort_by": "'Calendar'[Week Of Year.Week Of Year DESC]",
+      "distinct": 54,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendar'[Day Week]",
+      "label": "Weekday",
+      "entity": "weekday",
+      "kind": "date_part",
+      "meaning": "Weekday of the request date (\"Monday\").",
+      "needs_columns": [
+        "'Calendar'[Day Week.UniqueName]"
+      ],
+      "sort_by": "'Calendar'[Day Week.Day Week DESC]",
+      "distinct": 8,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Service Dates'[Month]",
+      "label": "Service month",
+      "entity": "service_month",
+      "kind": "date_part",
+      "meaning": "Month of the service date asked for in the request (\"March 2026\").",
+      "needs_columns": [
+        "'Service Dates'[Month.UniqueName]"
+      ],
+      "sort_by": "'Service Dates'[Month.Month DESC]",
+      "distinct": 493,
+      "sample_values": [],
+      "status": "active"
+    }
+  ],
+  "named_filters": [
+    {
+      "name": "client api service availability requests",
+      "meaning": "Availability (search) requests.",
+      "column": "'Request Types'[Request Type]",
+      "values": [
+        "Availability"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "client api service booking requests",
+      "meaning": "Booking (reservation) requests.",
+      "column": "'Request Types'[Request Type]",
+      "values": [
+        "Reservation/Booking"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "client api service cancellation requests",
+      "meaning": "Booking cancellation requests.",
+      "column": "'Request Types'[Request Type]",
+      "values": [
+        "Cancel Booking"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "successful requests",
+      "meaning": "Requests answered without error.",
+      "column": "'Error Types'[Error Type]",
+      "values": [
+        "Correct"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "name": "timed-out requests",
+      "meaning": "Requests that ended in a time-out.",
+      "column": "'Error Types'[Error Type]",
+      "values": [
+        "Time Outs"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "name": "requests with no results",
+      "meaning": "Requests answered with no results.",
+      "column": "'Error Types'[Error Type]",
+      "values": [
+        "No results"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "name": "xml requests",
+      "meaning": "Requests from XML (API) integrations.",
+      "column": "'Interfaces'[Interface]",
+      "values": [
+        "XML"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "test customers",
+      "meaning": "Customers in the testing market (exclude them from real traffic).",
+      "column": "'Customers'[Market]",
+      "values": [
+        "Market for Testing Purposes"
+      ],
+      "confidence": "medium"
+    }
+  ],
+  "rules": [
+    "Never pick this cube for general 'API requests', 'client requests' or 'searches' questions: it holds one request (January 2026). An earlier answer picked it for 'API requests yesterday' and got 0 rows.",
+    "Answer from it only when the question is explicitly about client API requests for service products; for any period other than January 2026 say the cube has no data.",
+    "Use the cube's measures only; never SUM a column.",
+    "Averages ([Avg Response Time Sec], [Avg Results], [Avg Bytes Response], [Avg Pax Number]) are never added or averaged across rows; query them at the level asked.",
+    "'Calendar'[Date] and 'Hours'[Hour] are UAE time; 'Calendar CET'[Date] and 'Hours CET'[Hour CET] are Central European Time. Use the UAE calendar unless CET is asked for, and never mix the two calendars in one query.",
+    "Errors = every 'Error Types'[Error Type] value except \"Correct\".",
+    "'Service Dates' holds placeholder dates (year 2000) and \"Unknown\" for requests without a service date; service-date questions only cover requests that carry one.",
+    "[Results] and [Avg Results] are 0 for every request loaded so far; say so rather than reporting 0 results as a finding.",
+    "The cube appears to keep a rolling 12 months: requests older than about a year drop out, so there is no long history."
+  ],
+  "examples": [
+    {
+      "question": "Client API service requests in January 2026 by request type",
+      "measures": [
+        "[Requests]"
+      ],
+      "breakdowns": [
+        "'Request Types'[Request Type]"
+      ],
+      "date_role": "request_date"
+    }
+  ],
+  "review": [
+    {
+      "id": "client_api_service.exclude",
+      "question": "This cube holds a single request (January 2026) and was wrongly picked for 'API requests yesterday' (0 rows). Exclude it from automatic cube picking?",
+      "options": [
+        "Exclude from automatic picking; use only when the user names it",
+        "Keep it pickable",
+        "Remove it from the app"
+      ],
+      "proposed": "Exclude from automatic picking; use only when the user names it",
+      "why": "With one row it can only produce empty or misleading answers; client request volumes are in Statistics History Client and Statistics Real Time Client."
+    },
+    {
+      "id": "client_api_service.product",
+      "question": "Does 'Service' in this cube mean the non-hotel, non-transfer service products (activities, tours, tickets), like 'Transfer' in Statistics Client API Transfer?",
+      "options": [
+        "Yes: client requests for service products (activities, tours, tickets)",
+        "No: all client API requests to the GlobalTravelEngine service"
+      ],
+      "proposed": "Yes: client requests for service products (activities, tours, tickets)",
+      "why": "The statistics cubes are split Hotel / Transfer / Service, and this cube's request types include \"Service Information\" where the transfer cube has \"Transfer Information\"."
+    }
+  ]
+}

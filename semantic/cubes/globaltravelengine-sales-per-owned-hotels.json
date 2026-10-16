@@ -1,0 +1,2386 @@
+{
+ "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+ "label": "Hotel Sales (owned and third-party hotels)",
+ "purpose": "Hotel accommodation bookings of GTE / Dubai Link Direct in AED, for owned and third-party hotels alike ('Hotels'[Is Own] separates them): sales, cost, profit, bookings, room nights, guests and cancellations. Answers 'hotel sales' (all hotels) and 'owned-hotel sales' (with the owned filter).",
+ "grain": "One hotel booking (reservation line); cancelled bookings stay in the cube, flagged by 'Canceled'[Canceled], with little or no sales.",
+ "use_for": [
+  "hotel sales, cost and profit",
+  "owned-hotel sales and owned vs third-party comparison",
+  "hotel bookings, room nights, nights, rooms and guests",
+  "hotel cancellations and cancellation rate",
+  "lead-time (booking window) mix",
+  "hotel sales by market, customer, supplier, hotel, chain, star category, destination, board and channel"
+ ],
+ "not_for": [
+  "payments collected (Booking Payments)",
+  "non-hotel services such as visas, tours and transfers (Tickets)",
+  "allotment / contracted room inventory (Hotel Allotments)",
+  "sales per stay night (Sales Average Per Owned Hotels)",
+  "search and API traffic (Statistics cubes)",
+  "average lead time (only the maximum [Booking Window] exists)"
+ ],
+ "coverage": {
+  "main_date": "'Booking Date'[Booking Date]",
+  "first": "2014-10",
+  "last": "2026-10",
+  "note": "Meaningful from 2015 (2014 has only a few dozen bookings); the current month is partial. Arrival dates run to 2028-09 for bookings already made. 2026 sales run well below 2025 from February."
+ },
+ "dates": [
+  {
+   "column": "'Booking Date'[Booking Date]",
+   "role": "booking_date",
+   "label": "Booking date",
+   "meaning": "When the hotel booking was made (the cube's main date).",
+   "default": true,
+   "words": [
+    "booked",
+    "booking date",
+    "bookings made",
+    "sold",
+    "sales date",
+    "made"
+   ],
+   "first": "2014-10",
+   "last": "2026-10"
+  },
+  {
+   "column": "'Arrival Date'[Arrival Date]",
+   "role": "travel_date",
+   "label": "Arrival (check-in) date",
+   "meaning": "Check-in date of the stay; runs into the future for bookings already made.",
+   "default": false,
+   "words": [
+    "arrival",
+    "arrivals",
+    "arriving",
+    "check-in",
+    "check in",
+    "checking in",
+    "travel date",
+    "travelling"
+   ],
+   "first": "2014-11",
+   "last": "2028-09"
+  }
+ ],
+ "measures": [
+  {
+   "name": "[Total Sales]",
+   "label": "Hotel sales",
+   "definition": "Selling amount of hotel bookings, in AED. Cancelled bookings keep only small residual amounts, so the total is effectively net of cancellations.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "hotel sales",
+    "hotel revenue",
+    "hotel turnover",
+    "accommodation sales",
+    "owned-hotel sales",
+    "owned hotel sales",
+    "third-party hotel sales"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "For owned hotels apply the named filter 'owned hotels' ('Hotels'[Is Own] = \"Yes\"); without it the figure covers all hotels. 'third-party hotel sales' uses the 'third-party hotels' filter."
+  },
+  {
+   "name": "[Total Costs]",
+   "label": "Hotel cost",
+   "definition": "Supplier cost of hotel bookings, in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "hotel cost",
+    "hotel costs",
+    "accommodation cost",
+    "owned-hotel cost"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "For owned hotels apply the named filter 'owned hotels' ('Hotels'[Is Own] = \"Yes\"); without it the figure covers all hotels."
+  },
+  {
+   "name": "[Total Profit]",
+   "label": "Hotel profit",
+   "definition": "Total Sales minus Total Costs, in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "hotel profit",
+    "accommodation profit",
+    "owned-hotel profit"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "For owned hotels apply the named filter 'owned hotels' ('Hotels'[Is Own] = \"Yes\"); without it the figure covers all hotels."
+  },
+  {
+   "name": "[Markup]",
+   "label": "Hotel margin % (profit / sales)",
+   "definition": "Total Profit divided by Total Sales, despite its name (checked: 2025 profit 10.41M / sales 216.05M = 4.82% = [Markup]).",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "hotel margin %",
+    "hotel profit margin",
+    "owned-hotel margin %"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Name suggests profit/cost but the data is profit/sales; see review item sales_per_owned_hotels.margin_vs_markup."
+  },
+  {
+   "name": "[% Total Profit]",
+   "label": "Hotel markup % (profit / cost)",
+   "definition": "Total Profit divided by Total Costs (checked exactly on all-time and 2025 data).",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "hotel markup %",
+    "hotel profit % on cost"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "See review item sales_per_owned_hotels.margin_vs_markup."
+  },
+  {
+   "name": "[Bookings]",
+   "label": "Hotel bookings (incl. cancelled)",
+   "definition": "Number of hotel bookings, cancelled ones included (about 43% of all bookings are cancelled).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "hotel bookings",
+    "number of hotel bookings",
+    "hotel reservations",
+    "owned-hotel bookings"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Use the 'live bookings' filter for confirmed / non-cancelled bookings. For owned hotels apply the named filter 'owned hotels' ('Hotels'[Is Own] = \"Yes\"); without it the figure covers all hotels."
+  },
+  {
+   "name": "[Cancellations]",
+   "label": "Cancelled hotel bookings",
+   "definition": "Number of cancelled hotel bookings.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "hotel cancellations",
+    "cancelled hotel bookings",
+    "number of hotel cancellations"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[% Cancellations]",
+   "label": "Hotel cancellation rate",
+   "definition": "Cancellations divided by Bookings.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "hotel cancellation rate",
+    "cancellation rate",
+    "cancellation %"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Only cube with a ready cancellation-rate measure; the Bookings cube may also be asked."
+  },
+  {
+   "name": "[Total Room Nights]",
+   "label": "Hotel room nights",
+   "definition": "Rooms multiplied by nights, summed over bookings (cancelled included).",
+   "unit": "nights",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "hotel room nights",
+    "owned-hotel room nights"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Includes cancelled bookings; add the 'live bookings' filter for stayed / active room nights."
+  },
+  {
+   "name": "[Total Nights]",
+   "label": "Hotel nights (length of stay)",
+   "definition": "Sum of each booking's number of nights, not multiplied by rooms (cancelled included).",
+   "unit": "nights",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "hotel nights",
+    "hotel nights booked"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Total Rooms]",
+   "label": "Hotel rooms booked",
+   "definition": "Number of rooms booked (cancelled included).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "hotel rooms booked",
+    "number of hotel rooms booked"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Total Pax]",
+   "label": "Hotel guests (pax)",
+   "definition": "Number of guests on the bookings (cancelled included).",
+   "unit": "people",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "hotel guests",
+    "hotel pax"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Sales]",
+   "label": "Average sale per hotel booking",
+   "definition": "Total Sales divided by Bookings, in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [
+    "average hotel booking value",
+    "average sale per hotel booking"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Cancelled bookings (with near-zero sales) are in the denominator, so this understates a live booking's value; add the 'live bookings' filter for that."
+  },
+  {
+   "name": "[Avg Costs]",
+   "label": "Average cost per hotel booking",
+   "definition": "Total Costs divided by Bookings, in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [
+    "average cost per hotel booking"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Cancelled bookings are in the denominator."
+  },
+  {
+   "name": "[Avg Profit]",
+   "label": "Average profit per hotel booking",
+   "definition": "Total Profit divided by Bookings, in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [
+    "average profit per hotel booking"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Cancelled bookings are in the denominator."
+  },
+  {
+   "name": "[Avg Nights]",
+   "label": "Average length of stay",
+   "definition": "Total Nights divided by Bookings.",
+   "unit": "nights",
+   "format": ",.1f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [
+    "hotel average length of stay",
+    "hotel alos",
+    "average nights per hotel booking"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Room Nights]",
+   "label": "Average nights per room",
+   "definition": "Total Room Nights divided by Total Rooms (checked).",
+   "unit": "nights",
+   "format": ",.1f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [
+    "average nights per room"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Pax]",
+   "label": "Average guests per hotel booking",
+   "definition": "Total Pax divided by Bookings.",
+   "unit": "people",
+   "format": ",.1f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [
+    "average guests per hotel booking",
+    "average pax per hotel booking"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Booking Window]",
+   "label": "Longest booking window (days)",
+   "definition": "Largest number of days between booking date and arrival date among the bookings in context. It is a maximum, not an average (checked: each lead-time bucket returns its upper bound, all-time 1,070 days).",
+   "unit": "days",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": " days",
+   "aggregation": "max",
+   "terms": [
+    "longest booking window",
+    "maximum lead time"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "No average lead-time measure exists: for lead-time questions use [Bookings] by 'Booking Window Interval'[Booking Window Interval]."
+  },
+  {
+   "name": "[Original Price Delayed]",
+   "label": "Original price of re-priced bookings",
+   "definition": "Original cost of bookings later re-priced by a price-optimisation tool.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "no data (0 for all time)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Modified Price Delayed]",
+   "label": "Modified price of re-priced bookings",
+   "definition": "New cost after a price-optimisation re-pricing.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "no data (0 for all time)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Price Delayed Profit]",
+   "label": "Profit from re-priced bookings",
+   "definition": "Extra profit from re-pricing (original minus modified).",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "no data (0 for all time)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[% Cancellations LY]",
+   "label": "% Cancellations LY",
+   "definition": "[% Cancellations] for the same period last year.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [% Cancellations]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[% Total Profit LY]",
+   "label": "% Total Profit LY",
+   "definition": "[% Total Profit] for the same period last year.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [% Total Profit]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Costs LY]",
+   "label": "Avg Costs LY",
+   "definition": "[Avg Costs] for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Avg Costs]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Costs LYS]",
+   "label": "Avg Costs LYS",
+   "definition": "[Avg Costs] for the same period last year (weekday-aligned).",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Avg Costs] (same weekday last year)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Nights LY]",
+   "label": "Avg Nights LY",
+   "definition": "[Avg Nights] for the same period last year.",
+   "unit": "nights",
+   "format": ",.1f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Avg Nights]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Pax LY]",
+   "label": "Avg Pax LY",
+   "definition": "[Avg Pax] for the same period last year.",
+   "unit": "people",
+   "format": ",.1f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Avg Pax]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Pax LYS]",
+   "label": "Avg Pax LYS",
+   "definition": "[Avg Pax] for the same period last year (weekday-aligned).",
+   "unit": "people",
+   "format": ",.1f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Avg Pax] (same weekday last year)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Profit LY]",
+   "label": "Avg Profit LY",
+   "definition": "[Avg Profit] for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Avg Profit]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Room Nights LY]",
+   "label": "Avg Room Nights LY",
+   "definition": "[Avg Room Nights] for the same period last year.",
+   "unit": "nights",
+   "format": ",.1f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Avg Room Nights]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Sales LY]",
+   "label": "Avg Sales LY",
+   "definition": "[Avg Sales] for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Avg Sales]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Sales LYS]",
+   "label": "Avg Sales LYS",
+   "definition": "[Avg Sales] for the same period last year (weekday-aligned).",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Avg Sales] (same weekday last year)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Bookings LY]",
+   "label": "Bookings LY",
+   "definition": "[Bookings] for the same period last year.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Bookings]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Bookings Var LY]",
+   "label": "Bookings Var LY",
+   "definition": "[Bookings] for the same period last year as % change.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year variance helper of [Bookings]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Cancellations LY]",
+   "label": "Cancellations LY",
+   "definition": "[Cancellations] for the same period last year.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Cancellations]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Cost Var LY]",
+   "label": "Cost Var LY",
+   "definition": "[Total Costs] for the same period last year as % change.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year variance helper of [Total Costs]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Markup LY]",
+   "label": "Markup LY",
+   "definition": "[Markup] for the same period last year.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Markup]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Modified Price Lelayed LY]",
+   "label": "Modified Price Lelayed LY",
+   "definition": "[Modified Price Delayed] for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Modified Price Delayed]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Original Price Delayed LY]",
+   "label": "Original Price Delayed LY",
+   "definition": "[Original Price Delayed] for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Original Price Delayed]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Pax Var LY]",
+   "label": "Pax Var LY",
+   "definition": "[Total Pax] for the same period last year as % change.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year variance helper of [Total Pax]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Price Delayed Profit LY]",
+   "label": "Price Delayed Profit LY",
+   "definition": "[Price Delayed Profit] for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Price Delayed Profit]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Profit Var LY]",
+   "label": "Profit Var LY",
+   "definition": "[Total Profit] for the same period last year as % change.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year variance helper of [Total Profit]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Sale Var LY]",
+   "label": "Sale Var LY",
+   "definition": "[Total Sales] for the same period last year as % change.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year variance helper of [Total Sales]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Total Costs LY]",
+   "label": "Total Costs LY",
+   "definition": "[Total Costs] for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Total Costs]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Total Nights LY]",
+   "label": "Total Nights LY",
+   "definition": "[Total Nights] for the same period last year.",
+   "unit": "nights",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Total Nights]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Total Pax LY]",
+   "label": "Total Pax LY",
+   "definition": "[Total Pax] for the same period last year.",
+   "unit": "people",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Total Pax]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Total Profit LY]",
+   "label": "Total Profit LY",
+   "definition": "[Total Profit] for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Total Profit]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Total Room Nights LY]",
+   "label": "Total Room Nights LY",
+   "definition": "[Total Room Nights] for the same period last year.",
+   "unit": "nights",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Total Room Nights]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Total Room Nights Var LY]",
+   "label": "Total Room Nights Var LY",
+   "definition": "[Total Room Nights] for the same period last year as % change.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year variance helper of [Total Room Nights]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Total Rooms LY]",
+   "label": "Total Rooms LY",
+   "definition": "[Total Rooms] for the same period last year.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Total Rooms]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Total Sales LY]",
+   "label": "Total Sales LY",
+   "definition": "[Total Sales] for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Total Sales]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[% Cancellations LYS]",
+   "label": "% Cancellations LYS",
+   "definition": "[% Cancellations] for the same period last year (weekday-aligned).",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [% Cancellations] (same weekday last year)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[% Total Profit LYS]",
+   "label": "% Total Profit LYS",
+   "definition": "[% Total Profit] for the same period last year (weekday-aligned).",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [% Total Profit] (same weekday last year)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Nights LYS]",
+   "label": "Avg Nights LYS",
+   "definition": "[Avg Nights] for the same period last year (weekday-aligned).",
+   "unit": "nights",
+   "format": ",.1f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Avg Nights] (same weekday last year)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Profit LYS]",
+   "label": "Avg Profit LYS",
+   "definition": "[Avg Profit] for the same period last year (weekday-aligned).",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Avg Profit] (same weekday last year)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Room Nights LYS]",
+   "label": "Avg Room Nights LYS",
+   "definition": "[Avg Room Nights] for the same period last year (weekday-aligned).",
+   "unit": "nights",
+   "format": ",.1f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Avg Room Nights] (same weekday last year)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Bookings LYS]",
+   "label": "Bookings LYS",
+   "definition": "[Bookings] for the same period last year (weekday-aligned).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Bookings] (same weekday last year)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Bookings Var LYS]",
+   "label": "Bookings Var LYS",
+   "definition": "[Bookings] for the same period last year (weekday-aligned) as % change.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year variance helper of [Bookings]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Cancellations LYS]",
+   "label": "Cancellations LYS",
+   "definition": "[Cancellations] for the same period last year (weekday-aligned).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Cancellations] (same weekday last year)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Cost Var LYS]",
+   "label": "Cost Var LYS",
+   "definition": "[Total Costs] for the same period last year (weekday-aligned) as % change.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year variance helper of [Total Costs]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Markup LYS]",
+   "label": "Markup LYS",
+   "definition": "[Markup] for the same period last year (weekday-aligned).",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Markup] (same weekday last year)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Modified Price Delayed LYS]",
+   "label": "Modified Price Delayed LYS",
+   "definition": "[Modified Price Delayed] for the same period last year (weekday-aligned).",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Modified Price Delayed] (same weekday last year)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Original Price Delayed LYS]",
+   "label": "Original Price Delayed LYS",
+   "definition": "[Original Price Delayed] for the same period last year (weekday-aligned).",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Original Price Delayed] (same weekday last year)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Pax Var LYS]",
+   "label": "Pax Var LYS",
+   "definition": "[Total Pax] for the same period last year (weekday-aligned) as % change.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year variance helper of [Total Pax]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Price Delayed Profit LYS]",
+   "label": "Price Delayed Profit LYS",
+   "definition": "[Price Delayed Profit] for the same period last year (weekday-aligned).",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Price Delayed Profit] (same weekday last year)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Profit Var LYS]",
+   "label": "Profit Var LYS",
+   "definition": "[Total Profit] for the same period last year (weekday-aligned) as % change.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year variance helper of [Total Profit]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Sale Var LYS]",
+   "label": "Sale Var LYS",
+   "definition": "[Total Sales] for the same period last year (weekday-aligned) as % change.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year variance helper of [Total Sales]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Total Costs LYS]",
+   "label": "Total Costs LYS",
+   "definition": "[Total Costs] for the same period last year (weekday-aligned).",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Total Costs] (same weekday last year)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Total Nights LYS]",
+   "label": "Total Nights LYS",
+   "definition": "[Total Nights] for the same period last year (weekday-aligned).",
+   "unit": "nights",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Total Nights] (same weekday last year)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Total Pax LYS]",
+   "label": "Total Pax LYS",
+   "definition": "[Total Pax] for the same period last year (weekday-aligned).",
+   "unit": "people",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Total Pax] (same weekday last year)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Total Profit LYS]",
+   "label": "Total Profit LYS",
+   "definition": "[Total Profit] for the same period last year (weekday-aligned).",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Total Profit] (same weekday last year)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Total Room Nights LYS]",
+   "label": "Total Room Nights LYS",
+   "definition": "[Total Room Nights] for the same period last year (weekday-aligned).",
+   "unit": "nights",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Total Room Nights] (same weekday last year)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Total Room Nights Var LYS]",
+   "label": "Total Room Nights Var LYS",
+   "definition": "[Total Room Nights] for the same period last year (weekday-aligned) as % change.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year variance helper of [Total Room Nights]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Total Rooms LYS]",
+   "label": "Total Rooms LYS",
+   "definition": "[Total Rooms] for the same period last year (weekday-aligned).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Total Rooms] (same weekday last year)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Total Sales LYS]",
+   "label": "Total Sales LYS",
+   "definition": "[Total Sales] for the same period last year (weekday-aligned).",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Total Sales] (same weekday last year)",
+   "confidence": "high",
+   "notes": ""
+  }
+ ],
+ "breakdowns": [
+  {
+   "column": "'Hotels'[Is Own]",
+   "label": "Owned hotel",
+   "entity": "hotel_ownership",
+   "kind": "enum",
+   "meaning": "Yes = owned / contracted hotel of the group, No = third-party hotel.",
+   "needs_columns": [
+    "'Hotels'[Is Own.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 3,
+   "sample_values": [
+    "Yes",
+    "No",
+    "Unknown"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Canceled'[Canceled]",
+   "label": "Cancelled",
+   "entity": "cancellation_flag",
+   "kind": "enum",
+   "meaning": "Whether the booking is cancelled.",
+   "needs_columns": [
+    "'Canceled'[Canceled.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 3,
+   "sample_values": [
+    "No",
+    "Yes",
+    "Unknown"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Status'[Status]",
+   "label": "Booking status",
+   "entity": "booking_status",
+   "kind": "enum",
+   "meaning": "Status code: Pag = active/paid, CaC = cancelled by client, Can = cancelled, Con = confirmed, PRe = pre-booking.",
+   "needs_columns": [
+    "'Status'[Status.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 6,
+   "sample_values": [
+    "Pag",
+    "CaC",
+    "Can",
+    "Con",
+    "PRe",
+    "Unknown"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Market]",
+   "label": "Market",
+   "entity": "market",
+   "kind": "enum",
+   "meaning": "Customer market (source market of the agency).",
+   "needs_columns": [
+    "'Customers'[Market.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 24,
+   "sample_values": [
+    "UAE",
+    "GCC - Except UAE and Local Residence",
+    "EUROPE",
+    "ROW",
+    "North Africa",
+    "Middle East",
+    "Turkish Market",
+    "B2C UAE"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Customer]",
+   "label": "Customer",
+   "entity": "customer",
+   "kind": "name",
+   "meaning": "Client agency or B2C site that made the booking.",
+   "needs_columns": [
+    "'Customers'[Customer.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 6822,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Agency Group]",
+   "label": "Agency group",
+   "entity": "agency_group",
+   "kind": "name",
+   "meaning": "Commercial group of the agency (market and commission level).",
+   "needs_columns": [
+    "'Customers'[Agency Group.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 130,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Master Agency]",
+   "label": "Master agency",
+   "entity": "master_agency",
+   "kind": "name",
+   "meaning": "Parent agency the customer belongs to.",
+   "needs_columns": [
+    "'Customers'[Master Agency.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 143,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Master Integrator]",
+   "label": "Integrator",
+   "entity": "integrator",
+   "kind": "name",
+   "meaning": "Technology integrator the customer connects through.",
+   "needs_columns": [
+    "'Customers'[Master Integrator.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 68,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Account Manager]",
+   "label": "Account manager",
+   "entity": "account_manager",
+   "kind": "name",
+   "meaning": "Account manager responsible for the customer.",
+   "needs_columns": [
+    "'Customers'[Account Manager.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 19,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Countries'[Country]",
+   "label": "Country",
+   "entity": "country",
+   "kind": "name",
+   "meaning": "Country attached to the booking (likely guest nationality / source country).",
+   "needs_columns": [
+    "'Countries'[Country.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 239,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hotels'[Hotel]",
+   "label": "Hotel",
+   "entity": "hotel",
+   "kind": "name",
+   "meaning": "Booked hotel.",
+   "needs_columns": [
+    "'Hotels'[Hotel.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 72170,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hotels'[Hotel City]",
+   "label": "Hotel city",
+   "entity": "hotel_city",
+   "kind": "name",
+   "meaning": "City of the hotel.",
+   "needs_columns": [
+    "'Hotels'[Hotel City.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 8707,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hotels'[Hotel Country]",
+   "label": "Hotel country",
+   "entity": "hotel_country",
+   "kind": "name",
+   "meaning": "Country of the hotel.",
+   "needs_columns": [
+    "'Hotels'[Hotel Country.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 201,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hotel Chain'[Hotel Chain]",
+   "label": "Hotel chain",
+   "entity": "hotel_chain",
+   "kind": "name",
+   "meaning": "Hotel chain or group; many hotels are Unknown or N/A.",
+   "needs_columns": [
+    "'Hotel Chain'[Hotel Chain.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 58,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hotel Chain'[Hotel Category]",
+   "label": "Hotel category (stars)",
+   "entity": "hotel_category",
+   "kind": "enum",
+   "meaning": "Star rating or apartment type; about two thirds of bookings are Unknown.",
+   "needs_columns": [
+    "'Hotel Chain'[Hotel Category.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 13,
+   "sample_values": [
+    "5 Stars",
+    "4 Stars",
+    "3 Stars",
+    "2 Stars",
+    "1 Star",
+    "Deluxe Apartment",
+    "Standard Apartment",
+    "Unknown"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Destinations'[Destination Parent]",
+   "label": "Destination",
+   "entity": "destination",
+   "kind": "name",
+   "meaning": "Destination area of the stay (city / emirate level).",
+   "needs_columns": [
+    "'Destinations'[Destination Parent.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 8486,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Suppliers'[Supplier]",
+   "label": "Supplier",
+   "entity": "supplier",
+   "kind": "name",
+   "meaning": "Supplier the room was bought from.",
+   "needs_columns": [
+    "'Suppliers'[Supplier.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 2697,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Modules'[Module]",
+   "label": "Supplier module",
+   "entity": "supplier_module",
+   "kind": "name",
+   "meaning": "Supplier connection (module) used for the booking.",
+   "needs_columns": [
+    "'Modules'[Module.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 101,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Modules'[Direct Contracting]",
+   "label": "Direct contracting",
+   "entity": "direct_contracting",
+   "kind": "enum",
+   "meaning": "Whether the booking came through a directly contracted module.",
+   "needs_columns": [
+    "'Modules'[Direct Contracting.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 3,
+   "sample_values": [
+    "Yes",
+    "No",
+    "Unknown"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Supplier Contract'[Contract Type]",
+   "label": "Contract type",
+   "entity": "contract_type",
+   "kind": "enum",
+   "meaning": "Type of supplier contract; mostly Unknown.",
+   "needs_columns": [
+    "'Supplier Contract'[Contract Type.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 4,
+   "sample_values": [
+    "FIT",
+    "Hotelier extranet",
+    "Rack",
+    "Unknown"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Interfaces'[Interface]",
+   "label": "Sales interface",
+   "entity": "sale_channel",
+   "kind": "enum",
+   "meaning": "Channel the booking came through: XML (API), WEB (B2B/B2C web) or CLC.",
+   "needs_columns": [
+    "'Interfaces'[Interface.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 4,
+   "sample_values": [
+    "XML",
+    "WEB",
+    "CLC",
+    "Unknown"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Board Types'[Generic Board Type]",
+   "label": "Board (meal plan)",
+   "entity": "board_type",
+   "kind": "enum",
+   "meaning": "Generic meal plan of the booking.",
+   "needs_columns": [
+    "'Board Types'[Generic Board Type.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 7,
+   "sample_values": [
+    "Bed & Breakfast",
+    "Accommodation only",
+    "All inclusive",
+    "Half board",
+    "Full board",
+    "Unknown",
+    "N/A"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Board Types'[Board Type]",
+   "label": "Board type (detailed)",
+   "entity": "board_type_detail",
+   "kind": "enum",
+   "meaning": "Detailed meal plan of the booking.",
+   "needs_columns": [
+    "'Board Types'[Board Type.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 18,
+   "sample_values": [
+    "Bed & Breakfast",
+    "Room Only",
+    "All Inclusive",
+    "Half Board",
+    "Full Board",
+    "Soft All Inclusive",
+    "Ultra All Inclusive",
+    "Unknown"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'No Refundable'[Value]",
+   "label": "Non-refundable rate",
+   "entity": "refundability",
+   "kind": "enum",
+   "meaning": "Whether the rate was non-refundable.",
+   "needs_columns": [
+    "'No Refundable'[Value.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 3,
+   "sample_values": [
+    "Yes",
+    "No",
+    "Unknown"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Booking Window Interval'[Booking Window Interval]",
+   "label": "Booking window (lead-time bucket, days)",
+   "entity": "lead_time_band",
+   "kind": "enum",
+   "meaning": "Days between booking and arrival, in buckets.",
+   "needs_columns": [
+    "'Booking Window Interval'[Booking Window Interval.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 8,
+   "sample_values": [
+    "0-15",
+    "15-30",
+    "30-45",
+    "45-60",
+    "60-75",
+    "75-90",
+    ">90",
+    "Unknown"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Is Webservice Administrator'[Is Webservice Administrator]",
+   "label": "Handled by re-pricing tool",
+   "entity": "repricing_flag",
+   "kind": "enum",
+   "meaning": "Whether a price-optimisation (re-booking) tool handled the booking.",
+   "needs_columns": [
+    "'Is Webservice Administrator'[Is Webservice Administrator.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 3,
+   "sample_values": [
+    "Yes",
+    "No",
+    "Unknown"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Booking Date'[Year]",
+   "label": "Booking year",
+   "entity": "booking_year",
+   "kind": "date_part",
+   "meaning": "Year the booking was made.",
+   "needs_columns": [
+    "'Booking Date'[Year.UniqueName]"
+   ],
+   "sort_by": "'Booking Date'[Year.Fecha ISO DESC Year]",
+   "distinct": 15,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Booking Date'[Month Name]",
+   "label": "Booking month",
+   "entity": "booking_month",
+   "kind": "date_part",
+   "meaning": "Month the booking was made, e.g. July 2025.",
+   "needs_columns": [
+    "'Booking Date'[Month Name.UniqueName]"
+   ],
+   "sort_by": "'Booking Date'[Month Name.Fecha ISO DESC Month Name]",
+   "distinct": 161,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Booking Date'[Week]",
+   "label": "Booking week",
+   "entity": "booking_week",
+   "kind": "date_part",
+   "meaning": "Monday-Sunday week the booking was made.",
+   "needs_columns": [
+    "'Booking Date'[Week.UniqueName]"
+   ],
+   "sort_by": "'Booking Date'[Week.Fecha ISO DESC Week]",
+   "distinct": 693,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Booking Date'[Day Week]",
+   "label": "Booking weekday",
+   "entity": "booking_weekday",
+   "kind": "date_part",
+   "meaning": "Day of week the booking was made.",
+   "needs_columns": [
+    "'Booking Date'[Day Week.UniqueName]"
+   ],
+   "sort_by": "'Booking Date'[Day Week.Day Week DESC]",
+   "distinct": 8,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Arrival Date'[Year]",
+   "label": "Arrival year",
+   "entity": "arrival_year",
+   "kind": "date_part",
+   "meaning": "Year of check-in.",
+   "needs_columns": [
+    "'Arrival Date'[Year.UniqueName]"
+   ],
+   "sort_by": "'Arrival Date'[Year.Fecha ISO DESC Year]",
+   "distinct": 17,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Arrival Date'[Month Name]",
+   "label": "Arrival month",
+   "entity": "arrival_month",
+   "kind": "date_part",
+   "meaning": "Month of check-in, e.g. August 2025.",
+   "needs_columns": [
+    "'Arrival Date'[Month Name.UniqueName]"
+   ],
+   "sort_by": "'Arrival Date'[Month Name.Fecha ISO DESC Month Name]",
+   "distinct": 183,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Arrival Date'[Day Week]",
+   "label": "Arrival weekday",
+   "entity": "arrival_weekday",
+   "kind": "date_part",
+   "meaning": "Day of week of check-in.",
+   "needs_columns": [
+    "'Arrival Date'[Day Week.UniqueName]"
+   ],
+   "sort_by": "'Arrival Date'[Day Week.Day Week DESC]",
+   "distinct": 8,
+   "sample_values": [],
+   "status": "active"
+  }
+ ],
+ "named_filters": [
+  {
+   "name": "owned hotels",
+   "meaning": "Owned / contracted hotels of the group (also 'own hotels').",
+   "column": "'Hotels'[Is Own]",
+   "values": [
+    "Yes"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "third-party hotels",
+   "meaning": "Hotels not owned by the group (also 'non-owned hotels', 'external hotels').",
+   "column": "'Hotels'[Is Own]",
+   "values": [
+    "No"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "live bookings",
+   "meaning": "Bookings that are not cancelled (confirmed / active).",
+   "column": "'Canceled'[Canceled]",
+   "values": [
+    "No"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "cancelled bookings",
+   "meaning": "Cancelled hotel bookings.",
+   "column": "'Canceled'[Canceled]",
+   "values": [
+    "Yes"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "non-refundable bookings",
+   "meaning": "Bookings on non-refundable rates.",
+   "column": "'No Refundable'[Value]",
+   "values": [
+    "Yes"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "directly contracted",
+   "meaning": "Bookings through directly contracted modules.",
+   "column": "'Modules'[Direct Contracting]",
+   "values": [
+    "Yes"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "xml bookings",
+   "meaning": "Bookings received through the XML / API interface.",
+   "column": "'Interfaces'[Interface]",
+   "values": [
+    "XML"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "web bookings",
+   "meaning": "Bookings made on the web interface.",
+   "column": "'Interfaces'[Interface]",
+   "values": [
+    "WEB"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "uae market",
+   "meaning": "Customers of the UAE (B2B) market.",
+   "column": "'Customers'[Market]",
+   "values": [
+    "UAE"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "b2c markets",
+   "meaning": "All B2C (direct consumer) markets.",
+   "column": "'Customers'[Market]",
+   "values": [
+    "B2C GCC Except UAE and Local Residence",
+    "B2C UAE",
+    "B2C Middle East",
+    "B2C ROW",
+    "B2C Europe",
+    "B2C American Market",
+    "B2C CIS",
+    "B2C North Africa",
+    "B2C Turkish",
+    "B2C Latin America"
+   ],
+   "confidence": "medium"
+  }
+ ],
+ "rules": [
+  "Owned-hotel questions must use the named filter 'owned hotels' ('Hotels'[Is Own] = \"Yes\"); without it every figure covers all hotels. 'Third-party hotels' is \"No\".",
+  "[Bookings], [Total Room Nights], [Total Nights], [Total Rooms] and [Total Pax] include cancelled bookings; use the 'live bookings' filter when the question says confirmed, active or not cancelled.",
+  "[Total Sales], [Total Costs] and [Total Profit] are effectively net of cancellations (cancelled bookings keep only small residual amounts).",
+  "[Markup] is profit / sales and [% Total Profit] is profit / cost; percentages and Avg measures are ratios and must never be added across rows. [Booking Window] is a maximum.",
+  "Ignore the LY / LYS measures: the app makes period comparisons itself.",
+  "Always put a breakdown's needs_columns next to it when grouping or filtering by it.",
+  "Use the cube's measures only; never SUM a column."
+ ],
+ "examples": [
+  {
+   "question": "Owned-hotel sales by month this year",
+   "measures": [
+    "[Total Sales]"
+   ],
+   "breakdowns": [
+    "'Booking Date'[Month Name]"
+   ],
+   "date_role": "booking_date"
+  },
+  {
+   "question": "Owned vs third-party hotel sales and profit last year",
+   "measures": [
+    "[Total Sales]",
+    "[Total Profit]"
+   ],
+   "breakdowns": [
+    "'Hotels'[Is Own]"
+   ],
+   "date_role": "booking_date"
+  },
+  {
+   "question": "Hotel cancellation rate by market in 2025",
+   "measures": [
+    "[% Cancellations]"
+   ],
+   "breakdowns": [
+    "'Customers'[Market]"
+   ],
+   "date_role": "booking_date"
+  },
+  {
+   "question": "Hotel room nights for check-ins next month by hotel country",
+   "measures": [
+    "[Total Room Nights]"
+   ],
+   "breakdowns": [
+    "'Hotels'[Hotel Country]"
+   ],
+   "date_role": "travel_date"
+  },
+  {
+   "question": "Hotel bookings by booking-window bucket this year",
+   "measures": [
+    "[Bookings]"
+   ],
+   "breakdowns": [
+    "'Booking Window Interval'[Booking Window Interval]"
+   ],
+   "date_role": "booking_date"
+  }
+ ],
+ "review": [
+  {
+   "id": "sales_per_owned_hotels.margin_vs_markup",
+   "question": "In this cube [Markup] is profit / sales and [% Total Profit] is profit / cost (checked on the data), the opposite of what the names suggest. Which measure answers 'hotel margin %' and which 'hotel markup %'?",
+   "options": [
+    "[Markup]",
+    "[% Total Profit]"
+   ],
+   "proposed": "'hotel margin %' -> [Markup] (profit / sales); 'hotel markup %' -> [% Total Profit] (profit / cost)",
+   "why": "Matches the usual business meaning of margin (on sales) and markup (on cost); labels say what each really computes so users are not misled by the cube's names."
+  },
+  {
+   "id": "sales_per_owned_hotels.bookings_include_cancelled",
+   "question": "Should 'hotel bookings' / 'owned-hotel bookings' count cancelled bookings (about 43% of all hotel bookings) or only live ones?",
+   "options": [
+    "[Bookings] (all, cancelled included)",
+    "[Bookings] with the 'live bookings' filter"
+   ],
+   "proposed": "[Bookings] (all, cancelled included), with the answer saying cancelled bookings are included",
+   "why": "It is the cube's own definition and the base of [% Cancellations]; sales are already net, so the gap only shows in counts. Users who say confirmed / active get the 'live bookings' filter."
+  }
+ ]
+}

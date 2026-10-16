@@ -1,0 +1,807 @@
+{
+  "cube": "GlobalTravelEngine - Statistics Hotel Client",
+  "label": "Hotel-level client requests",
+  "purpose": "Client hotel API traffic counted per hotel requested: every hotel asked for in a request is one hotel request, answered OK (available) or KO, with the room/rate combinations returned and a hotel-level look-to-book. The cube for traffic by hotel, hotel country/region/city and supplier code.",
+  "grain": "Hotel request lines (one per hotel asked for in each client request) aggregated per request day, customer, hotel, request type, availability type and travel window.",
+  "use_for": [
+    "which hotels, hotel countries or cities clients request most",
+    "hotel-level availability rate (OK/KO) by hotel, country or supplier code",
+    "room/rate combinations returned",
+    "hotel-level look-to-book by hotel country or customer",
+    "demand by travel window (days before check-in)"
+  ],
+  "not_for": [
+    "number of searches (Statistics Zone [Total Requests])",
+    "any period before 2026-08-17",
+    "bookings or sales (Bookings)",
+    "requests sent to suppliers (Statistics Hotel Supplier)"
+  ],
+  "coverage": {
+    "main_date": "'Request Calendar'[Request Day]",
+    "first": "2026-08",
+    "last": "2026-10",
+    "note": "Daily from 2026-08-17 to yesterday; 2026-08-21 and 2026-08-22 have no data."
+  },
+  "dates": [
+    {
+      "column": "'Request Calendar'[Request Day]",
+      "role": "request_date",
+      "label": "Request date",
+      "meaning": "Day the client request was received (the cube's main date).",
+      "default": true,
+      "words": [
+        "request date",
+        "requested on",
+        "received"
+      ],
+      "first": "2026-08",
+      "last": "2026-10"
+    }
+  ],
+  "measures": [
+    {
+      "name": "[% Hotel Requests KO]",
+      "label": "Hotel-level KO rate",
+      "definition": "Hotel requests answered KO as a share of all hotel requests ([Hotel Requests KO] / [Total Hotel Requests]).",
+      "unit": "percent",
+      "format": ".1%",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "ratio",
+      "terms": [
+        "hotel-level ko rate",
+        "hotel no-availability rate"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "medium",
+      "notes": ""
+    },
+    {
+      "name": "[% Hotel Requests OK]",
+      "label": "Hotel-level OK rate",
+      "definition": "Hotel requests answered OK as a share of all hotel requests ([Hotel Requests OK] / [Total Hotel Requests]).",
+      "unit": "percent",
+      "format": ".1%",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "ratio",
+      "terms": [
+        "hotel-level ok rate",
+        "hotel availability rate"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "medium",
+      "notes": ""
+    },
+    {
+      "name": "[% L2B]",
+      "label": "Hotel-level look-to-book %",
+      "definition": "Bookings as a share of hotel requests: the inverse of [L2B], a tiny percentage.",
+      "unit": "percent",
+      "format": ".6%",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "ratio",
+      "terms": [
+        "hotel-level look-to-book %"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "medium",
+      "notes": ""
+    },
+    {
+      "name": "[Avg Combinations]",
+      "label": "Combinations per hotel request",
+      "definition": "Average combinations returned per hotel request ([Combinations] / [Total Hotel Requests]).",
+      "unit": "count",
+      "format": ",.1f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "average",
+      "terms": [
+        "average combinations per hotel request"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[Avg Days Travel Window]",
+      "label": "Average travel window (days)",
+      "definition": "Meant as the average days between request and check-in.",
+      "unit": "days",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "average",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date"
+      ],
+      "status": "hidden",
+      "hidden_reason": "broken: returns about 0 days (even inside the '91 to 180 Days' band) and negative values; use the 'Travel Window' breakdown",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[Combinations]",
+      "label": "Combinations returned",
+      "definition": "Number of room/board/rate combinations (priced options) returned for the hotels requested.",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [
+        "combinations",
+        "room combinations returned",
+        "rate combinations"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "medium",
+      "notes": ""
+    },
+    {
+      "name": "[Hotel Requests KO]",
+      "label": "Hotel requests KO",
+      "definition": "Hotel request lines answered KO: no availability or an error for that hotel.",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [
+        "hotel-level requests ko",
+        "hotel requests without availability"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "medium",
+      "notes": ""
+    },
+    {
+      "name": "[Hotel Requests OK]",
+      "label": "Hotel requests OK",
+      "definition": "Hotel request lines answered OK: the hotel returned availability.",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [
+        "hotel-level requests ok",
+        "hotel requests with availability"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "medium",
+      "notes": "Its share (63%) matches Statistics Zone [% Hotels Results] (62%)."
+    },
+    {
+      "name": "[L2B]",
+      "label": "Hotel-level look-to-book",
+      "definition": "Hotel requests per booking (about 2 million hotel requests for each booking).",
+      "unit": "ratio",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": ":1",
+      "aggregation": "ratio",
+      "terms": [
+        "hotel-level look-to-book",
+        "hotel requests per booking"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "medium",
+      "notes": "Different denominator from Statistics History Client [L2B] (requests per booking): never compare the two."
+    },
+    {
+      "name": "[Total Hotel Requests]",
+      "label": "Hotel-level requests",
+      "definition": "Number of hotel request lines: one per hotel asked for in each client request (a 20-hotel search counts 20). About 5 times the number of searches and close to Statistics Zone [Hotels Requests]. Not the number of searches.",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [
+        "hotel-level requests",
+        "hotel request lines",
+        "requests by hotel",
+        "times a hotel was requested"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": "Sep 2026: 26.0 bn here vs 25.0 bn Statistics Zone [Hotels Requests] and 4.7 bn searches."
+    }
+  ],
+  "breakdowns": [
+    {
+      "column": "'Hotels'[Hotel]",
+      "label": "Hotel",
+      "entity": "hotel",
+      "kind": "name",
+      "meaning": "Hotel requested (1.3 million hotels: always use a top N).",
+      "needs_columns": [
+        "'Hotels'[Hotel.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 1306645,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Hotels'[JP Code]",
+      "label": "Hotel code",
+      "entity": "hotel",
+      "kind": "code",
+      "meaning": "The engine's hotel code (JP code).",
+      "needs_columns": [
+        "'Hotels'[JP Code.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 1473737,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Hotels'[Country]",
+      "label": "Hotel country",
+      "entity": "destination_country",
+      "kind": "name",
+      "meaning": "Country of the hotel requested.",
+      "needs_columns": [
+        "'Hotels'[Country.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 230,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Hotels'[Region]",
+      "label": "Hotel region",
+      "entity": "destination",
+      "kind": "name",
+      "meaning": "Region of the hotel requested.",
+      "needs_columns": [
+        "'Hotels'[Region.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 3078,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Hotels'[City]",
+      "label": "Hotel city",
+      "entity": "destination",
+      "kind": "name",
+      "meaning": "City of the hotel requested.",
+      "needs_columns": [
+        "'Hotels'[City.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 85728,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Hotels'[Supplier Code]",
+      "label": "Supplier code",
+      "entity": "supplier",
+      "kind": "code",
+      "meaning": "Code of the supplier on the hotel record (81 codes).",
+      "needs_columns": [
+        "'Hotels'[Supplier Code.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 81,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Customer]",
+      "label": "Customer",
+      "entity": "customer",
+      "kind": "name",
+      "meaning": "Client agency or XML partner sending the requests.",
+      "needs_columns": [
+        "'Customers'[Customer.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 6772,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Customer Code]",
+      "label": "Customer code",
+      "entity": "customer",
+      "kind": "code",
+      "meaning": "Customer code (same codes as the Bookings cube).",
+      "needs_columns": [
+        "'Customers'[Customer Code.Key0]"
+      ],
+      "sort_by": "",
+      "distinct": 6851,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Market]",
+      "label": "Market",
+      "entity": "market",
+      "kind": "enum",
+      "meaning": "Commercial market of the customer.",
+      "needs_columns": [
+        "'Customers'[Market.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 24,
+      "sample_values": [
+        "ROW",
+        "EUROPE",
+        "Turkish Market",
+        "GCC - Except UAE and Local Residence",
+        "UAE",
+        "Middle East",
+        "North Africa"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Default Country]",
+      "label": "Customer country",
+      "entity": "customer_country",
+      "kind": "name",
+      "meaning": "Country of the agency.",
+      "needs_columns": [
+        "'Customers'[Default Country.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 96,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Integrator]",
+      "label": "Integrator",
+      "entity": "integrator",
+      "kind": "name",
+      "meaning": "Technology platform the customer connects through.",
+      "needs_columns": [
+        "'Customers'[Integrator.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 69,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Master Agency]",
+      "label": "Master agency",
+      "entity": "master_agency",
+      "kind": "name",
+      "meaning": "Parent agency that groups several customer accounts.",
+      "needs_columns": [
+        "'Customers'[Master Agency.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 143,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Agency Group]",
+      "label": "Agency group",
+      "entity": "agency_group",
+      "kind": "name",
+      "meaning": "Commercial group of the customer (region and markup tier).",
+      "needs_columns": [
+        "'Customers'[Agency Group.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 130,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Category]",
+      "label": "Customer category",
+      "entity": "customer_category",
+      "kind": "enum",
+      "meaning": "Customer category.",
+      "needs_columns": [
+        "'Customers'[Category.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 5,
+      "sample_values": [
+        "Dubai Link Category",
+        "Final Client Category",
+        "DL Business Trip - No Markup"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Account Manager]",
+      "label": "Account manager",
+      "entity": "account_manager",
+      "kind": "name",
+      "meaning": "Account manager responsible for the customer.",
+      "needs_columns": [
+        "'Customers'[Account Manager.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 19,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Type of Payment]",
+      "label": "Payment type",
+      "entity": "payment_type",
+      "kind": "enum",
+      "meaning": "How the customer pays: Credit (almost all), Pre-payment or POS.",
+      "needs_columns": [
+        "'Customers'[Type of Payment.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 4,
+      "sample_values": [
+        "Credit",
+        "Pre-payment",
+        "POS"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Request Types'[Request Type]",
+      "label": "Request type",
+      "entity": "request_type",
+      "kind": "enum",
+      "meaning": "API method; almost all hotel requests are Availability.",
+      "needs_columns": [
+        "'Request Types'[Request Type.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 65,
+      "sample_values": [
+        "Availability",
+        "Cancellation Policy",
+        "Reservation/Booking",
+        "Cancel"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Availability Types'[Availability Type]",
+      "label": "Search type",
+      "entity": "availability_type",
+      "kind": "enum",
+      "meaning": "Multi-Hotel (destination search) or One Hotel (single-hotel search).",
+      "needs_columns": [
+        "'Availability Types'[Availability Type.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 4,
+      "sample_values": [
+        "Multi-Hotel",
+        "One Hotel"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Travel Window'[Description]",
+      "label": "Travel window",
+      "entity": "travel_window",
+      "kind": "enum",
+      "meaning": "Days between the request and the check-in, in bands.",
+      "needs_columns": [
+        "'Travel Window'[Description.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 11,
+      "sample_values": [
+        "0 to 2 Days",
+        "3 to 7 Days",
+        "8 to 14 Days",
+        "15 to 21 Days",
+        "22 to 30 Days",
+        "31 to 60 Days",
+        "61 to 90 Days",
+        "91 to 180 Days"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Travel Window'[Name]",
+      "label": "Travel window name",
+      "entity": "travel_window",
+      "kind": "enum",
+      "meaning": "The same bands by name (Last Minute = 0-2 days ... Four to Six Months = 91-180 days).",
+      "needs_columns": [
+        "'Travel Window'[Name.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 11,
+      "sample_values": [
+        "Last Minute",
+        "Last Week",
+        "Two Weeks",
+        "Three Weeks",
+        "One Month",
+        "Two Months",
+        "Three Months",
+        "Four to Six Months"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Is Webservice Administrator'[Is Webservice Administrator]",
+      "label": "Rate-checker traffic",
+      "entity": "rate_checker",
+      "kind": "enum",
+      "meaning": "Yes when the request came from a third-party rate-checking tool acting for a customer.",
+      "needs_columns": [
+        "'Is Webservice Administrator'[Is Webservice Administrator.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 3,
+      "sample_values": [
+        "No",
+        "Yes"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Webservice Administrator'[Webservice Administrator]",
+      "label": "Rate-checker tool",
+      "entity": "rate_checker",
+      "kind": "name",
+      "meaning": "Which third-party rate-checking tool sent the request ('Unknown' for normal traffic).",
+      "needs_columns": [
+        "'Webservice Administrator'[Webservice Administrator.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 5,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Request Calendar'[Month Year]",
+      "label": "Request month",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Month of the request (M-YYYY).",
+      "needs_columns": [
+        "'Request Calendar'[Month Year.UniqueName]"
+      ],
+      "sort_by": "'Request Calendar'[Month Year.Fecha ISO DESC MonthYear]",
+      "distinct": 4,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Request Calendar'[Year Week]",
+      "label": "Request week",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Week of the request, e.g. '41 (2026)'.",
+      "needs_columns": [
+        "'Request Calendar'[Year Week.UniqueName]"
+      ],
+      "sort_by": "'Request Calendar'[Year Week.Fecha ISO DESC YearWeek]",
+      "distinct": 11,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Request Calendar'[Week Day]",
+      "label": "Request weekday",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Weekday of the request.",
+      "needs_columns": [
+        "'Request Calendar'[Week Day.UniqueName]"
+      ],
+      "sort_by": "'Request Calendar'[Week Day.Fecha ISO DESC WeekDay]",
+      "distinct": 8,
+      "sample_values": [],
+      "status": "active"
+    }
+  ],
+  "named_filters": [
+    {
+      "name": "availability hotel requests",
+      "meaning": "Hotel requests from availability searches.",
+      "column": "'Request Types'[Request Type]",
+      "values": [
+        "Availability"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "booking requests",
+      "meaning": "Booking requests.",
+      "column": "'Request Types'[Request Type]",
+      "values": [
+        "Reservation/Booking"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "last-minute requests",
+      "meaning": "Requests for a check-in 0 to 2 days ahead.",
+      "column": "'Travel Window'[Name]",
+      "values": [
+        "Last Minute"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "requests within a week of check-in",
+      "meaning": "Requests for a check-in 0 to 7 days ahead.",
+      "column": "'Travel Window'[Description]",
+      "values": [
+        "0 to 2 Days",
+        "3 to 7 Days"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "credit customers",
+      "meaning": "Customers paying on credit.",
+      "column": "'Customers'[Type of Payment]",
+      "values": [
+        "Credit"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "prepaid customers",
+      "meaning": "Customers paying in advance.",
+      "column": "'Customers'[Type of Payment]",
+      "values": [
+        "Pre-payment"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "uae hotels",
+      "meaning": "Hotels located in the United Arab Emirates.",
+      "column": "'Hotels'[Country]",
+      "values": [
+        "United Arab Emirates"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "excluding rate-checker traffic",
+      "meaning": "Normal client traffic, without rate-checking tools.",
+      "column": "'Is Webservice Administrator'[Is Webservice Administrator]",
+      "values": [
+        "No"
+      ],
+      "confidence": "medium"
+    }
+  ],
+  "rules": [
+    "[Total Hotel Requests] counts one line per hotel asked for in each request (about 5x the number of searches, close to Statistics Zone [Hotels Requests]). Never report it as searches: searches are Statistics Zone [Total Requests].",
+    "[Hotel Requests OK] + [Hotel Requests KO] = [Total Hotel Requests].",
+    "[L2B] and [% L2B] here are hotel-level (hotel requests per booking), not comparable with Statistics History Client [L2B]. Never add them; they are blank when grouped by request type.",
+    "[Avg Days Travel Window] is broken (about 0 days); use the 'Travel Window' breakdown for how far ahead clients request.",
+    "Data starts 2026-08-17 and 2026-08-21/22 are missing: flag periods that include them as partial.",
+    "'Customers'[Customer Manager] and 'Hotels'[Account Manager] are mostly n/a; use 'Customers'[Account Manager].",
+    "Hotel, city and region lists are very long: always ask for a top N.",
+    "Use the cube's measures only; never SUM a column."
+  ],
+  "examples": [
+    {
+      "question": "Most requested hotels last week",
+      "measures": [
+        "[Total Hotel Requests]"
+      ],
+      "breakdowns": [
+        "'Hotels'[Hotel]"
+      ],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Hotel availability rate by hotel country in September 2026",
+      "measures": [
+        "[% Hotel Requests OK]"
+      ],
+      "breakdowns": [
+        "'Hotels'[Country]"
+      ],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Hotel-level requests by travel window this month",
+      "measures": [
+        "[Total Hotel Requests]"
+      ],
+      "breakdowns": [
+        "'Travel Window'[Description]"
+      ],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Combinations returned per hotel request by supplier code",
+      "measures": [
+        "[Avg Combinations]"
+      ],
+      "breakdowns": [
+        "'Hotels'[Supplier Code]"
+      ],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Hotel-level look-to-book by hotel country last month",
+      "measures": [
+        "[L2B]"
+      ],
+      "breakdowns": [
+        "'Hotels'[Country]"
+      ],
+      "date_role": "request_date"
+    }
+  ],
+  "review": [
+    {
+      "id": "hotel_client.hotels_requested_term",
+      "question": "Should \"hotels requested\" stay Statistics Zone [Hotels Requests], with Statistics Hotel Client [Total Hotel Requests] used only when the question needs hotel-level detail (by hotel, hotel country/city, supplier code)?",
+      "options": [
+        "Statistics Zone [Hotels Requests]",
+        "Statistics Hotel Client [Total Hotel Requests]"
+      ],
+      "proposed": "Statistics Zone [Hotels Requests]",
+      "why": "Both count hotels asked for inside searches (Sep 2026: 25.0 bn vs 26.0 bn, about 4% apart). Statistics Zone has the longer history (from 2026-07-18) and the search context; Hotel Client is the only one with hotel-level detail and starts 2026-08-17."
+    }
+  ]
+}

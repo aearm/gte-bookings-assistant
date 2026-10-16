@@ -18,6 +18,7 @@ import config
 import cubes
 import data_layer
 import llm
+import semantic
 import value_index
 
 MAX_CUBES = 3
@@ -33,6 +34,9 @@ _lock = threading.Lock()
 # ---------------------------------------------------------------- cards and graph --
 
 def _card(cube: str, p: dict) -> str:
+    from_meaning = semantic.card(cube)  # the meaning layer's card, with real coverage, when it has the cube
+    if from_meaning:
+        return from_meaning
     ms = ", ".join(dict.fromkeys(m["label"] for m in p.get("measures", [])))  # exact names come with the details
     dates = " · ".join(d["meaning"].split(".")[0][:60] + (" (default)" if d["column"] == p.get("default_date") else "")
                        for d in p.get("dates", [])[:3])
@@ -144,9 +148,10 @@ def value_hits(question: str, names: list[str], limit: int = 24) -> list[dict]:
 def hits_text(hits: list[dict], chosen: list[str] | None = None) -> str:
     if not hits:
         return ""
-    lines = []
+    terms = [h for h in hits if h.get("kind") == "term"]  # business words: always shown, they name the measure
+    lines = [semantic.hits_text(terms)] if terms else []
     for h in hits:
-        if chosen and h["cube"] not in chosen:
+        if h.get("kind") == "term" or (chosen and h["cube"] not in chosen):
             continue
         amount = f"{h['count']:,.0f}" if h["count"] else "no data"
         lines.append(f'- "{h["text"]}": {cubes.label(h["cube"])} {h["column"]} = "{h["value"]}" ({amount})')
@@ -193,7 +198,8 @@ class Pick:
 
 def pick(question: str, names: list[str], context: list[dict] | None = None) -> Pick:
     """The cubes to give the planner in full (a quick Haiku request when there is a choice)."""
-    hits = value_hits(question, names)
+    hits = semantic.term_hits(question) + value_hits(question, names)
+    names = [c for c in names if semantic.usable(c)] or names  # cubes with no data are never picked
     if len(names) <= 1:
         return Pick(list(names), "the cube picked", hits)
     parts = [f"Question: {question}"]
@@ -201,7 +207,7 @@ def pick(question: str, names: list[str], context: list[dict] | None = None) -> 
         used = prev.get("cubes") or []
         parts.insert(0, f"Earlier question: {prev.get('question', '')} (answered from: {', '.join(used) or '?'})")
     if hits:
-        parts.append("Values found in the data:\n" + hits_text(hits))
+        parts.append("Business terms and values found in the question:\n" + hits_text(hits))
     system = [{"type": "text", "text": ROUTE_RULES + "\n\n" + cards_text(),
                "cache_control": {"type": "ephemeral", "ttl": "1h"}}]
     try:

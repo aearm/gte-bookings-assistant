@@ -1,0 +1,870 @@
+{
+ "cube": "GlobalTravelEngine - Relocations",
+ "label": "Relocations (historical)",
+ "purpose": "Hotel bookings relocated (walked) from the booked hotel to a replacement hotel, with sales, cost, profit and guests of both sides. Only 34 relocations (2015, 2021, 2022), several on test hotels; data stops in 2022 — never use it for recent periods.",
+ "grain": "One relocated booking: the original (origin) booking paired with its replacement (destination) booking.",
+ "use_for": [
+  "number of relocations in 2015–2022",
+  "original vs replacement booking sales, cost and profit",
+  "which hotels, chains or star categories relocated guests, and where to"
+ ],
+ "not_for": [
+  "any period after August 2022",
+  "general booking volumes or sales (Bookings)",
+  "trends or rates: only 34 rows"
+ ],
+ "coverage": {
+  "main_date": "'Booking Date'[Booking Date]",
+  "first": "2015-01",
+  "last": "2022-08",
+  "note": "Very sparse historical data: 34 relocations in 9 months only (13 in January–March 2015, 19 in April–September 2021, 2 in August 2022), none since. Sales and cost amounts are filled for only a few 2021 relocations, and several rows use test hotels and suppliers."
+ },
+ "dates": [
+  {
+   "column": "'Booking Date'[Booking Date]",
+   "role": "booking_date",
+   "label": "Booking date",
+   "meaning": "When the relocated booking was made (the cube's main date).",
+   "default": true,
+   "words": [
+    "booked",
+    "booking date",
+    "made"
+   ],
+   "first": "2015-01",
+   "last": "2022-08"
+  },
+  {
+   "column": "'Arrival Date Origin'[Arrival Date Origin]",
+   "role": "travel_date",
+   "label": "Check-in date",
+   "meaning": "Check-in (arrival) date of the original booking.",
+   "default": false,
+   "words": [
+    "arrival",
+    "arriving",
+    "check-in",
+    "check in",
+    "travel",
+    "travel date"
+   ],
+   "first": "2015-03",
+   "last": "2022-12"
+  }
+ ],
+ "measures": [
+  {
+   "name": "[% Total Profit Destination]",
+   "label": "Replacement booking markup",
+   "definition": "Replacement booking profit as a share of its cost.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "broken: its formula refers to [Total Costs Destination], which does not exist (the cube has [Total Costs Dest]); every query returns #ERROR",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[% Total Profit Origin]",
+   "label": "Original booking markup",
+   "definition": "[Total Profit Origin] ÷ [Total Costs Origin]: a markup on cost, not a margin on sales.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "origin profit %",
+    "origin markup"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Checked: 5.26% = 425.1 ÷ 8,077.5 (cost); ÷ sales would be 5.0%. Amounts are filled for only a few 2021 relocations."
+  },
+  {
+   "name": "[Booking Window Dest]",
+   "label": "Longest booking window (replacement)",
+   "definition": "Longest booking window of the replacement bookings, in days.",
+   "unit": "days",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": " days",
+   "aggregation": "max",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "duplicate: identical to [Booking Window Origin] in every breakdown",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Booking Window Origin]",
+   "label": "Longest booking window",
+   "definition": "Longest booking window (days from booking to check-in) of the relocated bookings in the selection — the cube returns the maximum, not an average or a sum.",
+   "unit": "days",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": " days",
+   "aggregation": "max",
+   "terms": [
+    "booking window of relocated bookings",
+    "lead time of relocated bookings"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Checked: the all-data value (204) is the largest monthly value, so it aggregates as a maximum."
+  },
+  {
+   "name": "[Bookings]",
+   "label": "Bookings",
+   "definition": "Number of bookings involved in relocations.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "duplicate: identical to [Relocations] in every breakdown",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Modified Price Delayed Dest]",
+   "label": "Modified delayed price (replacement)",
+   "definition": "Delayed-price figure of the relocated booking, in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "no data: 0 in all data, and the cube receives no new data",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Modified Price Delayed Origin]",
+   "label": "Modified delayed price (original)",
+   "definition": "Delayed-price figure of the relocated booking, in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "no data: 0 in all data, and the cube receives no new data",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Original Price Delayed Dest]",
+   "label": "Original delayed price (replacement)",
+   "definition": "Delayed-price figure of the relocated booking, in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "no data: 0 in all data, and the cube receives no new data",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Original Price Delayed Origin]",
+   "label": "Original delayed price (original)",
+   "definition": "Delayed-price figure of the relocated booking, in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "no data: 0 in all data, and the cube receives no new data",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Price Delayed Profit Dest]",
+   "label": "Delayed-price profit (replacement)",
+   "definition": "Delayed-price figure of the relocated booking, in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "no data: 0 in all data, and the cube receives no new data",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Price Delayed Profit Origin]",
+   "label": "Delayed-price profit (original)",
+   "definition": "Delayed-price figure of the relocated booking, in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "no data: 0 in all data, and the cube receives no new data",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Relocations]",
+   "label": "Relocations",
+   "definition": "Number of relocated bookings (guests moved from the booked hotel to a replacement hotel).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "relocations",
+    "relocated bookings",
+    "number of relocations",
+    "walks",
+    "walked bookings",
+    "guest relocations"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Only 34 relocations in the whole cube."
+  },
+  {
+   "name": "[Total Costs Dest]",
+   "label": "Replacement booking cost",
+   "definition": "Supplier cost of the replacement booking, in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "destination cost",
+    "replacement booking cost"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Amounts are filled for only a few 2021 relocations."
+  },
+  {
+   "name": "[Total Costs Origin]",
+   "label": "Original booking cost",
+   "definition": "Supplier cost of the original booking, in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "origin cost",
+    "original booking cost"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Amounts are filled for only a few 2021 relocations."
+  },
+  {
+   "name": "[Total Pax Dest]",
+   "label": "Guests on replacement bookings",
+   "definition": "Number of passengers on the replacement bookings.",
+   "unit": "people",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "destination pax",
+    "replacement booking passengers"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Can differ from [Total Pax Origin] (88 vs 77 over all data)."
+  },
+  {
+   "name": "[Total Pax Origin]",
+   "label": "Relocated guests",
+   "definition": "Number of passengers on the original bookings.",
+   "unit": "people",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "relocated guests",
+    "relocated passengers",
+    "relocated pax",
+    "origin pax"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Total Profit Dest]",
+   "label": "Replacement booking profit",
+   "definition": "[Total Sales Dest] − [Total Costs Dest], in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "destination profit",
+    "replacement booking profit"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Amounts are filled for only a few 2021 relocations."
+  },
+  {
+   "name": "[Total Profit Origin]",
+   "label": "Original booking profit",
+   "definition": "[Total Sales Origin] − [Total Costs Origin], in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "origin profit",
+    "original booking profit"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Amounts are filled for only a few 2021 relocations."
+  },
+  {
+   "name": "[Total Sales Dest]",
+   "label": "Replacement booking sales",
+   "definition": "Sales amount of the replacement booking, in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "destination sales",
+    "replacement booking sales"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Amounts are filled for only a few 2021 relocations."
+  },
+  {
+   "name": "[Total Sales Origin]",
+   "label": "Original booking sales",
+   "definition": "Sales amount of the original booking, in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "origin sales",
+    "original booking sales"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Amounts are filled for only a few 2021 relocations."
+  }
+ ],
+ "breakdowns": [
+  {
+   "column": "'Status'[Status]",
+   "label": "Booking status",
+   "entity": "status",
+   "kind": "enum",
+   "meaning": "Status code of the relocated booking: Can = cancelled, CaC = cancelled by the client, Pag = live.",
+   "needs_columns": [
+    "'Status'[Status.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 4,
+   "sample_values": [
+    "Can",
+    "CaC",
+    "Pag"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Canceled Origin'[Canceled Origin]",
+   "label": "Original booking cancelled",
+   "entity": "cancelled_flag",
+   "kind": "enum",
+   "meaning": "Whether the original booking is cancelled.",
+   "needs_columns": [
+    "'Canceled Origin'[Canceled Origin.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 3,
+   "sample_values": [
+    "Yes",
+    "No"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Canceled Destination'[Canceled Destination]",
+   "label": "Replacement booking cancelled",
+   "entity": "cancelled_flag",
+   "kind": "enum",
+   "meaning": "Whether the replacement booking is cancelled.",
+   "needs_columns": [
+    "'Canceled Destination'[Canceled Destination.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 3,
+   "sample_values": [
+    "Yes",
+    "No"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Market]",
+   "label": "Market",
+   "entity": "market",
+   "kind": "enum",
+   "meaning": "The customer's market.",
+   "needs_columns": [
+    "'Customers'[Market.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 24,
+   "sample_values": [
+    "EUROPE",
+    "GCC - Except UAE and Local Residence",
+    "UAE",
+    "North Africa",
+    "ROW"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Customer]",
+   "label": "Customer",
+   "entity": "customer",
+   "kind": "name",
+   "meaning": "The agency or client of the booking.",
+   "needs_columns": [
+    "'Customers'[Customer.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 6772,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hotels Origin'[Hotel Origin]",
+   "label": "Original hotel",
+   "entity": "hotel",
+   "kind": "name",
+   "meaning": "Hotel the guests were relocated from.",
+   "needs_columns": [
+    "'Hotels Origin'[Hotel Origin.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 19,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hotels Destination'[Hotel Destination]",
+   "label": "Replacement hotel",
+   "entity": "hotel",
+   "kind": "name",
+   "meaning": "Hotel the guests were relocated to.",
+   "needs_columns": [
+    "'Hotels Destination'[Hotel Destination.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 19,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hotel Chain Origin'[Hotel Chain Origin]",
+   "label": "Original hotel chain",
+   "entity": "hotel_chain",
+   "kind": "name",
+   "meaning": "Chain of the original hotel (\"n/a\" when independent).",
+   "needs_columns": [
+    "'Hotel Chain Origin'[Hotel Chain Origin.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 58,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hotel Chain Destination'[Hotel Chain Destination]",
+   "label": "Replacement hotel chain",
+   "entity": "hotel_chain",
+   "kind": "name",
+   "meaning": "Chain of the replacement hotel (\"n/a\" when independent).",
+   "needs_columns": [
+    "'Hotel Chain Destination'[Hotel Chain Destination.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 58,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hotel Chain Origin'[Hotel Category Origin]",
+   "label": "Original hotel category",
+   "entity": "hotel_category",
+   "kind": "enum",
+   "meaning": "Star category of the original hotel.",
+   "needs_columns": [
+    "'Hotel Chain Origin'[Hotel Category Origin.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 13,
+   "sample_values": [
+    "5 Stars",
+    "4 Stars",
+    "3 Stars",
+    "Apartment",
+    "1 Star"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Hotel Chain Destination'[Hotel Category Destination]",
+   "label": "Replacement hotel category",
+   "entity": "hotel_category",
+   "kind": "enum",
+   "meaning": "Star category of the replacement hotel.",
+   "needs_columns": [
+    "'Hotel Chain Destination'[Hotel Category Destination.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 13,
+   "sample_values": [
+    "5 Stars",
+    "1 Star",
+    "4 Stars",
+    "3 Stars",
+    "Apartment"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Suppliers Origin'[Supplier Origin]",
+   "label": "Original supplier",
+   "entity": "supplier",
+   "kind": "name",
+   "meaning": "Supplier of the original booking.",
+   "needs_columns": [
+    "'Suppliers Origin'[Supplier Origin.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 2697,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Suppliers Destination'[Supplier Destination]",
+   "label": "Replacement supplier",
+   "entity": "supplier",
+   "kind": "name",
+   "meaning": "Supplier of the replacement booking.",
+   "needs_columns": [
+    "'Suppliers Destination'[Supplier Destination.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 2697,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Destinations Origin'[Destination Parent Origin]",
+   "label": "Original destination",
+   "entity": "destination",
+   "kind": "name",
+   "meaning": "Parent area (city / emirate / country) of the original hotel.",
+   "needs_columns": [
+    "'Destinations Origin'[Destination Parent Origin.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 8486,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Destinations Dest'[Destination Parent Destination]",
+   "label": "Replacement destination",
+   "entity": "destination",
+   "kind": "name",
+   "meaning": "Parent area (city / emirate / country) of the replacement hotel.",
+   "needs_columns": [
+    "'Destinations Dest'[Destination Parent Destination.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 8486,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Booking Date'[Year]",
+   "label": "Booking year",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Year of the booking date (text).",
+   "needs_columns": [
+    "'Booking Date'[Year.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 9,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Booking Date'[Month]",
+   "label": "Booking month number",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Month number of the booking date (\"01\"–\"12\") without the year.",
+   "needs_columns": [
+    "'Booking Date'[Month.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 13,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Arrival Date Origin'[Year Origin]",
+   "label": "Check-in year",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Year of the original booking's check-in date (text).",
+   "needs_columns": [
+    "'Arrival Date Origin'[Year Origin.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 9,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Arrival Date Origin'[Month Origin]",
+   "label": "Check-in month number",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Month number of the original check-in date (\"01\"–\"12\") without the year.",
+   "needs_columns": [
+    "'Arrival Date Origin'[Month Origin.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 13,
+   "sample_values": [],
+   "status": "active"
+  }
+ ],
+ "named_filters": [
+  {
+   "name": "cancelled relocated bookings",
+   "meaning": "Relocated bookings whose status is cancelled.",
+   "column": "'Status'[Status]",
+   "values": [
+    "Can",
+    "CaC"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "live relocated bookings",
+   "meaning": "Relocated bookings still live (status Pag).",
+   "column": "'Status'[Status]",
+   "values": [
+    "Pag"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "original booking cancelled",
+   "meaning": "Relocations where the original booking was cancelled.",
+   "column": "'Canceled Origin'[Canceled Origin]",
+   "values": [
+    "Yes"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "replacement booking kept",
+   "meaning": "Relocations whose replacement booking was not cancelled.",
+   "column": "'Canceled Destination'[Canceled Destination]",
+   "values": [
+    "No"
+   ],
+   "confidence": "high"
+  }
+ ],
+ "rules": [
+  "Historical, very small cube (34 relocations, 2015–2022): never use it for periods after August 2022, and say how few rows there are when answering.",
+  "Use the cube's measures only; never SUM a column.",
+  "List every breakdown column together with its needs_columns (group-with helper columns).",
+  "Origin = the original booking and hotel; Dest/Destination = the replacement. Never add origin and destination amounts together.",
+  "[% Total Profit Origin] is profit ÷ cost of the original booking (markup), not ÷ sales.",
+  "[Booking Window Origin] returns the largest booking window in days, not an average or a sum.",
+  "Several relocations use test hotels and suppliers; say so when listing hotels or suppliers.",
+  "'Booking Date'[Month] and 'Arrival Date Origin'[Month Origin] are month numbers without the year.",
+  "All amounts are in AED."
+ ],
+ "examples": [
+  {
+   "question": "How many relocations were there in 2021 by month?",
+   "measures": [
+    "[Relocations]"
+   ],
+   "breakdowns": [
+    "'Booking Date'[Year]",
+    "'Booking Date'[Month]"
+   ],
+   "date_role": "booking_date"
+  },
+  {
+   "question": "Which hotels relocated the most guests?",
+   "measures": [
+    "[Relocations]",
+    "[Total Pax Origin]"
+   ],
+   "breakdowns": [
+    "'Hotels Origin'[Hotel Origin]"
+   ],
+   "date_role": "booking_date"
+  },
+  {
+   "question": "Original vs replacement booking profit for relocations in 2021",
+   "measures": [
+    "[Total Profit Origin]",
+    "[Total Profit Dest]"
+   ],
+   "breakdowns": [],
+   "date_role": "booking_date"
+  },
+  {
+   "question": "Relocations by star category of the original hotel",
+   "measures": [
+    "[Relocations]"
+   ],
+   "breakdowns": [
+    "'Hotel Chain Origin'[Hotel Category Origin]"
+   ],
+   "date_role": "booking_date"
+  }
+ ],
+ "review": [
+  {
+   "id": "relocations.test_rows",
+   "question": "Exclude relocations on test hotels and suppliers by default?",
+   "options": [
+    "exclude (an admin adds the test hotel values as an override)",
+    "include all rows"
+   ],
+   "proposed": "exclude (an admin adds the test hotel values as an override)",
+   "why": "At least 13 of the 34 relocations involve test hotels; they inflate the counts. Hotel names cannot be written in this public file, so the exclusion has to be an admin override."
+  }
+ ]
+}

@@ -69,15 +69,31 @@ def test_a_failing_plan_is_fixed_once(layer, monkeypatch):
     assert "Your previous plan failed" in fake.user_text(1) and "Nope" in fake.user_text(1)
 
 
+def test_no_rows_get_one_more_look_then_stand(layer, monkeypatch):
+    nothing = 'SELECT COUNT(*) AS "N" FROM bookings GROUP BY "Status" HAVING COUNT(*) > 999'
+    fake = FakeClaude(plan([step(nothing)]), plan([step('SELECT COUNT(*) AS "N" FROM bookings')]))
+    monkeypatch.setattr(llm, "_create", fake)
+    steps = []
+    out = answering.answer("How many bookings", on_step=steps.append)
+    assert out.df["N"].iloc[0] == 12 and "returned no rows" in fake.user_text(1)
+    assert "No rows came back, asking Claude to check the filters" in steps
+    fake = FakeClaude(plan([step(nothing)]), plan([step(nothing)]))  # really nothing: shown as no results
+    monkeypatch.setattr(llm, "_create", fake)
+    out = answering.answer("How many bookings")
+    assert out.kind == "data" and out.df.empty and len(fake.requests) == 2
+
+
 def test_clarify_and_reuse_outcomes(layer, monkeypatch):
     ask_back = {**plan([]), "needs_clarification": True, "clarifying_question": "Which date?", "options": ["A", "B"]}
     monkeypatch.setattr(llm, "_create", FakeClaude(ask_back))
     out = answering.answer("Bookings in March")
     assert (out.kind, out.question, out.options) == ("clarify", "Which date?", ["A", "B"])
-    reuse = {**plan([]), "reuse_previous": True, "chart_request": "as a pie"}
-    monkeypatch.setattr(llm, "_create", FakeClaude(reuse))
-    out = answering.answer("show it as a pie", context=[{"question": "q", "query": "SELECT 1"}])
+    fake = FakeClaude(rewrite={"standalone_question": "Sales by channel", "chart_request": "as a pie",
+                               "kind": "chart_only", "periods": []})
+    monkeypatch.setattr(llm, "_create", fake)
+    out = answering.answer("show it as a pie", context=[{"question": "Sales by channel", "query": "SELECT 1"}])
     assert out.kind == "reuse" and out.result["chart_request"] == "as a pie"
+    assert fake.requests == [] and "Earlier question: Sales by channel" in fake.rewrites[0]["messages"][0]["content"]
 
 
 def test_dashboard_chart_follows_the_period(layer, monkeypatch):

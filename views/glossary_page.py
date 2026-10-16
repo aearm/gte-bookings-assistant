@@ -7,6 +7,7 @@ import admin
 import cube_setup
 import cubes
 import glossary
+import semantic
 import ui
 
 with st.sidebar:
@@ -22,6 +23,33 @@ rows, updated = glossary.load(cube)
 summary = cube_setup.load(cube).get("summary")
 if summary:
     st.markdown(summary)
+
+# decisions from the meaning layer (semantic/): only a person can make them; until then the proposed answer is used
+made = semantic.decisions(cube)
+waiting = [r for r in semantic.decisions() if r["status"] == "proposed"]
+if made:
+    st.subheader("Decisions")
+    st.caption(f"Questions only a person can answer. Until someone agrees, Claude uses the proposed answer. "
+               f"{len(waiting)} decision{'s' if len(waiting) != 1 else ''} still open across all cubes.")
+    is_admin = admin.signed_in()
+    for r in made:
+        with st.container(border=True, key=f"decision_{r['id']}"):
+            badge = ":green-badge[Agreed]" if r["status"] == "agreed" else ":orange-badge[Proposed]"
+            st.markdown(f"**{r['question']}** {badge}")
+            if r.get("why"):
+                st.caption(r["why"])
+            current = r.get("answer", r["proposed"])
+            if is_admin:
+                options = list(dict.fromkeys([*r.get("options", []), r["proposed"], current]))
+                choice = st.radio("Answer", options, index=options.index(current), key=f"decide_{r['id']}",
+                                  label_visibility="collapsed")
+                if st.button("Agree", key=f"agree_{r['id']}", type="primary" if r["status"] != "agreed" else "secondary"):
+                    semantic.save_decision(r["id"], choice)
+                    st.rerun()
+            else:
+                st.caption(f"Answer used: {current}")
+    if not is_admin:
+        st.caption(":material/lock: Agreeing to decisions needs the admin password.")
 drafts = [r for r in rows if r.get("Status") != "Agreed"]
 if not rows:
     st.info("Nothing here yet. An admin sets up this cube on the Cubes page, which fills in the glossary.",

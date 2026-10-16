@@ -82,6 +82,9 @@ _TIME_VALUE = re.compile(r"^(\d{1,2}[-/]\d{4}|\d{4}[-/]\d{1,2}([-/]\d{1,2})?|\d{
 def is_time_column(series: pd.Series) -> bool:
     if pd.api.types.is_datetime64_any_dtype(series):
         return True
+    if pd.api.types.is_numeric_dtype(series):  # a number is a time only as a year: 5926 "Used rooms (by stay month)" isn't
+        values = series.dropna()
+        return bool(_TIME_NAME.search(str(series.name))) and bool(((values % 1 == 0) & values.between(1900, 2100)).all())
     sample = series.dropna().astype(str).head(20)
     return bool(_TIME_NAME.search(str(series.name))) and (
         len(sample) == 0 or sum(bool(_TIME_VALUE.match(v.strip())) for v in sample) >= len(sample) * 0.6)
@@ -198,11 +201,12 @@ def trim(df: pd.DataFrame, spec: dict) -> tuple[pd.DataFrame, str]:
 
 def _style(fig, dark: bool, height: int | None, title: str, legend: bool = True):
     ink = INK["dark" if dark else "light"]
-    fig.update_layout(
-        title=dict(text=title, x=0, font=dict(size=15, color=ink["text"])) if title else None,
+    fig.update_layout(  # the title at the very top, the legend on its own line below it
+        title=dict(text=title, x=0, y=1, yref="container", yanchor="top", pad=dict(t=10),
+                   font=dict(size=15, color=ink["text"])) if title else None,
         font=dict(family=FONT, size=12, color=ink["muted"]),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=8, r=8, t=44 if title else 8, b=8),
+        margin=dict(l=8, r=8, t=(76 if legend else 44) if title else 8, b=8),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0, title_text="", font=dict(color=ink["text"]))
         if legend else dict(visible=False),
         hoverlabel=dict(bgcolor=ink["surface"], bordercolor=ink["grid"], font=dict(family=FONT, color=ink["text"])),
@@ -236,6 +240,10 @@ def build_figure(df: pd.DataFrame, spec: dict, dark: bool = False, height: int |
         return None
     df, _ = trim(df, spec)
     style = spec.get("style") or {}
+    if wants_one_chart(df, spec):
+        return _one_chart(df, spec, dark, height, show_title)
+    if needs_panels(df, spec):
+        return _panels(df, spec, dark, height, show_title)
     if kind == "donut" and style.get("sort") in ("value_desc", "value_asc") and spec["y"]:
         df = df.sort_values(spec["y"][0], ascending=style["sort"] == "value_asc")
     fig = _draw(df, spec, dark, height, show_title)
@@ -400,6 +408,8 @@ def _draw(df: pd.DataFrame, spec: dict, dark: bool, height: int | None, show_tit
                      **common)
     if kind in ("bar", "horizontal_bar", "stacked_bar"):
         fig.update_layout(barcornerradius=4, bargap=0.3, bargroupgap=0.08)
+        if not is_time_column(df[x]):  # customer "1042": a label side by side with others, never a number line
+            (fig.update_yaxes if kind == "horizontal_bar" else fig.update_xaxes)(type="category")
     if isinstance(y_arg, list):  # several measures: the legend names them, so no "value" axis title
         fig.update_layout(**{"xaxis_title" if kind == "horizontal_bar" else "yaxis_title": ""})
     if kind == "horizontal_bar":
@@ -407,6 +417,186 @@ def _draw(df: pd.DataFrame, spec: dict, dark: bool, height: int | None, show_tit
         fig.update_yaxes(showgrid=False, title="")
     fig.update_layout(hovermode="x unified" if kind in ("line", "area", "bar", "stacked_bar") else "closest")
     return _style(fig, dark, height, title, legend=bool(color) or isinstance(y_arg, list))
+
+
+# ---------------------------------------------------------------- panels (small multiples) --
+# Several measures of different size or unit (requests in millions, bookings in tens, sales in AED)
+# can't share one axis, and a second breakdown (e.g. the day) leaves no room for them as series. So
+# each measure gets its own panel with its own scale and format, the panels share the categories,
+# and the breakdown is drawn the same way in every panel, with one legend.
+
+PANEL_KINDS = ("bar", "horizontal_bar", "line", "area")
+
+
+def needs_panels(df: pd.DataFrame, spec: dict) -> bool:
+    ys = [y for y in spec.get("y") or [] if y in df.columns]
+    if spec.get("chart_type") not in PANEL_KINDS or len(ys) < 2:
+        return False
+    if spec.get("color") or (spec.get("style") or {}).get("measures") == "panels":
+        return True
+    units = {number_format(spec, y)[1:] + (number_format(spec, y)[0].endswith("%"),) for y in ys}
+    sizes = [float(df[y].abs().max() or 0) for y in ys]
+    smallest = min((s for s in sizes if s), default=0)
+    return len(units) > 1 or bool(smallest and max(sizes) / smallest >= 20)
+
+
+def _panels(df: pd.DataFrame, spec: dict, dark: bool, height: int | None, show_title: bool):
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
+    kind, x, color = spec["chart_type"], spec["x"], spec.get("color") or ""
+    ys = [y for y in spec["y"] if y in df.columns]
+    mode = "dark" if dark else "light"
+    colors, ink, style = PALETTE[mode], INK[mode], spec.get("style") or {}
+    horizontal, over_time = kind == "horizontal_bar", kind in ("line", "area")
+    if over_time and is_time_column(df[x]):
+        df = df.iloc[time_order(df[x])]
+    labels = df[x].astype(str)
+    order = list(dict.fromkeys(labels))  # the categories, the same in every panel
+    if style.get("sort") in ("value_desc", "value_asc") and not over_time:
+        totals = df.groupby(labels, sort=False)[ys[0]].sum()
+        order = list(totals.sort_values(ascending=style["sort"] == "value_asc").index)
+    elif style.get("sort") == "label":
+        order = sorted(order)
+
+    def unit(y):
+        _, prefix, suffix = number_format(spec, y)
+        u = (prefix or suffix).strip()
+        return f"{y} ({u})" if u and u != "%" and u.lower() not in y.lower() else y
+    n = len(ys)
+    fig = (make_subplots(rows=1, cols=n, shared_yaxes=True, horizontal_spacing=0.04, subplot_titles=[unit(y) for y in ys])
+           if horizontal else
+           make_subplots(rows=n, cols=1, shared_xaxes=True, vertical_spacing=min(0.1, 0.5 / n), subplot_titles=[unit(y) for y in ys]))
+    groups = list(df.assign(_label=labels).groupby(df[color].astype(str), sort=False)) if color else [("", df.assign(_label=labels))]
+    for i, y in enumerate(ys):
+        d3, prefix, suffix = number_format(spec, y)
+        shown = d3 or (",.0f" if (df[y].abs().max() or 0) >= 100 else ",.2f")
+        where = dict(row=1, col=i + 1) if horizontal else dict(row=i + 1, col=1)
+        for j, (name, part) in enumerate(groups):
+            if not over_time:  # one bar per category (and breakdown value), in the panels' order
+                part = part.groupby("_label", sort=False)[ys].sum().reindex(order)
+            series = name or y
+            value = f"{prefix}%{{{'x' if horizontal else 'y'}:{shown}}}{suffix}"
+            head = f"%{{y}} · {series}" if horizontal else series
+            common = dict(name=series, legendgroup=series, showlegend=bool(color) and i == 0,
+                          hovertemplate=f"{head}: {value}<extra></extra>")
+            cats = list(part.index) if not over_time else list(part["_label"])
+            if over_time:
+                trace = go.Scatter(x=cats, y=part[y], mode="lines+markers" if len(part) <= 40 else "lines",
+                                   line=dict(color=colors[j % len(colors)], width=2), marker=dict(size=6),
+                                   fill="tozeroy" if kind == "area" else None, **common)
+            elif horizontal:
+                trace = go.Bar(x=part[y], y=cats, orientation="h", marker_color=colors[j % len(colors)], **common)
+            else:
+                trace = go.Bar(x=cats, y=part[y], marker_color=colors[j % len(colors)], **common)
+            fig.add_trace(trace, **where)
+        axis = fig.update_xaxes if horizontal else fig.update_yaxes
+        axis(tickformat=d3 or None, tickprefix=prefix, ticksuffix=suffix, rangemode="tozero", **where)
+    label_axis = fig.update_yaxes if horizontal else fig.update_xaxes
+    label_axis(type="category", categoryorder="array", categoryarray=order[::-1] if horizontal else order)
+    if style.get("label_angle") and not horizontal:
+        fig.update_xaxes(tickangle=style["label_angle"], row=n, col=1)
+    fig.update_layout(barmode="group", barcornerradius=3, bargap=0.25, bargroupgap=0.06,
+                      hovermode="x unified" if not horizontal else "closest")
+    for i, note in enumerate(fig.layout.annotations):  # panel titles: left-aligned above each panel
+        start = fig.layout["xaxis" if i == 0 else f"xaxis{i + 1}"].domain[0] if horizontal else 0
+        note.update(x=start, xanchor="left", font=dict(size=12, color=ink["text"]))
+    title = spec.get("title", "") if show_title else ""
+    _style(fig, dark, max(height or 0, (360 if horizontal else 175 * n + 70)), title, legend=bool(color))
+    fig.update_layout(margin=dict(t=fig.layout.margin.t + 18),  # room for the first panel's title
+                      legend=dict(x=1, xanchor="right"))  # on the right, clear of the left-aligned panel title
+    return fig
+
+
+# ---------------------------------------------------------------- one chart, an axis per measure --
+# When the user asks for the measures together ("6 bars for each customer, 3 for each day"): up to 3
+# measures, each on its own axis in its own colour (axis and bars alike), the bars side by side, and a
+# second breakdown (e.g. the day) in shades of each measure's colour, earliest lightest.
+
+ONE_CHART_MAX = 3
+
+
+def wants_one_chart(df: pd.DataFrame, spec: dict) -> bool:
+    ys = [y for y in spec.get("y") or [] if y in df.columns]
+    return ((spec.get("style") or {}).get("measures") == "one_chart" and spec.get("chart_type") in PANEL_KINDS
+            and 2 <= len(ys) <= ONE_CHART_MAX)
+
+
+def _shade(color: str, toward: str, amount: float) -> str:
+    """color moved `amount` (0-1) of the way toward another colour (the background, for lighter shades)."""
+    a, b = (tuple(int(c[i:i + 2], 16) for i in (1, 3, 5)) for c in (color, toward))
+    return "#" + "".join(f"{round(p + (q - p) * amount):02x}" for p, q in zip(a, b))
+
+
+def _one_chart(df: pd.DataFrame, spec: dict, dark: bool, height: int | None, show_title: bool):
+    import plotly.graph_objects as go
+    kind, x, color = spec["chart_type"], spec["x"], spec.get("color") or ""
+    ys = [y for y in spec["y"] if y in df.columns]
+    mode = "dark" if dark else "light"
+    colors, ink, style = PALETTE[mode], INK[mode], spec.get("style") or {}
+    over_time = kind in ("line", "area")
+    if is_time_column(df[x]):
+        df = df.iloc[time_order(df[x])]
+    labels = df[x].astype(str)
+    order = list(dict.fromkeys(labels))
+    if style.get("sort") in ("value_desc", "value_asc") and not over_time:
+        totals = df.groupby(labels, sort=False)[ys[0]].sum()
+        order = list(totals.sort_values(ascending=style["sort"] == "value_asc").index)
+    elif style.get("sort") == "label":
+        order = sorted(order)
+    data = df.assign(_label=labels)
+    if color:
+        names = [str(v) for v in data[color].drop_duplicates()]
+        if is_time_column(data[color]):
+            names = [names[i] for i in time_order(names)]
+        groups = [(n, data[data[color].astype(str) == n]) for n in names]
+    else:
+        groups = [("", data)]
+
+    def unit(y):
+        _, prefix, suffix = number_format(spec, y)
+        u = (prefix or suffix).strip()
+        return f"{y} ({u})" if u and u != "%" and u.lower() not in y.lower() else y
+    fig = go.Figure()
+    for i, y in enumerate(ys):
+        d3, prefix, suffix = number_format(spec, y)
+        shown = d3 or (",.0f" if (df[y].abs().max() or 0) >= 100 else ",.2f")
+        base, axis = colors[i % len(colors)], "y" if i == 0 else f"y{i + 1}"
+        for j, (name, part) in enumerate(groups):
+            # earliest lightest: with 2 days the first is a light shade, the second the measure's own colour
+            hue = _shade(base, ink["surface"], 0.55 * (len(groups) - 1 - j) / max(len(groups) - 1, 1))
+            part = part.groupby("_label", sort=False)[y].sum().reindex(order)
+            series = f"{y} · {name}" if name else y
+            common = dict(name=name or y, yaxis=axis, legendgroup=y, legendgrouptitle_text=y if name else None,
+                          hovertemplate=f"{series}: {prefix}%{{y:{shown}}}{suffix}<extra></extra>")
+            if over_time:
+                fig.add_trace(go.Scatter(x=list(part.index), y=part.values, mode="lines+markers" if len(part) <= 40
+                                         else "lines", line=dict(color=hue, width=2), marker=dict(size=6),
+                                         fill="tozeroy" if kind == "area" and i == 0 else None, **common))
+            else:
+                fig.add_trace(go.Bar(x=list(part.index), y=part.values, marker_color=hue,
+                                     offsetgroup=f"{i}-{j}", **common))
+        # round ticks on every axis ("sync", Plotly's default for the others, gives 14, 29, 43 ...)
+        side = dict(side="left") if i == 0 else dict(side="right", overlaying="y", tickmode="auto")
+        if i >= 2:  # the third axis right of the second, outside the plot
+            side.update(anchor="free", position=1)
+            fig.update_xaxes(domain=[0, 0.88])
+        fig.update_layout({("yaxis" if i == 0 else f"yaxis{i + 1}"): dict(
+            title=dict(text=unit(y), font=dict(color=base)), tickfont=dict(color=base), tickformat=d3 or None,
+            tickprefix=prefix, ticksuffix=suffix, rangemode="tozero", showgrid=i == 0, **side)})
+    fig.update_xaxes(type="category", categoryorder="array", categoryarray=order)
+    if style.get("label_angle"):
+        fig.update_xaxes(tickangle=style["label_angle"])
+    if style.get("x_title"):
+        fig.update_xaxes(title_text=style["x_title"])
+    fig.update_layout(barmode="group", barcornerradius=3, bargap=0.2, bargroupgap=0.04, hovermode="x unified")
+    title = spec.get("title", "") if show_title else ""
+    _style(fig, dark, max(height or 0, 440), title)
+    fig.update_layout(margin=dict(t=44 if title else 8),  # the legend below: each measure, then its days
+                      legend=dict(y=-0.12, yanchor="top", groupclick="toggleitem", tracegroupgap=24))
+    for i, y in enumerate(ys):  # _style greys the axes: each measure's axis keeps its bars' colour
+        key = "yaxis" if i == 0 else f"yaxis{i + 1}"
+        fig.layout[key].tickfont.color = fig.layout[key].title.font.color = colors[i % len(colors)]
+    return fig
 
 
 # ---------------------------------------------------------------- formatting --

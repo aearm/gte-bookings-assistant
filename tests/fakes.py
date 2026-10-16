@@ -15,13 +15,24 @@ def tool_response(*calls):
 
 class FakeClaude:
     """Install with monkeypatch.setattr(llm, "_create", fake). Each response is a dict (JSON answer)
-    or a list of (tool name, input) calls; a callable gets the request and returns either."""
+    or a list of (tool name, input) calls; a callable gets the request and returns either.
+    The question rewrite (rewrite.py) is answered apart, from self.rewrite (by default the message
+    unchanged, no periods), and recorded in self.rewrites, so scripts only list the other calls."""
 
-    def __init__(self, *responses):
+    def __init__(self, *responses, rewrite=None):
         self.responses = list(responses)
         self.requests = []
+        self.rewrites = []
+        self.rewrite = rewrite
 
     def __call__(self, **kwargs):
+        if kwargs.get("purpose") == "rewrite":
+            self.rewrites.append(kwargs)
+            content = kwargs["messages"][0]["content"]
+            message = content.split("Message: ", 1)[-1].split("\n\n", 1)[0]
+            out = self.rewrite(kwargs) if callable(self.rewrite) else self.rewrite
+            return text_response(out or {"standalone_question": message, "chart_request": "", "kind": "new",
+                                         "periods": []})
         self.requests.append(kwargs)
         if not self.responses:
             raise AssertionError("Claude was asked more often than the test expected")

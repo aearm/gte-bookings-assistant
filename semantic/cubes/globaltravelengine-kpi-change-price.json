@@ -1,0 +1,743 @@
+{
+ "cube": "GlobalTravelEngine - KPI Change Price",
+ "label": "Price Changes (KPI Change Price)",
+ "purpose": "Price changes detected between the availability price and later booking-flow steps (cancellation policy / booking rules, booking, modify), with the number of requests checked and the size of the difference. Used to track price stability by supplier, customer and hotel.",
+ "grain": "One detected price change per request, product and room allocation, by request date and hour.",
+ "use_for": [
+  "number of price changes and price change rate",
+  "price change rate by supplier, supplier credential, customer, market or channel",
+  "changes by booking-flow step, allowed vs not allowed, availability errors",
+  "hotels with most price changes",
+  "changes by hour, check-in date or lead-time band"
+ ],
+ "not_for": [
+  "bookings, sales or profit (Sales Per Owned Hotels, Bookings)",
+  "hotel options locked after a price change (History Hotel Locks)",
+  "rate updates pushed by hotels' channel managers (Statistics Rate Changes Channel Manager API)",
+  "non-hotel products (only Accommodation has data)"
+ ],
+ "coverage": {
+  "main_date": "'Create Date'[Create Date]",
+  "first": "2025-10",
+  "last": "2026-10",
+  "note": "Data starts mid-October 2025; the current month is partial. Monthly volumes grew about sixfold between January and September 2026. [Client Requests] only from 2026-09."
+ },
+ "dates": [
+  {
+   "column": "'Create Date'[Create Date]",
+   "role": "request_date",
+   "label": "Request date",
+   "meaning": "Day the booking-flow request was made and the price change detected (the cube's main date).",
+   "default": true,
+   "words": [
+    "detected",
+    "requested",
+    "request date",
+    "checked",
+    "happened",
+    "created"
+   ],
+   "first": "2025-10",
+   "last": "2026-10"
+  },
+  {
+   "column": "'Travel Date Start'[Travel Date Start]",
+   "role": "travel_date",
+   "label": "Check-in date",
+   "meaning": "Check-in date of the requested stay; about 2% of changes have no travel date.",
+   "default": false,
+   "words": [
+    "check-in",
+    "check in",
+    "travel date",
+    "arrival",
+    "for stays",
+    "travelling"
+   ],
+   "first": "2025-11",
+   "last": "2028-09"
+  }
+ ],
+ "measures": [
+  {
+   "name": "[Changes]",
+   "label": "Price changes",
+   "definition": "Number of price changes detected between the availability price and a later booking-flow step (cancellation policy / booking rules, booking, modify).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "price changes",
+    "number of price changes",
+    "price change count"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Not the same as price-change locks (History Hotel Locks) or channel-manager rate changes."
+  },
+  {
+   "name": "[Requests]",
+   "label": "Price-check requests",
+   "definition": "Number of booking-flow requests checked for a price change (the base of the price change rate).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "price check requests",
+    "requests checked for price changes"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Splits by supplier module, credential, customer, market, channel, interface, hour, travel date and travel window; it does not split by 'Change Allowed' (repeats the total) and is blank for the modify step."
+  },
+  {
+   "name": "[% Changes]",
+   "label": "Price change rate",
+   "definition": "Changes divided by Requests (checked).",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "price change rate",
+    "% price changes",
+    "price change ratio",
+    "price change percentage"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Ratio: never add across rows. Do not split by 'Change Allowed' (its denominator does not split)."
+  },
+  {
+   "name": "[Client Requests]",
+   "label": "Client requests",
+   "definition": "Number of client requests behind the price checks.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "low",
+   "notes": "Only recorded from 2026-09 (zero before); do not use for earlier periods."
+  },
+  {
+   "name": "[% Changes Client]",
+   "label": "Price change rate per client request",
+   "definition": "Changes divided by Client Requests.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "misleading: [Client Requests] is only recorded from 2026-09, so the rate is infinite before and inflated over longer periods",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Diff Price]",
+   "label": "Average price difference",
+   "definition": "Average difference between the availability price and the later price, in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [
+    "average price difference",
+    "average price change amount"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "low",
+   "notes": "Distorted by extreme outliers (largest difference about 3.08 billion AED); allowed changes average about 243 AED, not-allowed about 27,500 AED. Give it with a caveat."
+  },
+  {
+   "name": "[Max Diff Price]",
+   "label": "Largest price difference",
+   "definition": "Largest price difference among the changes in context, in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "max",
+   "terms": [
+    "largest price difference",
+    "maximum price change"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "low",
+   "notes": "Contains absurd outliers (billions of AED) in most months."
+  },
+  {
+   "name": "[Min Diff Price]",
+   "label": "Smallest price difference",
+   "definition": "Smallest price difference among the changes in context, in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "min",
+   "terms": [
+    "smallest price difference"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "0 for almost every selection (only the modify step shows a positive minimum)."
+  }
+ ],
+ "breakdowns": [
+  {
+   "column": "'Product Types'[Module]",
+   "label": "Supplier",
+   "entity": "supplier",
+   "kind": "name",
+   "meaning": "Supplier connection (module) the price came from; the same supplier list as 'Suppliers'[Supplier] in History Hotel Locks. Use it for price change rate by supplier ([Requests] splits by it).",
+   "needs_columns": [
+    "'Product Types'[Module.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 114,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Product Types'[Module Code]",
+   "label": "Supplier code",
+   "entity": "supplier_code",
+   "kind": "code",
+   "meaning": "Short code of the supplier connection.",
+   "needs_columns": [
+    "'Product Types'[Module Code.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 114,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Credentials'[Credential]",
+   "label": "Supplier credential",
+   "entity": "supplier_credential",
+   "kind": "name",
+   "meaning": "Supplier account / credential used for the request (finer than the supplier).",
+   "needs_columns": [
+    "'Credentials'[Credential.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 206,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Context'[Context]",
+   "label": "Booking-flow step",
+   "entity": "booking_flow_step",
+   "kind": "enum",
+   "meaning": "Step where the change was detected: cancellation policy / booking rules (almost all), booking, or modify.",
+   "needs_columns": [
+    "'Context'[Context.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 4,
+   "sample_values": [
+    "Cancellation Policy",
+    "Reservation/Booking",
+    "Modify Reservation/Booking",
+    "Unknown"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Change Allowed'[Change Allowed]",
+   "label": "Change allowed",
+   "entity": "change_allowed",
+   "kind": "enum",
+   "meaning": "Whether the price change was allowed (accepted) under the price-change rules.",
+   "needs_columns": [
+    "'Change Allowed'[Change Allowed.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 3,
+   "sample_values": [
+    "Yes",
+    "No",
+    "Unknown"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Error Avail'[Error Avail]",
+   "label": "Availability error",
+   "entity": "availability_error",
+   "kind": "enum",
+   "meaning": "Whether the availability call returned an error.",
+   "needs_columns": [
+    "'Error Avail'[Error Avail.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 3,
+   "sample_values": [
+    "Yes",
+    "No",
+    "Unknown"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Channels'[Channel]",
+   "label": "Channel",
+   "entity": "sale_channel",
+   "kind": "enum",
+   "meaning": "Channel of the request: Xml (API), Web (B2B) or B2C.",
+   "needs_columns": [],
+   "sort_by": "",
+   "distinct": 3,
+   "sample_values": [
+    "Xml",
+    "Web",
+    "B2C"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Interfaces'[Interface]",
+   "label": "Interface",
+   "entity": "interface",
+   "kind": "enum",
+   "meaning": "Interface of the request: XML, WEB or CLC.",
+   "needs_columns": [],
+   "sort_by": "",
+   "distinct": 4,
+   "sample_values": [
+    "XML",
+    "WEB",
+    "CLC",
+    "UNKW"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Customer]",
+   "label": "Customer",
+   "entity": "customer",
+   "kind": "name",
+   "meaning": "Client agency that made the request.",
+   "needs_columns": [
+    "'Customers'[Customer.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 6772,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Market]",
+   "label": "Market",
+   "entity": "market",
+   "kind": "enum",
+   "meaning": "Customer market.",
+   "needs_columns": [
+    "'Customers'[Market.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 24,
+   "sample_values": [
+    "ROW",
+    "EUROPE",
+    "UAE",
+    "GCC - Except UAE and Local Residence",
+    "Turkish Market",
+    "Middle East",
+    "North Africa",
+    "B2C UAE"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Account Manager]",
+   "label": "Account manager",
+   "entity": "account_manager",
+   "kind": "name",
+   "meaning": "Account manager responsible for the customer.",
+   "needs_columns": [
+    "'Customers'[Account Manager.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 19,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Master Integrator]",
+   "label": "Integrator",
+   "entity": "integrator",
+   "kind": "name",
+   "meaning": "Technology integrator the customer connects through.",
+   "needs_columns": [
+    "'Customers'[Master Integrator.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 68,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Unique Product'[Product Name]",
+   "label": "Hotel",
+   "entity": "hotel",
+   "kind": "name",
+   "meaning": "Hotel (internal product) whose price changed.",
+   "needs_columns": [
+    "'Unique Product'[Product Name.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 1368411,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Intervals Avail - Bookingrules'[Interval Avail - Bookingrules]",
+   "label": "Gap availability to booking rules",
+   "entity": "time_gap_band",
+   "kind": "enum",
+   "meaning": "Band of the time gap between the availability call and the booking-rules call (unit not documented).",
+   "needs_columns": [
+    "'Intervals Avail - Bookingrules'[Interval Avail - Bookingrules.Key0]"
+   ],
+   "sort_by": "'Intervals Avail - Bookingrules'[Interval Avail - Bookingrules.Key0]",
+   "distinct": 28,
+   "sample_values": [
+    "0 - 1",
+    "1 - 2",
+    "2 - 3",
+    "3 - 4",
+    "4 - 6",
+    "6 - 8",
+    "8 - 10",
+    "10 - 15"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Travel Window'[Name]",
+   "label": "Travel window",
+   "entity": "lead_time_band",
+   "kind": "enum",
+   "meaning": "Lead-time band between request and check-in; about 70% of changes are Unknown.",
+   "needs_columns": [
+    "'Travel Window'[Name.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 11,
+   "sample_values": [
+    "Last Minute",
+    "Last Week",
+    "Two Weeks",
+    "Three Weeks",
+    "One Month",
+    "Two Months",
+    "Three Months",
+    "Unknown"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Is Webservice Administrator'[Is Webservice Administrator]",
+   "label": "Handled by re-pricing tool",
+   "entity": "repricing_flag",
+   "kind": "enum",
+   "meaning": "Whether a price-optimisation (re-booking) tool sent the request.",
+   "needs_columns": [
+    "'Is Webservice Administrator'[Is Webservice Administrator.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 3,
+   "sample_values": [
+    "Yes",
+    "No",
+    "Unknown"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Hours'[Hour]",
+   "label": "Hour of day",
+   "entity": "hour",
+   "kind": "date_part",
+   "meaning": "Hour of day (00-23) of the request.",
+   "needs_columns": [
+    "'Hours'[Hour.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 25,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Create Date'[Year]",
+   "label": "Year",
+   "entity": "request_year",
+   "kind": "date_part",
+   "meaning": "Year of the request.",
+   "needs_columns": [],
+   "sort_by": "'Create Date'[Year.Fecha ISO DESC Year]",
+   "distinct": null,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Create Date'[Quarter]",
+   "label": "Quarter",
+   "entity": "request_quarter",
+   "kind": "date_part",
+   "meaning": "Quarter of the request, e.g. Quarter 3, 2026.",
+   "needs_columns": [
+    "'Create Date'[Quarter.UniqueName]"
+   ],
+   "sort_by": "'Create Date'[Quarter.Fecha ISO DESC Quarter]",
+   "distinct": 6,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Create Date'[Month Name]",
+   "label": "Month",
+   "entity": "request_month",
+   "kind": "date_part",
+   "meaning": "Month of the request, e.g. September 2026.",
+   "needs_columns": [
+    "'Create Date'[Month Name.UniqueName]"
+   ],
+   "sort_by": "'Create Date'[Month Name.Fecha ISO DESC Month Name]",
+   "distinct": 14,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Create Date'[Week Of Year]",
+   "label": "Week of year",
+   "entity": "request_week",
+   "kind": "date_part",
+   "meaning": "Week number of the request.",
+   "needs_columns": [
+    "'Create Date'[Week Of Year.UniqueName]"
+   ],
+   "sort_by": "'Create Date'[Week Of Year.Week Of Year DESC]",
+   "distinct": 54,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Create Date'[Day Week]",
+   "label": "Weekday",
+   "entity": "request_weekday",
+   "kind": "date_part",
+   "meaning": "Day of week of the request.",
+   "needs_columns": [
+    "'Create Date'[Day Week.UniqueName]"
+   ],
+   "sort_by": "'Create Date'[Day Week.Day Week DESC]",
+   "distinct": 8,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Travel Date Start'[Month Name]",
+   "label": "Check-in month",
+   "entity": "checkin_month",
+   "kind": "date_part",
+   "meaning": "Month of check-in, e.g. October 2026.",
+   "needs_columns": [
+    "'Travel Date Start'[Month Name.UniqueName]"
+   ],
+   "sort_by": "'Travel Date Start'[Month Name.Fecha ISO DESC Month Name]",
+   "distinct": 48,
+   "sample_values": [],
+   "status": "active"
+  }
+ ],
+ "named_filters": [
+  {
+   "name": "allowed price changes",
+   "meaning": "Price changes that were allowed (accepted).",
+   "column": "'Change Allowed'[Change Allowed]",
+   "values": [
+    "Yes"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "not allowed price changes",
+   "meaning": "Price changes that were not allowed.",
+   "column": "'Change Allowed'[Change Allowed]",
+   "values": [
+    "No"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "cancellation-policy step",
+   "meaning": "Changes detected at the cancellation-policy / booking-rules check.",
+   "column": "'Context'[Context]",
+   "values": [
+    "Cancellation Policy"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "booking step",
+   "meaning": "Changes detected at booking.",
+   "column": "'Context'[Context]",
+   "values": [
+    "Reservation/Booking"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "modify step",
+   "meaning": "Changes detected when modifying a booking.",
+   "column": "'Context'[Context]",
+   "values": [
+    "Modify Reservation/Booking"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "availability errors",
+   "meaning": "Requests whose availability call returned an error.",
+   "column": "'Error Avail'[Error Avail]",
+   "values": [
+    "Yes"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "xml channel",
+   "meaning": "Requests through the XML / API channel.",
+   "column": "'Channels'[Channel]",
+   "values": [
+    "Xml"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "web channel",
+   "meaning": "Requests through the B2B web channel.",
+   "column": "'Channels'[Channel]",
+   "values": [
+    "Web"
+   ],
+   "confidence": "high"
+  }
+ ],
+ "rules": [
+  "Price change rate is [% Changes] (changes / requests); never add it across rows and do not break it down by 'Change Allowed'.",
+  "For 'by supplier' use 'Product Types'[Module]; 'Credentials'[Credential] is the finer supplier account.",
+  "[Avg Diff Price] and [Max Diff Price] are distorted by extreme outliers: give them with a caveat, prefer [Changes] and [% Changes].",
+  "Do not split by 'Currency'[Currency Ref]: both values return the same totals; differences are in AED.",
+  "Always put a breakdown's needs_columns next to it; 'Channels' and 'Interfaces' columns and the Year column need none.",
+  "Use the cube's measures only; never SUM a column."
+ ],
+ "examples": [
+  {
+   "question": "Price change rate by supplier last month",
+   "measures": [
+    "[% Changes]",
+    "[Changes]",
+    "[Requests]"
+   ],
+   "breakdowns": [
+    "'Product Types'[Module]"
+   ],
+   "date_role": "request_date"
+  },
+  {
+   "question": "Price changes per month, allowed vs not allowed",
+   "measures": [
+    "[Changes]"
+   ],
+   "breakdowns": [
+    "'Create Date'[Month Name]",
+    "'Change Allowed'[Change Allowed]"
+   ],
+   "date_role": "request_date"
+  },
+  {
+   "question": "Which customers had the highest price change rate this quarter",
+   "measures": [
+    "[% Changes]"
+   ],
+   "breakdowns": [
+    "'Customers'[Customer]"
+   ],
+   "date_role": "request_date"
+  }
+ ],
+ "review": [
+  {
+   "id": "kpi_change_price.rate_definition",
+   "question": "Does 'price change rate' mean changes per request ([% Changes], about 4%) or changes per client request ([% Changes Client])?",
+   "options": [
+    "[% Changes]",
+    "[% Changes Client]"
+   ],
+   "proposed": "[% Changes]",
+   "why": "[Client Requests] is only recorded from 2026-09, so [% Changes Client] is infinite before and inflated over longer periods; [% Changes] is consistent over the whole history and splits by supplier."
+  }
+ ]
+}

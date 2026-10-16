@@ -1,0 +1,848 @@
+{
+  "cube": "GlobalTravelEngine - Statistics Zone",
+  "label": "Searches (Statistics Zone)",
+  "purpose": "Client hotel searches (XML/API availability requests) received by GlobalTravelEngine: number of searches, how many succeeded or failed, hotels requested and returned, and search lead time. The official source for \"searches\", by customer, destination, guest nationality and travel date.",
+  "grain": "Search/API requests aggregated per request day, travel day, customer, request type, destination area, guest nationality, channel/interface, availability type and lead-time band.",
+  "use_for": [
+    "number of searches (hotel searches, search requests)",
+    "successful and failed searches, search success/failure rate",
+    "hotels requested vs hotels returned in searches",
+    "searches by customer, market, destination, guest nationality or travel month",
+    "how far ahead clients search (search lead time)"
+  ],
+  "not_for": [
+    "bookings, sales or revenue (Bookings)",
+    "searches before 2026-07-18 (no data here; Statistics History Client has API requests from 2025-10-16)",
+    "today's traffic (Statistics Real Time Client)",
+    "API calls of all types, response times or look-to-book (Statistics History Client)",
+    "B2B web portal traffic (Statistics Client Web)"
+  ],
+  "coverage": {
+    "main_date": "'Request Date'[Request Date]",
+    "first": "2025-11",
+    "last": "2026-10",
+    "note": "Continuous daily data only from 2026-07-18 to yesterday; 2025-11 holds one isolated day (2025-11-19). Nothing between 2025-11-20 and 2026-07-17 and nothing for today."
+  },
+  "dates": [
+    {
+      "column": "'Request Date'[Request Date]",
+      "role": "request_date",
+      "label": "Request date",
+      "meaning": "Day the client sent the search (the cube's main date).",
+      "default": true,
+      "words": [
+        "request date",
+        "searched on",
+        "received",
+        "sent"
+      ],
+      "first": "2025-11",
+      "last": "2026-10"
+    },
+    {
+      "column": "'Travel Date'[Travel Date]",
+      "role": "travel_date",
+      "label": "Travel date (check-in searched)",
+      "meaning": "Check-in date the client searched for; runs up to a year after the request date.",
+      "default": false,
+      "words": [
+        "travel date",
+        "check-in",
+        "for travel in",
+        "arrival",
+        "travelling"
+      ],
+      "first": "2025-11",
+      "last": "2027-10"
+    }
+  ],
+  "measures": [
+    {
+      "name": "[% Hotels Results]",
+      "label": "Hotel result rate",
+      "definition": "Hotels returned with availability as a share of hotels requested ([Hotels Results] / [Hotels Requests]).",
+      "unit": "percent",
+      "format": ".1%",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "ratio",
+      "terms": [
+        "hotel result rate",
+        "share of hotels returned",
+        "hotel results %"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "travel_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[% Requests KO]",
+      "label": "Search failure rate",
+      "definition": "Failed searches as a share of all searches ([Requests KO] / [Total Requests]).",
+      "unit": "percent",
+      "format": ".1%",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "ratio",
+      "terms": [
+        "search failure rate",
+        "search error rate",
+        "failed searches %"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "travel_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "medium",
+      "notes": "KO most likely includes searches with no availability as well as errors."
+    },
+    {
+      "name": "[% Requests OK]",
+      "label": "Search success rate",
+      "definition": "Successful searches as a share of all searches ([Requests OK] / [Total Requests]).",
+      "unit": "percent",
+      "format": ".1%",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "ratio",
+      "terms": [
+        "search success rate",
+        "successful searches %"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "travel_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[AVG Lead Time (Days)]",
+      "label": "Average search lead time",
+      "definition": "Average number of days between the search (request date) and the check-in searched (travel date).",
+      "unit": "days",
+      "format": ",.1f",
+      "prefix": "",
+      "suffix": " days",
+      "aggregation": "average",
+      "terms": [
+        "search lead time",
+        "average search lead time",
+        "days in advance searched"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "travel_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[Hotels Requests]",
+      "label": "Hotels requested",
+      "definition": "Number of hotels asked for inside searches: a multi-hotel search counts every hotel it asks for (about 5 per search). Not the number of searches.",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [
+        "hotels requested",
+        "number of hotels requested",
+        "hotels asked for in searches"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "travel_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[Hotels Results]",
+      "label": "Hotels returned",
+      "definition": "Number of hotels returned with availability in search responses.",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [
+        "hotels returned",
+        "hotels with availability",
+        "hotel results"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "travel_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[Requests KO]",
+      "label": "Failed searches",
+      "definition": "Searches answered KO (an error or no availability returned).",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [
+        "failed searches",
+        "unsuccessful searches",
+        "search errors",
+        "searches ko"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "travel_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "medium",
+      "notes": "[Requests OK] + [Requests KO] = [Total Requests]."
+    },
+    {
+      "name": "[Requests OK]",
+      "label": "Successful searches",
+      "definition": "Searches answered OK (availability returned).",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [
+        "successful searches",
+        "searches ok"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "travel_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[Total Requests]",
+      "label": "Searches",
+      "definition": "Number of search requests clients sent (OK + KO). 99.7% are Availability requests; the rest are cancellation-policy, booking, cancel and modify requests.",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [
+        "searches",
+        "hotel searches",
+        "search requests",
+        "number of searches",
+        "search volume",
+        "availability searches"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "travel_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": "Verified on real data: this, not [Hotels Requests], is the number of searches."
+    }
+  ],
+  "breakdowns": [
+    {
+      "column": "'Customers'[Customer]",
+      "label": "Customer",
+      "entity": "customer",
+      "kind": "name",
+      "meaning": "Client agency or XML partner that sent the searches.",
+      "needs_columns": [
+        "'Customers'[Customer.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 6772,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Customer Code]",
+      "label": "Customer code",
+      "entity": "customer",
+      "kind": "code",
+      "meaning": "Customer code; the same codes as the Bookings cube, so use it to match a customer's searches with its bookings.",
+      "needs_columns": [
+        "'Customers'[Customer Code.Key0]"
+      ],
+      "sort_by": "",
+      "distinct": 6851,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Market]",
+      "label": "Market",
+      "entity": "market",
+      "kind": "enum",
+      "meaning": "Commercial market of the customer.",
+      "needs_columns": [
+        "'Customers'[Market.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 24,
+      "sample_values": [
+        "ROW",
+        "EUROPE",
+        "Turkish Market",
+        "GCC - Except UAE and Local Residence",
+        "UAE",
+        "Middle East",
+        "North Africa"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Country]",
+      "label": "Customer country",
+      "entity": "customer_country",
+      "kind": "name",
+      "meaning": "Country of the customer (agency), not of the guests.",
+      "needs_columns": [
+        "'Customers'[Country.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 96,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Integrator Name]",
+      "label": "Integrator",
+      "entity": "integrator",
+      "kind": "name",
+      "meaning": "Technology platform the customer connects through.",
+      "needs_columns": [
+        "'Customers'[Integrator Name.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 69,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Master Agency]",
+      "label": "Master agency",
+      "entity": "master_agency",
+      "kind": "name",
+      "meaning": "Parent agency that groups several customer accounts.",
+      "needs_columns": [
+        "'Customers'[Master Agency.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 143,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Agency Group]",
+      "label": "Agency group",
+      "entity": "agency_group",
+      "kind": "name",
+      "meaning": "Commercial group of the customer (region and markup tier).",
+      "needs_columns": [
+        "'Customers'[Agency Group.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 130,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Category]",
+      "label": "Customer category",
+      "entity": "customer_category",
+      "kind": "enum",
+      "meaning": "Customer category; almost all traffic is Dubai Link Category.",
+      "needs_columns": [
+        "'Customers'[Category.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 5,
+      "sample_values": [
+        "Dubai Link Category",
+        "Final Client Category",
+        "DL Business Trip - No Markup"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Customers'[Account Manager]",
+      "label": "Account manager",
+      "entity": "account_manager",
+      "kind": "name",
+      "meaning": "Account manager responsible for the customer.",
+      "needs_columns": [
+        "'Customers'[Account Manager.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 19,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Areas'[Parent Area]",
+      "label": "Destination",
+      "entity": "destination",
+      "kind": "name",
+      "meaning": "Destination searched, at parent-area level (a city, region or country depending on the place).",
+      "needs_columns": [
+        "'Areas'[Parent Area.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 8498,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Areas'[Area]",
+      "label": "Destination area",
+      "entity": "destination",
+      "kind": "name",
+      "meaning": "Exact area searched (city or district).",
+      "needs_columns": [
+        "'Areas'[Area.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 143438,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Nationalities'[Country]",
+      "label": "Guest nationality",
+      "entity": "nationality",
+      "kind": "name",
+      "meaning": "Nationality of the guests sent in the search.",
+      "needs_columns": [
+        "'Nationalities'[Country.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 240,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Nationalities'[ISO Code]",
+      "label": "Guest nationality code",
+      "entity": "nationality",
+      "kind": "code",
+      "meaning": "Two-letter ISO code of the guest nationality.",
+      "needs_columns": [
+        "'Nationalities'[ISO Code.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 270,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Channels'[Channel]",
+      "label": "Sale channel",
+      "entity": "sale_channel",
+      "kind": "enum",
+      "meaning": "Sales channel of the customer; almost all searches are XML.",
+      "needs_columns": [
+        "'Channels'[Channel.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 4,
+      "sample_values": [
+        "XML",
+        "WEB",
+        "B2C"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Interfaces'[Interface]",
+      "label": "Interface",
+      "entity": "api_interface",
+      "kind": "enum",
+      "meaning": "Technical interface the request came through.",
+      "needs_columns": [
+        "'Interfaces'[Interface.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 4,
+      "sample_values": [
+        "XML",
+        "CLC"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Request Types'[Request Type]",
+      "label": "Request type",
+      "entity": "request_type",
+      "kind": "enum",
+      "meaning": "API method; 99.7% of requests are Availability (searches).",
+      "needs_columns": [
+        "'Request Types'[Request Type.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 64,
+      "sample_values": [
+        "Availability",
+        "Cancellation Policy",
+        "Reservation/Booking",
+        "Cancel",
+        "Modify Reservation/Booking"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Availability Types'[Availability Type]",
+      "label": "Search type",
+      "entity": "availability_type",
+      "kind": "enum",
+      "meaning": "Multi-Hotel (destination search) or One Hotel (single-hotel search).",
+      "needs_columns": [
+        "'Availability Types'[Availability Type.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 4,
+      "sample_values": [
+        "Multi-Hotel",
+        "One Hotel"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Lead Times'[Lead Time Description]",
+      "label": "Lead-time band",
+      "entity": "lead_time",
+      "kind": "enum",
+      "meaning": "Days between the search and the check-in searched, in bands.",
+      "needs_columns": [
+        "'Lead Times'[Lead Time Description.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 5,
+      "sample_values": [
+        "1 to 7 Days",
+        "8 to 30 Days",
+        "31 to 90 Days",
+        "From 91 Days"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Lead Times'[Lead Time]",
+      "label": "Lead-time size",
+      "entity": "lead_time",
+      "kind": "enum",
+      "meaning": "The same bands by name: Small (1-7 days), Medium (8-30), Large (31-90), Very Large (91+).",
+      "needs_columns": [
+        "'Lead Times'[Lead Time.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 5,
+      "sample_values": [
+        "Small",
+        "Medium",
+        "Large",
+        "Very Large"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Is Webservice Administrator'[Is Webservice Administrator]",
+      "label": "Rate-checker traffic",
+      "entity": "rate_checker",
+      "kind": "enum",
+      "meaning": "Yes when the search came from a third-party rate-checking tool acting for a customer.",
+      "needs_columns": [
+        "'Is Webservice Administrator'[Is Webservice Administrator.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 3,
+      "sample_values": [
+        "No",
+        "Yes"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Webservice Administrator'[Webservice Administrator]",
+      "label": "Rate-checker tool",
+      "entity": "rate_checker",
+      "kind": "name",
+      "meaning": "Which third-party rate-checking tool sent the search ('Unknown' for normal traffic).",
+      "needs_columns": [
+        "'Webservice Administrator'[Webservice Administrator.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 5,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Request Date'[Month Year]",
+      "label": "Request month",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Month of the request date (M-YYYY).",
+      "needs_columns": [
+        "'Request Date'[Month Year.UniqueName]"
+      ],
+      "sort_by": "'Request Date'[Month Year.Fecha ISO DESC MonthYear]",
+      "distinct": 22,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Request Date'[Week Year]",
+      "label": "Request week",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Week of the request date, e.g. '41 (2026)'.",
+      "needs_columns": [
+        "'Request Date'[Week Year.UniqueName]"
+      ],
+      "sort_by": "'Request Date'[Week Year.Fecha ISO DESC WeekYear]",
+      "distinct": 89,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Request Date'[Day Week]",
+      "label": "Request weekday",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Weekday of the request date.",
+      "needs_columns": [
+        "'Request Date'[Day Week.UniqueName]"
+      ],
+      "sort_by": "'Request Date'[Day Week.Day Week DESC]",
+      "distinct": 8,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Travel Date'[Month Year]",
+      "label": "Travel month",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Month of the check-in searched (M-YYYY).",
+      "needs_columns": [
+        "'Travel Date'[Month Year.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 34,
+      "sample_values": [],
+      "status": "active"
+    }
+  ],
+  "named_filters": [
+    {
+      "name": "availability searches",
+      "meaning": "Availability (search) requests only; 99.7% of all requests.",
+      "column": "'Request Types'[Request Type]",
+      "values": [
+        "Availability"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "booking requests",
+      "meaning": "Booking requests sent through the API.",
+      "column": "'Request Types'[Request Type]",
+      "values": [
+        "Reservation/Booking"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "cancellation policy requests",
+      "meaning": "Requests for a hotel option's cancellation policy.",
+      "column": "'Request Types'[Request Type]",
+      "values": [
+        "Cancellation Policy"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "single-hotel searches",
+      "meaning": "Searches for one specific hotel.",
+      "column": "'Availability Types'[Availability Type]",
+      "values": [
+        "One Hotel"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "multi-hotel searches",
+      "meaning": "Searches over many hotels (destination searches).",
+      "column": "'Availability Types'[Availability Type]",
+      "values": [
+        "Multi-Hotel"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "last-minute searches",
+      "meaning": "Searches for a check-in 1 to 7 days ahead.",
+      "column": "'Lead Times'[Lead Time]",
+      "values": [
+        "Small"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "rate-checker traffic",
+      "meaning": "Searches sent by third-party rate-checking tools.",
+      "column": "'Is Webservice Administrator'[Is Webservice Administrator]",
+      "values": [
+        "Yes"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "name": "excluding rate-checker traffic",
+      "meaning": "Normal client searches, without rate-checking tools.",
+      "column": "'Is Webservice Administrator'[Is Webservice Administrator]",
+      "values": [
+        "No"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "name": "xml searches",
+      "meaning": "Searches from XML (API) customers.",
+      "column": "'Channels'[Channel]",
+      "values": [
+        "XML"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "uae market",
+      "meaning": "Customers of the UAE market.",
+      "column": "'Customers'[Market]",
+      "values": [
+        "UAE"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "rules": [
+    "\"Searches\" (hotel searches, search requests) = [Total Requests]. [Hotels Requests] counts the hotels asked for inside searches (about 5 per search) and must never be reported as the number of searches.",
+    "Data is continuous only from 2026-07-18 to yesterday; 2025-11-19 is one isolated day. For any other period before 2026-07-18 say Statistics Zone has no data instead of showing zero.",
+    "There is no data for today (loaded daily up to yesterday).",
+    "[Requests OK] + [Requests KO] = [Total Requests]. Percentages and [AVG Lead Time (Days)] are ratios: ask the cube at the level needed; never add or average them across rows.",
+    "To compare a customer's searches with its bookings, match on 'Customers'[Customer Code] (same codes as the Bookings cube).",
+    "'Customers'[Customer Manager] is 'n/a' for most traffic; use 'Customers'[Account Manager].",
+    "'Nationalities'[Country] is the guests' nationality; 'Customers'[Country] is the agency's country.",
+    "Use the cube's measures only; never SUM a column."
+  ],
+  "examples": [
+    {
+      "question": "How many searches did we receive last month?",
+      "measures": [
+        "[Total Requests]"
+      ],
+      "breakdowns": [],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Top 10 customers by searches in September 2026",
+      "measures": [
+        "[Total Requests]"
+      ],
+      "breakdowns": [
+        "'Customers'[Customer]"
+      ],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Search failure rate by request type last week",
+      "measures": [
+        "[% Requests KO]"
+      ],
+      "breakdowns": [
+        "'Request Types'[Request Type]"
+      ],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Hotels requested vs returned by destination in October 2026",
+      "measures": [
+        "[Hotels Requests]",
+        "[Hotels Results]",
+        "[% Hotels Results]"
+      ],
+      "breakdowns": [
+        "'Areas'[Parent Area]"
+      ],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Searches for travel in December 2026 by guest nationality",
+      "measures": [
+        "[Total Requests]"
+      ],
+      "breakdowns": [
+        "'Nationalities'[Country]"
+      ],
+      "date_role": "travel_date"
+    }
+  ],
+  "review": [
+    {
+      "id": "zone.searches_term",
+      "question": "Does \"searches\" (\"hotel searches\", \"search requests\") mean Statistics Zone [Total Requests] (number of search requests) and never [Hotels Requests] (hotels asked for inside those searches)?",
+      "options": [
+        "[Total Requests]",
+        "[Hotels Requests]"
+      ],
+      "proposed": "[Total Requests]",
+      "why": "Verified on real data: [Hotels Requests] is about 5x [Total Requests] because each search asks for several hotels, and using it for searches gave wrong answers. 99.7% of [Total Requests] are Availability requests, so it already is the search count."
+    },
+    {
+      "id": "zone.searches_before_july_2026",
+      "question": "Statistics Zone has data only from 2026-07-18 (plus one day in Nov 2025). For searches in earlier periods, should the app say there is no data, or show Statistics History Client [Requests] filtered to request type Availability (from 2025-10-16) as a separately labelled figure?",
+      "options": [
+        "say no data",
+        "show History Client availability requests, labelled"
+      ],
+      "proposed": "show History Client availability requests, labelled",
+      "why": "History Client counts the same client API traffic from a different feed (Sep 2026: 5.19 bn requests vs 4.74 bn here, about 9% more), so it answers the question but must not be mixed into one series with Statistics Zone."
+    }
+  ]
+}

@@ -1,0 +1,3307 @@
+{
+ "cube": "GlobalTravelEngine - Bookings",
+ "label": "Bookings",
+ "purpose": "Sales, cost, profit and counts of booking lines (hotels, generic bookings, tickets, transfers) of Global Travel Engine / Dubai Link Direct in AED, from 2014 to today. The main cube for sales, profit and booking volumes.",
+ "grain": "One booking line (reservation service); [Reservations Count] counts them, cancelled lines included.",
+ "use_for": [
+  "sales, cost and profit",
+  "number of bookings",
+  "room nights, nights, rooms and passengers",
+  "margin and average booking value",
+  "cancellations (by cancellation date or the cancelled flag)",
+  "breakdowns by customer, market, channel, supplier, destination, product type and hotel",
+  "lead time and travel-date (check-in) patterns"
+ ],
+ "not_for": [
+  "payments collected (Booking Payments)",
+  "API search and request volumes (Statistics cubes)",
+  "hotel allotment inventory (Hotel Allotments)",
+  "owned vs third-party hotel split (Sales Per Owned Hotels)",
+  "other currencies: all amounts are AED"
+ ],
+ "coverage": {
+  "main_date": "'Calendar'[Date]",
+  "first": "2014-07",
+  "last": "2026-10",
+  "note": "Complete monthly data since mid-2014 (very small volumes in 2014); the current month is partial. 2020 is low (pandemic). Counts, nights and passengers include cancelled lines."
+ },
+ "dates": [
+  {
+   "column": "'Calendar'[Date]",
+   "role": "booking_date",
+   "label": "Booking date",
+   "meaning": "When the booking was made: the cube's main date, used by the company's reports. Plain period questions use it.",
+   "default": true,
+   "words": [
+    "booked",
+    "booking date",
+    "made",
+    "sold",
+    "reserved",
+    "booked on"
+   ],
+   "first": "2014-07",
+   "last": "2026-10"
+  },
+  {
+   "column": "'Create Date'[Create Date]",
+   "role": "creation_date",
+   "label": "Creation date",
+   "meaning": "When the booking record was created in the system. Close to the booking date but monthly counts differ by about 0.3–2%; use only when the question says created/creation.",
+   "default": false,
+   "words": [
+    "created",
+    "creation date",
+    "entered",
+    "created on"
+   ],
+   "first": "2014-07",
+   "last": "2026-10"
+  },
+  {
+   "column": "'Travel Date Start'[Travel Date Start]",
+   "role": "travel_date",
+   "label": "Travel date (check-in)",
+   "meaning": "Start of the service: hotel check-in, transfer or ticket date. Future months already hold bookings made for upcoming travel (data runs to 2028).",
+   "default": false,
+   "words": [
+    "travel",
+    "travel date",
+    "travelling",
+    "check-in",
+    "check in",
+    "arrival",
+    "arriving",
+    "service date"
+   ],
+   "first": "2014-08",
+   "last": "2028-09"
+  },
+  {
+   "column": "'Cancelation Date'[Cancelation Date]",
+   "role": "cancellation_date",
+   "label": "Cancellation date",
+   "meaning": "When the booking was cancelled; \"Unknown\" for bookings not cancelled. Filled from September 2016.",
+   "default": false,
+   "words": [
+    "cancelled",
+    "canceled",
+    "cancellation date",
+    "cancelled on"
+   ],
+   "first": "2016-09",
+   "last": "2026-10"
+  },
+  {
+   "column": "'Calendar'[Date LY]",
+   "role": "last_year_date",
+   "label": "Booking date last year",
+   "meaning": "Technical: the same calendar date one year earlier, used only by the hidden LY helper measures.",
+   "default": false,
+   "words": [],
+   "first": "2013-07",
+   "last": "2025-10"
+  },
+  {
+   "column": "'Calendar'[Date LY Slided]",
+   "role": "last_year_date",
+   "label": "Booking date last year (same weekday)",
+   "meaning": "Technical: the date one year earlier shifted to the same weekday, used only by the hidden LYS helper measures.",
+   "default": false,
+   "words": [],
+   "first": "2013-07",
+   "last": "2025-10"
+  }
+ ],
+ "measures": [
+  {
+   "name": "[% Base Profit]",
+   "label": "Base profit %",
+   "definition": "[Base Profit] ÷ [Amount].",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "base profit %",
+    "base margin"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Amount]",
+   "label": "Gross booked amount",
+   "definition": "Booked amount in AED including the full original value of lines later cancelled (unlike [Sale]). Base of [% Base Profit].",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "gross booked amount",
+    "gross booking value",
+    "booking amount",
+    "booked value"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date",
+    "cancellation_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Over all years about 2.25 × [Sale] because cancelled bookings keep their amount. By cancellation date it gives the value of cancelled bookings."
+  },
+  {
+   "name": "[Avg Cost]",
+   "label": "Average cost per booking",
+   "definition": "[Cost] ÷ [Reservations Count].",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [
+    "average cost",
+    "average cost per booking"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Nights]",
+   "label": "Average nights per booking",
+   "definition": "[Nights] ÷ [Reservations Count].",
+   "unit": "nights",
+   "format": ",.1f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [
+    "average nights",
+    "average length of stay",
+    "alos",
+    "length of stay"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Paxes]",
+   "label": "Average passengers per booking",
+   "definition": "[Paxes] ÷ [Reservations Count].",
+   "unit": "people",
+   "format": ",.1f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [
+    "average passengers",
+    "average pax",
+    "pax per booking",
+    "guests per booking"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Profit]",
+   "label": "Average profit per booking",
+   "definition": "[Profit] ÷ [Reservations Count].",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [
+    "average profit",
+    "profit per booking"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Room Nights]",
+   "label": "Average nights per room",
+   "definition": "[Room Nights] ÷ [Rooms].",
+   "unit": "nights",
+   "format": ",.1f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [
+    "average room nights",
+    "nights per room"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Divides by rooms, not by bookings."
+  },
+  {
+   "name": "[Avg Sale]",
+   "label": "Average sale per booking",
+   "definition": "[Sale] ÷ [Reservations Count] (cancelled lines included).",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [
+    "average sale",
+    "average booking value",
+    "average sale per booking",
+    "abv"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Base Cost]",
+   "label": "Gross (base) cost",
+   "definition": "Supplier cost on the gross basis, including the original cost of lines later cancelled (pairs with [Amount]).",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "base cost",
+    "gross cost"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": ""
+  },
+  {
+   "name": "[Base Profit]",
+   "label": "Base profit",
+   "definition": "Profit on the gross basis: [Amount] − [Base Cost] − [Base Supplier Commission]. Includes lines later cancelled; not the headline profit.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "base profit"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Much lower than [Profit] for live bookings and negative for the XML channel; only use when asked for base profit."
+  },
+  {
+   "name": "[Base Supplier Commission]",
+   "label": "Supplier commission (base)",
+   "definition": "Supplier commission on the gross (base) basis; it is deducted in [Base Profit].",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "supplier commission",
+    "base supplier commission"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Includes lines later cancelled."
+  },
+  {
+   "name": "[Cost]",
+   "label": "Cost",
+   "definition": "Supplier cost including tax, in AED. Cancelled lines keep only their cancellation cost.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "cost",
+    "costs",
+    "supplier cost",
+    "cost of sales",
+    "final cost"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "[Final Cost] is identical in all data, so \"final cost\" is answered here."
+  },
+  {
+   "name": "[Cost Tax]",
+   "label": "Tax on cost",
+   "definition": "Tax (VAT) included in the supplier cost.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "cost tax",
+    "vat on cost",
+    "input vat"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Cost w/o Tax]",
+   "label": "Cost without tax",
+   "definition": "Supplier cost excluding tax: [Cost] − [Cost Tax].",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "cost without tax",
+    "cost excluding vat",
+    "net cost",
+    "cost before tax"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Estimate Marketing Cost]",
+   "label": "Estimated marketing cost",
+   "definition": "Estimated marketing cost.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "no data: 0 in all data (not populated)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Estimate Rappel Cost]",
+   "label": "Estimated rappel cost",
+   "definition": "Estimated volume-rebate (rappel) cost.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "no data: 0 in all data (not populated)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Final Cost]",
+   "label": "Final cost",
+   "definition": "[Cost] plus estimated marketing and rappel costs.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "duplicate: identical to [Cost] in all data (the estimated costs are 0)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Final Profit]",
+   "label": "Final profit",
+   "definition": "[Final Sales] − [Final Cost]: [Profit] plus handling fees (estimated marketing and rappel costs are 0).",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "final profit",
+    "net profit"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Differs from [Profit] by only about AED 3.7K over all years."
+  },
+  {
+   "name": "[Final Profit %]",
+   "label": "Final profit %",
+   "definition": "[Final Profit] ÷ [Final Sales].",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "final profit %",
+    "final margin",
+    "final profit margin"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Practically equal to [Markup]."
+  },
+  {
+   "name": "[Final Profit Growth Opt]",
+   "label": "Final profit growth (optimisation)",
+   "definition": "Optimisation helper.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "optimisation helper; no data",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Final Profit Opt]",
+   "label": "Final profit (optimised)",
+   "definition": "Optimisation helper.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "optimisation helper; always 0 (no booking is optimised)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Final Sales]",
+   "label": "Final sales",
+   "definition": "[Sale] plus fixed handling fees ([Handling Fee Fix]); the 'final' sales line of the company's model.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "final sales"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Differs from [Sale] by only about AED 3.7K over all years."
+  },
+  {
+   "name": "[Final Sales Growth Opt]",
+   "label": "Final sales growth (optimisation)",
+   "definition": "Optimisation helper.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "optimisation helper; no data",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Final Sales Opt]",
+   "label": "Final sales (optimised)",
+   "definition": "Optimisation helper.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "optimisation helper; always 0 (no booking is optimised)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Growth Due Optimization]",
+   "label": "Growth due to optimisation",
+   "definition": "Optimisation helper.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "optimisation helper; no data",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Handling Fee Fix]",
+   "label": "Handling fees",
+   "definition": "Fixed handling fees charged on bookings, in AED.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "handling fee",
+    "handling fees"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Small: about AED 3.7K over all years."
+  },
+  {
+   "name": "[Markup]",
+   "label": "Margin on sales (Markup)",
+   "definition": "Profit as a share of sale (≈ [Profit] ÷ [Sale]) — a margin on sales, not profit ÷ cost.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "margin",
+    "profit margin",
+    "margin %",
+    "markup",
+    "markup %"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Checked on real data: equals [Profit] ÷ [Sale] by channel (e.g. 4.2% XML, 8.0% B2B, 12.1% B2C); profit ÷ cost would be higher. See review bookings.markup_meaning."
+  },
+  {
+   "name": "[Nights]",
+   "label": "Nights",
+   "definition": "Total nights booked (length of stay of each line), cancelled lines included.",
+   "unit": "nights",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "nights",
+    "number of nights"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date",
+    "cancellation_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Paxes]",
+   "label": "Passengers",
+   "definition": "Number of passengers (guests) on the booking lines, cancelled lines included.",
+   "unit": "people",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "passengers",
+    "pax",
+    "guests",
+    "travellers",
+    "number of guests"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date",
+    "cancellation_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Use this, not the broken [Pax]."
+  },
+  {
+   "name": "[Profit]",
+   "label": "Profit",
+   "definition": "[Sale] − [Cost], in AED (net of cancellations).",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "profit",
+    "gross profit",
+    "profit amount",
+    "earnings"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Most likely meaning of \"profit\" (see review bookings.profit_term)."
+  },
+  {
+   "name": "[Reservations Count]",
+   "label": "Bookings",
+   "definition": "Number of booking lines (reservation services), cancelled lines included.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "bookings",
+    "number of bookings",
+    "reservations",
+    "booking count",
+    "booking lines",
+    "how many bookings"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date",
+    "cancellation_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "The company's reports count bookings with this measure on 'Calendar'[Date]. About 40% of all lines are cancelled; add 'Canceled'[Canceled] = \"No\" for active/confirmed bookings. By cancellation date it counts cancellations."
+  },
+  {
+   "name": "[Reservations Count Growth Opt]",
+   "label": "Bookings growth (optimisation)",
+   "definition": "Optimisation helper.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "optimisation helper; no data",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Reservations Count OPT]",
+   "label": "Bookings (optimised)",
+   "definition": "Optimisation helper.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "optimisation helper; always 0 (no booking is optimised)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Room Nights]",
+   "label": "Room nights",
+   "definition": "Rooms × nights, cancelled lines included.",
+   "unit": "nights",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "room nights",
+    "roomnights",
+    "rn"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date",
+    "cancellation_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Rooms]",
+   "label": "Rooms",
+   "definition": "Number of rooms booked, cancelled lines included.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "rooms",
+    "rooms booked",
+    "number of rooms"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date",
+    "cancellation_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Sale]",
+   "label": "Sales",
+   "definition": "Sale amount including tax, in AED. Cancelled lines keep only their cancellation fees.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "sales",
+    "revenue",
+    "turnover",
+    "sales amount",
+    "sales including vat",
+    "selling price"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Most likely meaning of \"sales\" (see review bookings.sales_term). [Final Sales] adds only fixed handling fees; [Sale w/o Tax] removes VAT."
+  },
+  {
+   "name": "[Sale Commission]",
+   "label": "Sale commission",
+   "definition": "Commission given to the selling customer.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "practically no data (about AED 1K in all years, 0 in the last 12 months)",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Sale Tax]",
+   "label": "Tax on sales",
+   "definition": "Tax (VAT) charged on sales.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "sales tax",
+    "vat on sales",
+    "output vat"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Sale w/o Tax]",
+   "label": "Sales without tax",
+   "definition": "Sale amount excluding tax (VAT): [Sale] − [Sale Tax].",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "sales without tax",
+    "sales excluding vat",
+    "sales before tax",
+    "net sales",
+    "sales ex vat"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "creation_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[% Base Profit LY]",
+   "label": "% Base Profit LY",
+   "definition": "Base profit % for the same period last year.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [% Base Profit]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Amount LY]",
+   "label": "Amount LY",
+   "definition": "Gross booked amount for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Amount]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Cost LY]",
+   "label": "Avg Cost LY",
+   "definition": "Average cost per booking for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Avg Cost]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Nights LY]",
+   "label": "Avg Nights LY",
+   "definition": "Average nights per booking for the same period last year.",
+   "unit": "nights",
+   "format": ",.1f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Avg Nights]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Paxes LY]",
+   "label": "Avg Paxes LY",
+   "definition": "Average passengers per booking for the same period last year.",
+   "unit": "people",
+   "format": ",.1f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Avg Paxes]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Profit LY]",
+   "label": "Avg Profit LY",
+   "definition": "Average profit per booking for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Avg Profit]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Room Nights LY]",
+   "label": "Avg Room Nights LY",
+   "definition": "Average nights per room for the same period last year.",
+   "unit": "nights",
+   "format": ",.1f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Avg Room Nights]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Sale LY]",
+   "label": "Avg Sale LY",
+   "definition": "Average sale per booking for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Avg Sale]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Base Cost LY]",
+   "label": "Base Cost LY",
+   "definition": "Gross (base) cost for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Base Cost]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Base Cost Var LY]",
+   "label": "Base Cost Var LY",
+   "definition": "% change of [Base Cost] versus last year.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year variance helper of [Base Cost]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Base Profit LY]",
+   "label": "Base Profit LY",
+   "definition": "Base profit for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Base Profit]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Base Sale Var LY]",
+   "label": "Base Sale Var LY",
+   "definition": "% change of [Amount] versus last year.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year variance helper of [Amount]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Base Supplier Commission LY]",
+   "label": "Base Supplier Commission LY",
+   "definition": "Supplier commission (base) for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Base Supplier Commission]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Cost LY]",
+   "label": "Cost LY",
+   "definition": "Cost for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Cost]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Cost Tax LY]",
+   "label": "Cost Tax LY",
+   "definition": "Tax on cost for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Cost Tax]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Cost Var LY]",
+   "label": "Cost Var LY",
+   "definition": "% change of [Cost] versus last year.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year variance helper of [Cost]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Cost w/o Tax LY]",
+   "label": "Cost w/o Tax LY",
+   "definition": "Cost without tax for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Cost w/o Tax]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Estimate Marketing Cost LY]",
+   "label": "Estimate Marketing Cost LY",
+   "definition": "Estimated marketing cost for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Estimate Marketing Cost]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Estimate Rappel Cost LY]",
+   "label": "Estimate Rappel Cost LY",
+   "definition": "Estimated rappel cost for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Estimate Rappel Cost]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Final Cost LY]",
+   "label": "Final Cost LY",
+   "definition": "Final cost for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Final Cost]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Final Profit LY]",
+   "label": "Final Profit LY",
+   "definition": "Final profit for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Final Profit]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Final Profit LY %]",
+   "label": "Final Profit LY %",
+   "definition": "Final profit % for the same period last year.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Final Profit %]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Final Profit OPT LY]",
+   "label": "Final Profit OPT LY",
+   "definition": "Final profit (optimised) for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Final Profit Opt]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Final Sales LY]",
+   "label": "Final Sales LY",
+   "definition": "Final sales for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Final Sales]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Final Sales OPT LY]",
+   "label": "Final Sales OPT LY",
+   "definition": "Final sales (optimised) for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Final Sales Opt]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Handling Fee Fix LY]",
+   "label": "Handling Fee Fix LY",
+   "definition": "Handling fees for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Handling Fee Fix]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Markup LY]",
+   "label": "Markup LY",
+   "definition": "Margin on sales (Markup) for the same period last year.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Markup]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Nights LY]",
+   "label": "Nights LY",
+   "definition": "Nights for the same period last year.",
+   "unit": "nights",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Nights]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Paxes LY]",
+   "label": "Paxes LY",
+   "definition": "Passengers for the same period last year.",
+   "unit": "people",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Paxes]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Profit LY]",
+   "label": "Profit LY",
+   "definition": "Profit for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Profit]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Profit Var LY]",
+   "label": "Profit Var LY",
+   "definition": "% change of [Profit] versus last year.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year variance helper of [Profit]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Res Count Var LY]",
+   "label": "Res Count Var LY",
+   "definition": "% change of [Reservations Count] versus last year.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year variance helper of [Reservations Count]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Reservations Count LY]",
+   "label": "Reservations Count LY",
+   "definition": "Bookings for the same period last year.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Reservations Count]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Reservations Count OPT LY]",
+   "label": "Reservations Count OPT LY",
+   "definition": "Bookings (optimised) for the same period last year.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Reservations Count OPT]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Room Nights LY]",
+   "label": "Room Nights LY",
+   "definition": "Room nights for the same period last year.",
+   "unit": "nights",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Room Nights]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Rooms LY]",
+   "label": "Rooms LY",
+   "definition": "Rooms for the same period last year.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Rooms]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Sale Commission LY]",
+   "label": "Sale Commission LY",
+   "definition": "Sale commission for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Sale Commission]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Sale LY]",
+   "label": "Sale LY",
+   "definition": "Sales for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Sale]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Sale Tax LY]",
+   "label": "Sale Tax LY",
+   "definition": "Tax on sales for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Sale Tax]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Sale Var LY]",
+   "label": "Sale Var LY",
+   "definition": "% change of [Sale] versus last year.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year variance helper of [Sale]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Sale w/o Tax LY]",
+   "label": "Sale w/o Tax LY",
+   "definition": "Sales without tax for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Sale w/o Tax]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[% Base Profit LYS]",
+   "label": "% Base Profit LYS",
+   "definition": "Base profit % for the same period last year.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [% Base Profit]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Amount LYS]",
+   "label": "Amount LYS",
+   "definition": "Gross booked amount for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Amount]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Cost LYS]",
+   "label": "Avg Cost LYS",
+   "definition": "Average cost per booking for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Avg Cost]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Nights LYS]",
+   "label": "Avg Nights LYS",
+   "definition": "Average nights per booking for the same period last year.",
+   "unit": "nights",
+   "format": ",.1f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Avg Nights]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Paxes LYS]",
+   "label": "Avg Paxes LYS",
+   "definition": "Average passengers per booking for the same period last year.",
+   "unit": "people",
+   "format": ",.1f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Avg Paxes]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Profit LYS]",
+   "label": "Avg Profit LYS",
+   "definition": "Average profit per booking for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Avg Profit]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Room Nights LYS]",
+   "label": "Avg Room Nights LYS",
+   "definition": "Average nights per room for the same period last year.",
+   "unit": "nights",
+   "format": ",.1f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Avg Room Nights]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Avg Sale LYS]",
+   "label": "Avg Sale LYS",
+   "definition": "Average sale per booking for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Avg Sale]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Base Cost LYS]",
+   "label": "Base Cost LYS",
+   "definition": "Gross (base) cost for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Base Cost]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Base Cost Var LYS]",
+   "label": "Base Cost Var LYS",
+   "definition": "% change of [Base Cost] versus last year.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) variance helper of [Base Cost]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Base Profit LYS]",
+   "label": "Base Profit LYS",
+   "definition": "Base profit for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Base Profit]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Base Sale Var LYS]",
+   "label": "Base Sale Var LYS",
+   "definition": "% change of [Amount] versus last year.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) variance helper of [Amount]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Base Supplier Commission LYS]",
+   "label": "Base Supplier Commission LYS",
+   "definition": "Supplier commission (base) for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Base Supplier Commission]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Cost LYS]",
+   "label": "Cost LYS",
+   "definition": "Cost for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Cost]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Cost Tax LYS]",
+   "label": "Cost Tax LYS",
+   "definition": "Tax on cost for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Cost Tax]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Cost Var LYS]",
+   "label": "Cost Var LYS",
+   "definition": "% change of [Cost] versus last year.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) variance helper of [Cost]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Cost w/o Tax LYS]",
+   "label": "Cost w/o Tax LYS",
+   "definition": "Cost without tax for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Cost w/o Tax]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Estimate Marketing Cost LYS]",
+   "label": "Estimate Marketing Cost LYS",
+   "definition": "Estimated marketing cost for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Estimate Marketing Cost]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Estimate Rappel Cost LYS]",
+   "label": "Estimate Rappel Cost LYS",
+   "definition": "Estimated rappel cost for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Estimate Rappel Cost]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Final Cost LYS]",
+   "label": "Final Cost LYS",
+   "definition": "Final cost for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Final Cost]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Final Profit LYS]",
+   "label": "Final Profit LYS",
+   "definition": "Final profit for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Final Profit]",
+   "confidence": "high",
+   "notes": "Facts show an error only because it was read in the same batch as the broken [Pax]; hidden anyway as a last-year helper."
+  },
+  {
+   "name": "[Final Profit LYS %]",
+   "label": "Final Profit LYS %",
+   "definition": "Final profit % for the same period last year.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Final Profit %]",
+   "confidence": "high",
+   "notes": "Facts show an error only because it was read in the same batch as the broken [Pax]; hidden anyway as a last-year helper."
+  },
+  {
+   "name": "[Final Profit OPT LYS]",
+   "label": "Final Profit OPT LYS",
+   "definition": "Final profit (optimised) for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Final Profit Opt]",
+   "confidence": "high",
+   "notes": "Facts show an error only because it was read in the same batch as the broken [Pax]; hidden anyway as a last-year helper."
+  },
+  {
+   "name": "[Final Sales LYS]",
+   "label": "Final Sales LYS",
+   "definition": "Final sales for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Final Sales]",
+   "confidence": "high",
+   "notes": "Facts show an error only because it was read in the same batch as the broken [Pax]; hidden anyway as a last-year helper."
+  },
+  {
+   "name": "[Final Sales OPT LYS]",
+   "label": "Final Sales OPT LYS",
+   "definition": "Final sales (optimised) for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Final Sales Opt]",
+   "confidence": "high",
+   "notes": "Facts show an error only because it was read in the same batch as the broken [Pax]; hidden anyway as a last-year helper."
+  },
+  {
+   "name": "[Handling Fee Fix LYS]",
+   "label": "Handling Fee Fix LYS",
+   "definition": "Handling fees for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Handling Fee Fix]",
+   "confidence": "high",
+   "notes": "Facts show an error only because it was read in the same batch as the broken [Pax]; hidden anyway as a last-year helper."
+  },
+  {
+   "name": "[Markup LYS]",
+   "label": "Markup LYS",
+   "definition": "Margin on sales (Markup) for the same period last year.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Markup]",
+   "confidence": "high",
+   "notes": "Facts show an error only because it was read in the same batch as the broken [Pax]; hidden anyway as a last-year helper."
+  },
+  {
+   "name": "[Nights LYS]",
+   "label": "Nights LYS",
+   "definition": "Nights for the same period last year.",
+   "unit": "nights",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Nights]",
+   "confidence": "high",
+   "notes": "Facts show an error only because it was read in the same batch as the broken [Pax]; hidden anyway as a last-year helper."
+  },
+  {
+   "name": "[Paxes LYS]",
+   "label": "Paxes LYS",
+   "definition": "Passengers for the same period last year.",
+   "unit": "people",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Paxes]",
+   "confidence": "high",
+   "notes": "Facts show an error only because it was read in the same batch as the broken [Pax]; hidden anyway as a last-year helper."
+  },
+  {
+   "name": "[Profit LYS]",
+   "label": "Profit LYS",
+   "definition": "Profit for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Profit]",
+   "confidence": "high",
+   "notes": "Facts show an error only because it was read in the same batch as the broken [Pax]; hidden anyway as a last-year helper."
+  },
+  {
+   "name": "[Profit Var LYS]",
+   "label": "Profit Var LYS",
+   "definition": "% change of [Profit] versus last year.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) variance helper of [Profit]",
+   "confidence": "high",
+   "notes": "Facts show an error only because it was read in the same batch as the broken [Pax]; hidden anyway as a last-year helper."
+  },
+  {
+   "name": "[Res Count Var LYS]",
+   "label": "Res Count Var LYS",
+   "definition": "% change of [Reservations Count] versus last year.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) variance helper of [Reservations Count]",
+   "confidence": "high",
+   "notes": "Facts show an error only because it was read in the same batch as the broken [Pax]; hidden anyway as a last-year helper."
+  },
+  {
+   "name": "[Reservations Count LYS]",
+   "label": "Reservations Count LYS",
+   "definition": "Bookings for the same period last year.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Reservations Count]",
+   "confidence": "high",
+   "notes": "Facts show an error only because it was read in the same batch as the broken [Pax]; hidden anyway as a last-year helper."
+  },
+  {
+   "name": "[Reservations Count OPT LYS]",
+   "label": "Reservations Count OPT LYS",
+   "definition": "Bookings (optimised) for the same period last year.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Reservations Count OPT]",
+   "confidence": "high",
+   "notes": "Facts show an error only because it was read in the same batch as the broken [Pax]; hidden anyway as a last-year helper."
+  },
+  {
+   "name": "[Room Nights LYS]",
+   "label": "Room Nights LYS",
+   "definition": "Room nights for the same period last year.",
+   "unit": "nights",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Room Nights]",
+   "confidence": "high",
+   "notes": "Facts show an error only because it was read in the same batch as the broken [Pax]; hidden anyway as a last-year helper."
+  },
+  {
+   "name": "[Rooms LYS]",
+   "label": "Rooms LYS",
+   "definition": "Rooms for the same period last year.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Rooms]",
+   "confidence": "high",
+   "notes": "Facts show an error only because it was read in the same batch as the broken [Pax]; hidden anyway as a last-year helper."
+  },
+  {
+   "name": "[Sale Commission LYS]",
+   "label": "Sale Commission LYS",
+   "definition": "Sale commission for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Sale Commission]",
+   "confidence": "high",
+   "notes": "Facts show an error only because it was read in the same batch as the broken [Pax]; hidden anyway as a last-year helper."
+  },
+  {
+   "name": "[Sale LYS]",
+   "label": "Sale LYS",
+   "definition": "Sales for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Sale]",
+   "confidence": "high",
+   "notes": "Facts show an error only because it was read in the same batch as the broken [Pax]; hidden anyway as a last-year helper."
+  },
+  {
+   "name": "[Sale Tax LYS]",
+   "label": "Sale Tax LYS",
+   "definition": "Tax on sales for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Sale Tax]",
+   "confidence": "high",
+   "notes": "Facts show an error only because it was read in the same batch as the broken [Pax]; hidden anyway as a last-year helper."
+  },
+  {
+   "name": "[Sale Var LYS]",
+   "label": "Sale Var LYS",
+   "definition": "% change of [Sale] versus last year.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) variance helper of [Sale]",
+   "confidence": "high",
+   "notes": "Facts show an error only because it was read in the same batch as the broken [Pax]; hidden anyway as a last-year helper."
+  },
+  {
+   "name": "[Sale w/o Tax LYS]",
+   "label": "Sale w/o Tax LYS",
+   "definition": "Sales without tax for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Sale w/o Tax]",
+   "confidence": "high",
+   "notes": "Facts show an error only because it was read in the same batch as the broken [Pax]; hidden anyway as a last-year helper."
+  },
+  {
+   "name": "[Pax]",
+   "label": "Pax (package and individual bookings)",
+   "definition": "Passengers from the 'Package and Invidual Bookings' group.",
+   "unit": "people",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "broken: every query fails (\"The value for 'Pax' cannot be determined\"); use [Paxes]",
+   "confidence": "high",
+   "notes": ""
+  }
+ ],
+ "breakdowns": [
+  {
+   "column": "'Sale Channel'[Sale Channel]",
+   "label": "Sale channel",
+   "entity": "sale_channel",
+   "kind": "enum",
+   "meaning": "How the booking was sold: B2B web, XML (API) or B2C.",
+   "needs_columns": [
+    "'Sale Channel'[Sale Channel.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 4,
+   "sample_values": [
+    "B2B - GTE - Global Travel Engine",
+    "XML - GTE - Global Travel Engine",
+    "B2C - GTE - Global Travel Engine"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Interfaces'[Interfaz]",
+   "label": "Interface",
+   "entity": "interface",
+   "kind": "enum",
+   "meaning": "Booking interface: XML (API), WEB or CLC.",
+   "needs_columns": [
+    "'Interfaces'[Interfaz.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 4,
+   "sample_values": [
+    "XML",
+    "WEB",
+    "CLC"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Market]",
+   "label": "Market",
+   "entity": "market",
+   "kind": "enum",
+   "meaning": "The customer's market (region / B2C segment).",
+   "needs_columns": [
+    "'Customers'[Market.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 24,
+   "sample_values": [
+    "UAE",
+    "GCC - Except UAE and Local Residence",
+    "EUROPE",
+    "ROW",
+    "North Africa",
+    "Middle East",
+    "Turkish Market",
+    "B2C UAE"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Cliente]",
+   "label": "Customer",
+   "entity": "customer",
+   "kind": "name",
+   "meaning": "The buying agency or client.",
+   "needs_columns": [
+    "'Customers'[Cliente.Key0]"
+   ],
+   "sort_by": "",
+   "distinct": 6822,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Code]",
+   "label": "Customer code",
+   "entity": "customer",
+   "kind": "code",
+   "meaning": "The customer's code.",
+   "needs_columns": [
+    "'Customers'[Code.Key0]"
+   ],
+   "sort_by": "",
+   "distinct": 6851,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Customer Country]",
+   "label": "Customer country",
+   "entity": "country",
+   "kind": "enum",
+   "meaning": "Country of the buying customer (not the destination).",
+   "needs_columns": [
+    "'Customers'[Customer Country.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 96,
+   "sample_values": [
+    "UNITED ARAB EMIRATES",
+    "SAUDI ARABIA",
+    "UNITED STATES",
+    "SPAIN",
+    "EGYPT"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Account Manager]",
+   "label": "Account manager",
+   "entity": "account_manager",
+   "kind": "name",
+   "meaning": "Sales person or desk managing the customer account.",
+   "needs_columns": [
+    "'Customers'[Account Manager.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 19,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Agency Group]",
+   "label": "Agency group",
+   "entity": "agency_group",
+   "kind": "enum",
+   "meaning": "Customer pricing group (region and percentage).",
+   "needs_columns": [
+    "'Customers'[Agency Group.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 130,
+   "sample_values": [
+    "UAE - 5%",
+    "GCC Except UAE - 5%",
+    "ROW - 5%",
+    "North Africa - 5%",
+    "European - 4%"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Category]",
+   "label": "Customer category",
+   "entity": "customer_category",
+   "kind": "enum",
+   "meaning": "Customer category.",
+   "needs_columns": [
+    "'Customers'[Category.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 5,
+   "sample_values": [
+    "Dubai Link Category",
+    "Final Client Category",
+    "DL Business Trip - No Markup"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Type of Payment]",
+   "label": "Customer payment terms",
+   "entity": "payment_terms",
+   "kind": "enum",
+   "meaning": "How the customer pays: on credit, pre-payment or POS.",
+   "needs_columns": [
+    "'Customers'[Type of Payment.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 4,
+   "sample_values": [
+    "Credit",
+    "Pre-payment",
+    "POS"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Integrator Name]",
+   "label": "Integrator",
+   "entity": "integrator",
+   "kind": "name",
+   "meaning": "Technology integrator through which an XML customer connects.",
+   "needs_columns": [
+    "'Customers'[Integrator Name.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 69,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Master Agency]",
+   "label": "Master agency",
+   "entity": "agency",
+   "kind": "name",
+   "meaning": "Parent agency grouping several customer accounts.",
+   "needs_columns": [
+    "'Customers'[Master Agency.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 143,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Countries'[Country]",
+   "label": "Destination country",
+   "entity": "country",
+   "kind": "enum",
+   "meaning": "Country of the booked service (destination).",
+   "needs_columns": [
+    "'Countries'[Country.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 239,
+   "sample_values": [
+    "UNITED ARAB EMIRATES",
+    "SAUDI ARABIA",
+    "UNITED STATES",
+    "EGYPT",
+    "CHINA"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Areas'[Area Parent]",
+   "label": "Destination (parent area)",
+   "entity": "destination",
+   "kind": "name",
+   "meaning": "Parent area of the destination: city, emirate or country level.",
+   "needs_columns": [
+    "'Areas'[Area Parent.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 8486,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Areas'[Area]",
+   "label": "Destination area",
+   "entity": "destination",
+   "kind": "name",
+   "meaning": "Destination city or zone.",
+   "needs_columns": [
+    "'Areas'[Area.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 129843,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Product Type'[Product Type]",
+   "label": "Product type",
+   "entity": "product_type",
+   "kind": "enum",
+   "meaning": "Type of service booked.",
+   "needs_columns": [
+    "'Product Type'[Product Type.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 8,
+   "sample_values": [
+    "Accommodation",
+    "Generic Booking",
+    "Adjustment",
+    "Ticket",
+    "Transfer",
+    "Supplement",
+    "Service"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Product Type'[External]",
+   "label": "External product",
+   "entity": "product_source",
+   "kind": "enum",
+   "meaning": "Whether the product comes from an external (third-party) connection.",
+   "needs_columns": [
+    "'Product Type'[External.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 3,
+   "sample_values": [
+    "Yes",
+    "No"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Product Type'[Module]",
+   "label": "Booking module / connection",
+   "entity": "product_module",
+   "kind": "name",
+   "meaning": "Booking module or supplier connection the product came through.",
+   "needs_columns": [
+    "'Product Type'[Module.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 114,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Product Group'[Product Group]",
+   "label": "Product group",
+   "entity": "product_group",
+   "kind": "enum",
+   "meaning": "Internal product group (business line) of the booking.",
+   "needs_columns": [
+    "'Product Group'[Product Group.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 125,
+   "sample_values": [
+    "DL Direct Prepayment",
+    "DL Direct GCC/Middle East"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Suppliers'[Supplier]",
+   "label": "Supplier",
+   "entity": "supplier",
+   "kind": "name",
+   "meaning": "Supplier the service was bought from.",
+   "needs_columns": [
+    "'Suppliers'[Supplier.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 2697,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Unique Product'[Product Name]",
+   "label": "Hotel / product",
+   "entity": "hotel",
+   "kind": "name",
+   "meaning": "The specific hotel or product booked.",
+   "needs_columns": [
+    "'Unique Product'[Product Name.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 1367915,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Booking Status'[Status Name]",
+   "label": "Booking status",
+   "entity": "status",
+   "kind": "enum",
+   "meaning": "Booking status: PAG is the normal live status; Client Cancelled Bookings and Cancelled are cancellations; Confirmed Bookings and PRE are rare.",
+   "needs_columns": [
+    "'Booking Status'[Status Name.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 13,
+   "sample_values": [
+    "PAG",
+    "Client Cancelled Bookings",
+    "Cancelled",
+    "Confirmed Bookings",
+    "PRE"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Canceled'[Canceled]",
+   "label": "Cancelled",
+   "entity": "cancelled_flag",
+   "kind": "enum",
+   "meaning": "Whether the booking line is cancelled.",
+   "needs_columns": [
+    "'Canceled'[Canceled.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 3,
+   "sample_values": [
+    "No",
+    "Yes"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Non Refundable'[Is Non Refundable]",
+   "label": "Non-refundable",
+   "entity": "rate_type",
+   "kind": "enum",
+   "meaning": "Whether the booked rate is non-refundable.",
+   "needs_columns": [
+    "'Non Refundable'[Is Non Refundable.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 3,
+   "sample_values": [
+    "No",
+    "Yes"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Assigned Allotment'[Assigned Allotment]",
+   "label": "From allotment",
+   "entity": "allotment_flag",
+   "kind": "enum",
+   "meaning": "Whether the booking used contracted hotel allotment (blocked rooms).",
+   "needs_columns": [
+    "'Assigned Allotment'[Assigned Allotment.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 3,
+   "sample_values": [
+    "Yes",
+    "No"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Lead Time'[Lead Time Description]",
+   "label": "Lead time",
+   "entity": "lead_time",
+   "kind": "enum",
+   "meaning": "Days between booking and travel, in bands.",
+   "needs_columns": [],
+   "sort_by": "",
+   "distinct": 5,
+   "sample_values": [
+    "1 Day",
+    "2 to 7 Days",
+    "8 to 30 Days",
+    "31 to 90 Days",
+    "From 91 Days"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Transfer Types'[Transfer Type]",
+   "label": "Transfer type",
+   "entity": "transfer_type",
+   "kind": "enum",
+   "meaning": "Direction of a transfer (\"Unknown\" for non-transfers).",
+   "needs_columns": [
+    "'Transfer Types'[Transfer Type.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 4,
+   "sample_values": [
+    "Terminal - Zone",
+    "Zone - Terminal",
+    "Zone - Zone"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'With Error'[With Error]",
+   "label": "With error",
+   "entity": "error_flag",
+   "kind": "enum",
+   "meaning": "Whether the booking line has an error flag.",
+   "needs_columns": [
+    "'With Error'[With Error.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 3,
+   "sample_values": [
+    "No",
+    "Yes"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Calendar'[Year]",
+   "label": "Booking year",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Year of the booking date.",
+   "needs_columns": [],
+   "sort_by": "'Calendar'[Year.Fecha ISO DESC Year]",
+   "distinct": null,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Calendar'[Quarter]",
+   "label": "Booking quarter",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Quarter of the booking date, written like \"Quarter 3, 2025\".",
+   "needs_columns": [
+    "'Calendar'[Quarter.UniqueName]"
+   ],
+   "sort_by": "'Calendar'[Quarter.Fecha ISO DESC Quarter]",
+   "distinct": 55,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Calendar'[Month]",
+   "label": "Booking month",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Month of the booking date, written like \"July 2025\".",
+   "needs_columns": [
+    "'Calendar'[Month.UniqueName]"
+   ],
+   "sort_by": "'Calendar'[Month.Month DESC]",
+   "distinct": 161,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Calendar'[Week Of Year]",
+   "label": "Booking week",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Week number of the booking date (\"01\"–\"53\"), without the year.",
+   "needs_columns": [
+    "'Calendar'[Week Of Year.UniqueName]"
+   ],
+   "sort_by": "'Calendar'[Week Of Year.Week Of Year DESC]",
+   "distinct": 54,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Calendar'[Day Week]",
+   "label": "Booking weekday",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Weekday of the booking date.",
+   "needs_columns": [
+    "'Calendar'[Day Week.UniqueName]"
+   ],
+   "sort_by": "'Calendar'[Day Week.Day Week DESC]",
+   "distinct": 8,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Create Hour'[Create Hour]",
+   "label": "Creation hour",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Hour of day the booking was created (\"00\"–\"23\").",
+   "needs_columns": [
+    "'Create Hour'[Create Hour.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 25,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Travel Date Start'[Year]",
+   "label": "Travel year",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Year of the travel (check-in) date.",
+   "needs_columns": [],
+   "sort_by": "'Travel Date Start'[Year.Fecha ISO DESC Year]",
+   "distinct": null,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Travel Date Start'[Month Name]",
+   "label": "Travel month",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Month of the travel (check-in) date, written like \"August 2025\".",
+   "needs_columns": [
+    "'Travel Date Start'[Month Name.UniqueName]"
+   ],
+   "sort_by": "'Travel Date Start'[Month Name.Fecha ISO DESC Month Name]",
+   "distinct": 183,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Cancelation Date'[Month Name]",
+   "label": "Cancellation month",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Month of the cancellation date (\"Unknown\" when not cancelled).",
+   "needs_columns": [
+    "'Cancelation Date'[Month Name.UniqueName]"
+   ],
+   "sort_by": "'Cancelation Date'[Month Name.Fecha ISO DESC Month Name]",
+   "distinct": 135,
+   "sample_values": [],
+   "status": "active"
+  }
+ ],
+ "named_filters": [
+  {
+   "name": "cancelled bookings",
+   "meaning": "Booking lines that were cancelled (by the client or the system).",
+   "column": "'Canceled'[Canceled]",
+   "values": [
+    "Yes"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "active bookings",
+   "meaning": "Booking lines not cancelled; what people usually mean by confirmed, live or net bookings.",
+   "column": "'Canceled'[Canceled]",
+   "values": [
+    "No"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "client cancelled bookings",
+   "meaning": "Bookings cancelled by the client.",
+   "column": "'Booking Status'[Status Name]",
+   "values": [
+    "Client Cancelled Bookings"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "xml bookings",
+   "meaning": "Bookings sold through the XML (API) channel.",
+   "column": "'Sale Channel'[Sale Channel]",
+   "values": [
+    "XML - GTE - Global Travel Engine"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "b2b bookings",
+   "meaning": "Bookings sold through the B2B web channel.",
+   "column": "'Sale Channel'[Sale Channel]",
+   "values": [
+    "B2B - GTE - Global Travel Engine"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "b2c bookings",
+   "meaning": "Bookings sold to final clients (B2C channel).",
+   "column": "'Sale Channel'[Sale Channel]",
+   "values": [
+    "B2C - GTE - Global Travel Engine"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "hotel bookings",
+   "meaning": "Accommodation (hotel) bookings only.",
+   "column": "'Product Type'[Product Type]",
+   "values": [
+    "Accommodation"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "uae market",
+   "meaning": "Customers of the UAE market (B2B and XML; \"B2C UAE\" is a separate market).",
+   "column": "'Customers'[Market]",
+   "values": [
+    "UAE"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "gcc market",
+   "meaning": "Customers of the GCC market outside the UAE.",
+   "column": "'Customers'[Market]",
+   "values": [
+    "GCC - Except UAE and Local Residence"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "test bookings",
+   "meaning": "Bookings of test customers; exclude them when asked for clean figures.",
+   "column": "'Customers'[Market]",
+   "values": [
+    "Market for Testing Purposes"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "non-refundable bookings",
+   "meaning": "Bookings on non-refundable rates.",
+   "column": "'Non Refundable'[Is Non Refundable]",
+   "values": [
+    "Yes"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "allotment bookings",
+   "meaning": "Bookings that used contracted hotel allotment.",
+   "column": "'Assigned Allotment'[Assigned Allotment]",
+   "values": [
+    "Yes"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "last-minute bookings",
+   "meaning": "Bookings made 1 day or less before travel.",
+   "column": "'Lead Time'[Lead Time Description]",
+   "values": [
+    "1 Day"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "credit customers",
+   "meaning": "Customers buying on credit terms.",
+   "column": "'Customers'[Type of Payment]",
+   "values": [
+    "Credit"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "pre-payment customers",
+   "meaning": "Customers who pay before the booking.",
+   "column": "'Customers'[Type of Payment]",
+   "values": [
+    "Pre-payment"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "bookings with errors",
+   "meaning": "Booking lines flagged with an error.",
+   "column": "'With Error'[With Error]",
+   "values": [
+    "Yes"
+   ],
+   "confidence": "medium"
+  }
+ ],
+ "rules": [
+  "Use the cube's measures only; never SUM a column.",
+  "List every breakdown column together with its needs_columns (group-with helper columns).",
+  "Plain period questions filter 'Calendar'[Date] (booking date); use 'Create Date'[Create Date] only when the question says created, 'Travel Date Start'[Travel Date Start] for travel/check-in and 'Cancelation Date'[Cancelation Date] for cancellations.",
+  "[Reservations Count], [Nights], [Room Nights], [Rooms], [Paxes], [Amount] and [Base Cost] include cancelled lines; [Sale], [Cost] and [Profit] are net of cancellations. Add 'Canceled'[Canceled] = \"No\" when the question asks for active, confirmed or net bookings.",
+  "Ratios and averages ([Markup], [Final Profit %], [% Base Profit], the Avg measures) are never added or averaged across rows; ask the cube for them at the level needed.",
+  "Never use the LY/LYS/Var/Opt measures or the 'Calendar'[Date LY] / [Date LY Slided] columns; compare periods by querying each period.",
+  "'Customers'[Market] and 'Customers'[Customer Country] describe the customer; 'Countries'[Country] and 'Areas' describe the destination.",
+  "All amounts are in AED."
+ ],
+ "examples": [
+  {
+   "question": "Bookings by sale channel last month",
+   "measures": [
+    "[Reservations Count]"
+   ],
+   "breakdowns": [
+    "'Sale Channel'[Sale Channel]"
+   ],
+   "date_role": "booking_date"
+  },
+  {
+   "question": "Sales and profit by market this year",
+   "measures": [
+    "[Sale]",
+    "[Profit]"
+   ],
+   "breakdowns": [
+    "'Customers'[Market]"
+   ],
+   "date_role": "booking_date"
+  },
+  {
+   "question": "Room nights for check-ins in August 2026",
+   "measures": [
+    "[Room Nights]"
+   ],
+   "breakdowns": [],
+   "date_role": "travel_date"
+  },
+  {
+   "question": "How many bookings were cancelled last week?",
+   "measures": [
+    "[Reservations Count]"
+   ],
+   "breakdowns": [],
+   "date_role": "cancellation_date"
+  },
+  {
+   "question": "Top 10 suppliers by profit in Q3 2026",
+   "measures": [
+    "[Profit]"
+   ],
+   "breakdowns": [
+    "'Suppliers'[Supplier]"
+   ],
+   "date_role": "booking_date"
+  },
+  {
+   "question": "Margin by product type in 2025",
+   "measures": [
+    "[Markup]"
+   ],
+   "breakdowns": [
+    "'Product Type'[Product Type]"
+   ],
+   "date_role": "booking_date"
+  },
+  {
+   "question": "Average booking value by month this year",
+   "measures": [
+    "[Avg Sale]"
+   ],
+   "breakdowns": [
+    "'Calendar'[Month]"
+   ],
+   "date_role": "booking_date"
+  },
+  {
+   "question": "Bookings by lead time for travel next month",
+   "measures": [
+    "[Reservations Count]"
+   ],
+   "breakdowns": [
+    "'Lead Time'[Lead Time Description]"
+   ],
+   "date_role": "travel_date"
+  }
+ ],
+ "review": [
+  {
+   "id": "bookings.sales_term",
+   "question": "Does \"sales\" mean Sale (with tax), Sale w/o Tax or Final Sales?",
+   "options": [
+    "[Sale]",
+    "[Sale w/o Tax]",
+    "[Final Sales]"
+   ],
+   "proposed": "[Sale]",
+   "why": "Sale is what the company's reports use. Final Sales only adds fixed handling fees (about AED 3.7K over all years); Sale w/o Tax is 1.5–2% lower (VAT removed)."
+  },
+  {
+   "id": "bookings.profit_term",
+   "question": "Does \"profit\" mean Profit, Final Profit or Base Profit?",
+   "options": [
+    "[Profit]",
+    "[Final Profit]",
+    "[Base Profit]"
+   ],
+   "proposed": "[Profit]",
+   "why": "Profit = Sale − Cost, the pair of \"sales\". Final Profit only adds handling fees (about AED 3.7K overall). Base Profit is computed on gross amounts including cancelled bookings and is much lower (negative for XML)."
+  },
+  {
+   "id": "bookings.markup_meaning",
+   "question": "The cube's Markup is profit ÷ sale (a margin), not profit ÷ cost. Should \"markup\" and \"margin\" both use it?",
+   "options": [
+    "[Markup]",
+    "[Final Profit %]"
+   ],
+   "proposed": "[Markup]",
+   "why": "Both are profit ÷ sale and differ by under 0.01 points; Markup pairs with Profit and Sale. If people mean profit ÷ cost by \"markup\", answers would be slightly higher (7.4% instead of 6.9% over all years)."
+  },
+  {
+   "id": "bookings.cancelled_in_counts",
+   "question": "Should a plain \"number of bookings\" include cancelled booking lines?",
+   "options": [
+    "include cancelled (cube default)",
+    "exclude cancelled ('Canceled' = No)"
+   ],
+   "proposed": "include cancelled (cube default)",
+   "why": "[Reservations Count] counts all lines (about 40% cancelled over all years) and matches the company's reports; questions about active or confirmed bookings get the not-cancelled filter."
+  }
+ ]
+}

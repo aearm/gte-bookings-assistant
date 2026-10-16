@@ -18,7 +18,7 @@ import config
 # $ per million tokens: (input, output, cache read). Cache writes cost 1.25x input (5-minute cache)
 # or 2x input (1-hour cache).
 PRICES = {
-    "claude-sonnet-5-5": (2.00, 10.00, 0.20),
+    "claude-sonnet-5-5": (2.00, 10.00, 0.10),
     "claude-opus-5-5": (4.00, 20.00, 0.20),
     "claude-haiku-5-5": (0.10, 0.50, 0.01),
     "claude-sonnet-5": (2.00, 10.00, 0.20),
@@ -34,10 +34,17 @@ def usage_file():
     return config.DATA_DIR / "usage.jsonl"
 
 
+# Above this many prompt tokens (cached ones included) every price of the request is multiplied
+LONG_PROMPT = {"claude-haiku-5-5": (100_000, 5)}
+
+
 def call_cost(model: str, tokens: dict) -> float:
     price_in, price_out, price_read = next((p for m, p in PRICES.items() if model.startswith(m)), PRICES["claude-sonnet-5-5"])
-    return (tokens["input"] * price_in + tokens["output"] * price_out + tokens["cache_read"] * price_read
+    cost = (tokens["input"] * price_in + tokens["output"] * price_out + tokens["cache_read"] * price_read
             + tokens["cache_write_5m"] * price_in * 1.25 + tokens["cache_write_1h"] * price_in * 2) / 1_000_000
+    limit, times = next((v for m, v in LONG_PROMPT.items() if model.startswith(m)), (0, 1))
+    prompt = tokens["input"] + tokens["cache_read"] + tokens["cache_write_5m"] + tokens["cache_write_1h"]
+    return cost * times if limit and prompt > limit else cost
 
 
 def _tokens(u) -> dict:

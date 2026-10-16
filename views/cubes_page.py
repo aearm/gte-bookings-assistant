@@ -10,6 +10,7 @@ import config
 import cube_setup
 import cubes
 import data_layer
+import semantic
 import ui
 from backends import get_backend
 
@@ -88,6 +89,15 @@ with st.container(key="panel_layer"):
             st.warning(f"{len(layer['changed'])} cube(s) changed since the layer was built: "
                        + ", ".join(cubes.label(c) for c in layer["changed"]) + ". Update it.",
                        icon=":material/sync_problem:")
+        moved = semantic.drift()
+        if moved:
+            st.warning(f"The meaning layer (semantic/) was built for an earlier structure of {len(moved)} cube(s): "
+                       + ", ".join(cubes.label(c) for c in moved) + ". Answers still work; ask for the meaning layer "
+                       "to be checked for these cubes (python semantic.py facts, then check).",
+                       icon=":material/rule:")
+        else:
+            st.caption(f":material/verified: Meaning layer: {len(semantic.decisions())} decisions, "
+                       f"{sum(r['status'] == 'agreed' for r in semantic.decisions())} agreed (Glossary › Decisions).")
     else:
         st.markdown("**Build it once after installing.** Claude reads every connected cube (structure and every "
                     "value), learns what each one is for, what its numbers and dates mean, and which customers, "

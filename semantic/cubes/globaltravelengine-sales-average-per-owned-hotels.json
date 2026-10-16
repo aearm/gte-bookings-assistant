@@ -1,0 +1,593 @@
+{
+ "cube": "GlobalTravelEngine - Sales Average Per Owned Hotels",
+ "label": "Owned Hotels Sales Averages (by stay night)",
+ "purpose": "Owned / contracted-hotel bookings of the Dubai Link Direct department in AED, spread over each stay night: gross booked sale and cost, bookings and averages per booking and per day. Use it for owned-hotel questions by stay night; it includes cancelled bookings at full value.",
+ "grain": "One booking per stay night (amounts spread over the nights of the stay), by hotel, customer, board type and booking date.",
+ "use_for": [
+  "owned-hotel sales and cost by stay night / stay month",
+  "owned-hotel bookings by stay date",
+  "average gross sale or cost per owned-hotel booking",
+  "owned-hotel sales by hotel, chain, star category, market, customer, destination and board"
+ ],
+ "not_for": [
+  "owned-hotel sales net of cancellations (Sales Per Owned Hotels with the 'owned hotels' filter)",
+  "room nights or ADR ([Nights] does not reconcile with room nights)",
+  "third-party hotels or other departments",
+  "profit, cancellations or booking status (no such measures or attributes)",
+  "supplier, channel or payment analysis"
+ ],
+ "coverage": {
+  "main_date": "'Booking Date'[Booking Date]",
+  "first": "2014-08",
+  "last": "2026-10",
+  "note": "Meaningful from 2015 (2014 has a few dozen bookings); 2016 has unusually high average values. Stay nights run to 2027-12. The current month is partial."
+ },
+ "dates": [
+  {
+   "column": "'Booking Date'[Booking Date]",
+   "role": "booking_date",
+   "label": "Booking date",
+   "meaning": "When the booking was made (the cube's main date).",
+   "default": true,
+   "words": [
+    "booked",
+    "booking date",
+    "bookings made",
+    "sold",
+    "made"
+   ],
+   "first": "2014-08",
+   "last": "2026-10"
+  },
+  {
+   "column": "'Stay Date'[Stay Date]",
+   "role": "stay_date",
+   "label": "Stay night",
+   "meaning": "Each night of the stay; amounts are spread over the nights.",
+   "default": false,
+   "words": [
+    "stay",
+    "stays",
+    "stay date",
+    "stay night",
+    "staying",
+    "nights in",
+    "occupancy"
+   ],
+   "first": "2014-10",
+   "last": "2027-12"
+  }
+ ],
+ "measures": [
+  {
+   "name": "[Total Sale]",
+   "label": "Owned-hotel gross booked sales",
+   "definition": "Selling amount of owned / contracted-hotel bookings of the Dubai Link Direct department, in AED, spread over each stay night (adds up across booking and stay dates).",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "owned-hotel sales by stay night",
+    "owned-hotel gross booked sales"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "stay_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Includes cancelled bookings at their original value (checked hotel by hotel against Sales Per Owned Hotels), so it is higher than that cube's owned-hotel figure (2025 bookings: 134.0M vs 71.6M AED). For 'owned-hotel sales' use Sales Per Owned Hotels with the 'owned hotels' filter; use this cube when the question is by stay night."
+  },
+  {
+   "name": "[Total Cost]",
+   "label": "Owned-hotel gross booked cost",
+   "definition": "Cost of owned / contracted-hotel bookings, in AED, spread over stay nights.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "owned-hotel cost by stay night",
+    "owned-hotel gross booked cost"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "stay_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Includes cancelled bookings at their original value. No profit measure: profit = [Total Sale] - [Total Cost]."
+  },
+  {
+   "name": "[Bookings]",
+   "label": "Owned-hotel bookings (incl. cancelled)",
+   "definition": "Number of distinct owned-hotel bookings (cancelled included; same count as Sales Per Owned Hotels with the owned filter).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "distinct_count",
+   "terms": [
+    "owned-hotel bookings by stay night"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "stay_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Distinct count: adds up across booking dates but not across stay dates (a stay spanning two months counts in both)."
+  },
+  {
+   "name": "[Nights]",
+   "label": "Nights (cube count, unverified)",
+   "definition": "Count the cube calls nights, summed over stay nights. It is not room nights: per stay night it carries a per-booking count that is not the number of rooms.",
+   "unit": "nights",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "stay_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "low",
+   "notes": "[Nights] does not reconcile with room nights: about 3x the owned-hotel room nights of Sales Per Owned Hotels (e.g. a 1-room, 30-night booking shows 120). Do not present this as ADR / average daily rate; see review item sales_average_per_owned_hotels.nights_definition."
+  },
+  {
+   "name": "[AVG Sale]",
+   "label": "Average gross sale per owned-hotel booking",
+   "definition": "Total Sale divided by Bookings, in AED (checked).",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [
+    "owned-hotel average sale per booking"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "stay_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Gross: cancelled bookings count at their original value."
+  },
+  {
+   "name": "[AVG Cost]",
+   "label": "Average gross cost per owned-hotel booking",
+   "definition": "Total Cost divided by Bookings, in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [
+    "owned-hotel average cost per booking"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "stay_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Gross: cancelled bookings count at their original value."
+  },
+  {
+   "name": "[AVG Sale per Day]",
+   "label": "Average sale per day (cube definition)",
+   "definition": "Total Sale divided by [Nights], in AED (checked).",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [
+    "owned-hotel average sale per day"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "stay_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "low",
+   "notes": "[Nights] does not reconcile with room nights: about 3x the owned-hotel room nights of Sales Per Owned Hotels (e.g. a 1-room, 30-night booking shows 120). Do not present this as ADR / average daily rate; see review item sales_average_per_owned_hotels.nights_definition."
+  },
+  {
+   "name": "[AVG Cost per Day]",
+   "label": "Average cost per day (cube definition)",
+   "definition": "Total Cost divided by [Nights], in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [
+    "owned-hotel average cost per day"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "stay_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "low",
+   "notes": "[Nights] does not reconcile with room nights: about 3x the owned-hotel room nights of Sales Per Owned Hotels (e.g. a 1-room, 30-night booking shows 120). Do not present this as ADR / average daily rate; see review item sales_average_per_owned_hotels.nights_definition."
+  }
+ ],
+ "breakdowns": [
+  {
+   "column": "'Hotels'[Hotel]",
+   "label": "Hotel",
+   "entity": "hotel",
+   "kind": "name",
+   "meaning": "Owned / contracted hotel booked.",
+   "needs_columns": [
+    "'Hotels'[Hotel.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 4109,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hotels'[Hotel Category]",
+   "label": "Hotel category (stars)",
+   "entity": "hotel_category",
+   "kind": "enum",
+   "meaning": "Star rating or apartment type.",
+   "needs_columns": [
+    "'Hotels'[Hotel Category.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 13,
+   "sample_values": [
+    "5 Stars",
+    "4 Stars",
+    "3 Stars",
+    "2 Stars",
+    "1 Star",
+    "Deluxe Apartment",
+    "Standard Apartment",
+    "Deluxe Villas"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Hotels'[Hotel Chain]",
+   "label": "Hotel chain",
+   "entity": "hotel_chain",
+   "kind": "name",
+   "meaning": "Hotel chain or group; 'n/a' for independent hotels.",
+   "needs_columns": [
+    "'Hotels'[Hotel Chain.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 58,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Market]",
+   "label": "Market",
+   "entity": "market",
+   "kind": "enum",
+   "meaning": "Customer market.",
+   "needs_columns": [
+    "'Customers'[Market.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 24,
+   "sample_values": [
+    "GCC - Except UAE and Local Residence",
+    "UAE",
+    "EUROPE",
+    "ROW",
+    "Turkish Market",
+    "Middle East",
+    "North Africa",
+    "B2C GCC Except UAE and Local Residence"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Customer]",
+   "label": "Customer",
+   "entity": "customer",
+   "kind": "name",
+   "meaning": "Client agency or B2C site that made the booking.",
+   "needs_columns": [
+    "'Customers'[Customer.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 6772,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Agency Group]",
+   "label": "Agency group",
+   "entity": "agency_group",
+   "kind": "name",
+   "meaning": "Commercial group of the agency (market and commission level).",
+   "needs_columns": [
+    "'Customers'[Agency Group.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 130,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Master Agency]",
+   "label": "Master agency",
+   "entity": "master_agency",
+   "kind": "name",
+   "meaning": "Parent agency the customer belongs to.",
+   "needs_columns": [
+    "'Customers'[Master Agency.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 143,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Master Integrator]",
+   "label": "Integrator",
+   "entity": "integrator",
+   "kind": "name",
+   "meaning": "Technology integrator the customer connects through.",
+   "needs_columns": [
+    "'Customers'[Master Integrator.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 68,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Destinations'[Destination Parent]",
+   "label": "Destination",
+   "entity": "destination",
+   "kind": "name",
+   "meaning": "Destination area of the hotel (city / emirate level).",
+   "needs_columns": [
+    "'Destinations'[Destination Parent.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 8486,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Board Types'[Board Type]",
+   "label": "Board type (meal plan)",
+   "entity": "board_type",
+   "kind": "enum",
+   "meaning": "Meal plan of the booking.",
+   "needs_columns": [
+    "'Board Types'[Board Type.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 18,
+   "sample_values": [
+    "Bed & Breakfast",
+    "Room Only",
+    "Half Board",
+    "All Inclusive",
+    "Full Board",
+    "Ultra All Inclusive",
+    "Soft All Inclusive",
+    "Unknown"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Booking Date'[Year]",
+   "label": "Booking year",
+   "entity": "booking_year",
+   "kind": "date_part",
+   "meaning": "Year the booking was made.",
+   "needs_columns": [
+    "'Booking Date'[Year.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 15,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Booking Date'[Month]",
+   "label": "Booking month number",
+   "entity": "booking_month_number",
+   "kind": "date_part",
+   "meaning": "Month number (01-12) the booking was made, all years together.",
+   "needs_columns": [
+    "'Booking Date'[Month.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 13,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Booking Date'[Week]",
+   "label": "Booking week",
+   "entity": "booking_week",
+   "kind": "date_part",
+   "meaning": "Week the booking was made.",
+   "needs_columns": [
+    "'Booking Date'[Week.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 699,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Stay Date'[Year]",
+   "label": "Stay year",
+   "entity": "stay_year",
+   "kind": "date_part",
+   "meaning": "Year of the stay night.",
+   "needs_columns": [
+    "'Stay Date'[Year.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 15,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Stay Date'[Month]",
+   "label": "Stay month number",
+   "entity": "stay_month_number",
+   "kind": "date_part",
+   "meaning": "Month number (01-12) of the stay night, all years together.",
+   "needs_columns": [
+    "'Stay Date'[Month.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 13,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Stay Date'[Week]",
+   "label": "Stay week",
+   "entity": "stay_week",
+   "kind": "date_part",
+   "meaning": "Week of the stay night.",
+   "needs_columns": [
+    "'Stay Date'[Week.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 699,
+   "sample_values": [],
+   "status": "active"
+  }
+ ],
+ "named_filters": [
+  {
+   "name": "uae market",
+   "meaning": "Customers of the UAE (B2B) market.",
+   "column": "'Customers'[Market]",
+   "values": [
+    "UAE"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "b2c markets",
+   "meaning": "All B2C (direct consumer) markets.",
+   "column": "'Customers'[Market]",
+   "values": [
+    "B2C GCC Except UAE and Local Residence",
+    "B2C UAE",
+    "B2C Middle East",
+    "B2C Europe",
+    "B2C ROW",
+    "B2C American Market",
+    "B2C CIS",
+    "B2C North Africa",
+    "B2C Turkish",
+    "B2C Latin America"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "5-star hotels",
+   "meaning": "Five-star hotels.",
+   "column": "'Hotels'[Hotel Category]",
+   "values": [
+    "5 Stars"
+   ],
+   "confidence": "high"
+  }
+ ],
+ "rules": [
+  "Amounts include cancelled bookings at their original value; for owned-hotel sales net of cancellations use Sales Per Owned Hotels with the 'owned hotels' filter.",
+  "[Bookings] is a distinct count: never add it across stay dates or stay months.",
+  "Do not present [Nights], [AVG Sale per Day] or [AVG Cost per Day] as room nights or ADR; they do not reconcile with room nights.",
+  "Average measures are ratios: never add them across rows.",
+  "When grouping by 'Booking Date'[Year] always include 'Booking Date'[Year.UniqueName] (a query without it failed); likewise add every breakdown's needs_columns.",
+  "Use the cube's measures only; never SUM a column."
+ ],
+ "examples": [
+  {
+   "question": "Owned-hotel sales by stay year",
+   "measures": [
+    "[Total Sale]"
+   ],
+   "breakdowns": [
+    "'Stay Date'[Year]"
+   ],
+   "date_role": "stay_date"
+  },
+  {
+   "question": "Average sale per owned-hotel booking by hotel category for bookings made in 2025",
+   "measures": [
+    "[AVG Sale]"
+   ],
+   "breakdowns": [
+    "'Hotels'[Hotel Category]"
+   ],
+   "date_role": "booking_date"
+  },
+  {
+   "question": "Owned-hotel bookings and sales by market for stays in December",
+   "measures": [
+    "[Bookings]",
+    "[Total Sale]"
+   ],
+   "breakdowns": [
+    "'Customers'[Market]"
+   ],
+   "date_role": "stay_date"
+  }
+ ],
+ "review": [
+  {
+   "id": "sales_average_per_owned_hotels.owned_sales_source",
+   "question": "Which figure answers 'owned-hotel sales'? Sales Per Owned Hotels [Total Sales] with the owned filter is net of cancellations (2025 bookings: 71.6M AED); this cube's [Total Sale] keeps cancelled bookings at full value (134.0M AED) for the same bookings.",
+   "options": [
+    "Sales Per Owned Hotels [Total Sales] + 'owned hotels' filter",
+    "Sales Average Per Owned Hotels [Total Sale]"
+   ],
+   "proposed": "Sales Per Owned Hotels [Total Sales] + 'owned hotels' filter; this cube only for stay-night questions, labelled 'gross booked'",
+   "why": "Net sales are what finance reports; the two cubes count the same bookings, the difference is cancelled bookings."
+  },
+  {
+   "id": "sales_average_per_owned_hotels.nights_definition",
+   "question": "[Nights] is about 3x the owned-hotel room nights in Sales Per Owned Hotels (a 1-room 30-night booking shows 120), so [AVG Sale per Day] is about a third of sales / room nights. Can the cube owner confirm what [Nights] counts before it is used for room nights or ADR?",
+   "options": [
+    "Use [Nights] / [AVG Sale per Day] as room nights / ADR",
+    "Do not use them for room nights or ADR until confirmed"
+   ],
+   "proposed": "Do not use them for room nights or ADR until confirmed; answer owned-hotel room nights from Sales Per Owned Hotels [Total Room Nights] with the owned filter",
+   "why": "Verified mismatch on 2025 data and on single bookings; presenting it as ADR would understate rates about threefold."
+  }
+ ]
+}

@@ -28,11 +28,14 @@ def test_plan_after_checking_values(monkeypatch):
     assert "Rules for DAX queries" in system and "TODAY_DATE" not in system and "MAX_ROWS" not in system
     assert fake.requests[0]["system"][0]["cache_control"] == {"type": "ephemeral", "ttl": "1h"}
     assert fake.requests[0]["output_config"]["effort"] == "medium"
+    assert "Check the data with your tools" in system  # the same for every question: cached with the rules
     first = fake.requests[0]["messages"][0]["content"]
-    assert first[0]["text"].startswith('# Full details of the cube "Bookings"') and first[0]["cache_control"] == {"type": "ephemeral"}
+    assert first[0]["text"].startswith('# Full details of the cube "Bookings"')
+    assert first[0]["cache_control"] == {"type": "ephemeral", "ttl": "1h"}  # read again by the next questions
+    assert fake.requests[0]["cache_control"] == {"type": "ephemeral"}  # this question's later rounds of checks
     user = fake.user_text()
     assert "Values of the question found in the data" in user and '"UAE"' in user
-    assert "A similar question answered correctly before" in user and "Check the data with your tools" in user
+    assert "A similar question answered correctly before" in user and "Check the data with your tools" not in user
     assert fake.requests[1]["messages"][-1]["content"][0]["content"] == "UAE found"
 
 

@@ -31,10 +31,15 @@ def test_usage_records_calls_stages_and_cost(app_dirs):
             usage.record_call("plan", "claude-sonnet-5-5", response_usage, 3.5)
         usage.note(outcome="data")
     entry = usage.load()[-1]
-    # 1000 x $2 + 500 x $10 + 10,000 x $0.20 + 2,000 x $2 x 2 (1-hour cache write), per million
-    assert entry["cost"] == pytest.approx((2000 + 5000 + 2000 + 8000) / 1e6)
+    # 1000 x $2 + 500 x $10 + 10,000 x $0.10 + 2,000 x $2 x 2 (1-hour cache write), per million
+    assert entry["cost"] == pytest.approx((2000 + 5000 + 1000 + 8000) / 1e6)
     assert entry["claude_calls"] == 1 and entry["outcome"] == "data" and "plan" in entry["stages"]
     assert entry["cache_hit"] == pytest.approx(10_000 / 13_000, abs=0.001)
+    # Haiku 5.5 costs five times as much for a prompt over 100,000 tokens (cached ones count)
+    tokens = {"input": 1000, "output": 100, "cache_read": 0, "cache_write_5m": 0, "cache_write_1h": 0}
+    small = usage.call_cost("claude-haiku-5-5", tokens)
+    assert usage.call_cost("claude-haiku-5-5", {**tokens, "cache_read": 120_000}) == pytest.approx(
+        5 * (small + 120_000 * 0.01 / 1e6))
 
 
 def test_usage_follows_work_into_threads(app_dirs):

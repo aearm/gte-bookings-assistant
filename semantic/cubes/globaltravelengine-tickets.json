@@ -1,0 +1,797 @@
+{
+ "cube": "GlobalTravelEngine - Tickets",
+ "label": "Tickets (historical)",
+ "purpose": "Historical sales, cost, profit, bookings and passengers of non-hotel services sold by Dubai Link Direct — mostly UAE tourist visas, plus tours, attraction tickets, chauffeur and meet & greet — 2015 to 2021. Data stops in 2022: never use it for recent periods.",
+ "grain": "One service booking line (a service option booked for a customer).",
+ "use_for": [
+  "ancillary (visa, tour, ticket) sales, cost and profit in 2015–2021",
+  "visa service volumes and revenue before 2022",
+  "historical service sales by service, customer, market or supplier"
+ ],
+ "not_for": [
+  "any period after 2021 (use Bookings, product types Ticket, Transfer and Generic Booking)",
+  "hotel bookings (Bookings)",
+  "payments (Booking Payments)"
+ ],
+ "coverage": {
+  "main_date": "'Booking Date'[Booking Date]",
+  "first": "2015-02",
+  "last": "2022-06",
+  "note": "Historical cube: data stops in 2022 (last booking June 2022). Steady monthly data mid-2015 to 2019 (busiest year by bookings 2019); 2020 has no data April–July and a sales spike September–November; 2021 has only a few bookings a month; 2022 a single booking. Never use it for 2022 or later."
+ },
+ "dates": [
+  {
+   "column": "'Booking Date'[Booking Date]",
+   "role": "booking_date",
+   "label": "Booking date",
+   "meaning": "When the service booking was made (the cube's main date).",
+   "default": true,
+   "words": [
+    "booked",
+    "booking date",
+    "sold",
+    "made"
+   ],
+   "first": "2015-02",
+   "last": "2022-06"
+  },
+  {
+   "column": "'Arrival Date'[Arrival Date]",
+   "role": "travel_date",
+   "label": "Arrival / service date",
+   "meaning": "The customer's arrival or service date.",
+   "default": false,
+   "words": [
+    "arrival",
+    "arriving",
+    "travel",
+    "travel date",
+    "service date",
+    "visit date"
+   ],
+   "first": "2015-03",
+   "last": "2022-11"
+  }
+ ],
+ "measures": [
+  {
+   "name": "[% Profit]",
+   "label": "Ticket markup on cost",
+   "definition": "[Profit] ÷ [Costs]: a markup on cost, not a margin on sales.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "ticket profit %",
+    "ticket markup",
+    "visa markup",
+    "service markup"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Checked: 36.9% over all years = profit ÷ cost; profit ÷ sales would be 27.0%. Historical: data 2015–2021 only."
+  },
+  {
+   "name": "[Adults]",
+   "label": "Adults",
+   "definition": "Number of adult passengers on the service bookings.",
+   "unit": "people",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "ticket adults",
+    "visa adults"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Historical: data 2015–2021 only."
+  },
+  {
+   "name": "[Bookings]",
+   "label": "Ticket & service bookings",
+   "definition": "Number of service booking lines.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "ticket bookings",
+    "visa bookings",
+    "service bookings",
+    "tickets sold",
+    "visas sold"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Historical: data 2015–2021 only."
+  },
+  {
+   "name": "[Childrens]",
+   "label": "Children",
+   "definition": "Number of child passengers on the service bookings.",
+   "unit": "people",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "ticket children",
+    "visa children"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Historical: data 2015–2021 only."
+  },
+  {
+   "name": "[Costs]",
+   "label": "Ticket & service cost",
+   "definition": "Supplier cost of the service bookings, in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "ticket cost",
+    "visa cost",
+    "service cost",
+    "ancillary cost"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Historical: data 2015–2021 only."
+  },
+  {
+   "name": "[Profit]",
+   "label": "Ticket & service profit",
+   "definition": "[Sales] − [Costs], in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "ticket profit",
+    "visa profit",
+    "service profit",
+    "ancillary profit"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Historical: data 2015–2021 only."
+  },
+  {
+   "name": "[Sales]",
+   "label": "Ticket & service sales",
+   "definition": "Selling amount of the service bookings (visas, tours, tickets, chauffeur, meet & greet), in AED.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "ticket sales",
+    "visa sales",
+    "service sales",
+    "ancillary sales",
+    "tour sales"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Historical: data 2015–2021 only."
+  },
+  {
+   "name": "[Total Pax]",
+   "label": "Passengers",
+   "definition": "All passengers on the service bookings (adults, children and others such as infants).",
+   "unit": "people",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "ticket passengers",
+    "ticket pax",
+    "visa passengers"
+   ],
+   "default_date_role": "booking_date",
+   "date_roles": [
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Slightly above adults + children (11,694 vs 11,610 over all years). Historical: data 2015–2021 only."
+  },
+  {
+   "name": "[% Profit LY]",
+   "label": "% Profit LY",
+   "definition": "Ticket markup on cost for the same period last year.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [% Profit]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Adults LY]",
+   "label": "Adults LY",
+   "definition": "Adults for the same period last year.",
+   "unit": "people",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Adults]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Bookings LY]",
+   "label": "Bookings LY",
+   "definition": "Ticket & service bookings for the same period last year.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Bookings]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Childrens LY]",
+   "label": "Childrens LY",
+   "definition": "Children for the same period last year.",
+   "unit": "people",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Childrens]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Costs LY]",
+   "label": "Costs LY",
+   "definition": "Ticket & service cost for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Costs]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Profit LY]",
+   "label": "Profit LY",
+   "definition": "Ticket & service profit for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Profit]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Sales LY]",
+   "label": "Sales LY",
+   "definition": "Ticket & service sales for the same period last year.",
+   "unit": "currency:AED",
+   "format": ",.2f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Sales]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Total Pax LY]",
+   "label": "Total Pax LY",
+   "definition": "Passengers for the same period last year.",
+   "unit": "people",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year helper of [Total Pax]",
+   "confidence": "high",
+   "notes": ""
+  }
+ ],
+ "breakdowns": [
+  {
+   "column": "'Service Type'[Service Type]",
+   "label": "Service type",
+   "entity": "service_type",
+   "kind": "enum",
+   "meaning": "Service category. Inconsistent: most UAE tourist-visa sales are typed \"Service\", not \"Visa Service\"; filter visas by service name.",
+   "needs_columns": [
+    "'Service Type'[Service Type.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 12,
+   "sample_values": [
+    "Service",
+    "Visa Service",
+    "Tickets",
+    "Tours",
+    "Chauffeur Service",
+    "Transfers"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Service Name'[Service Name]",
+   "label": "Service",
+   "entity": "service",
+   "kind": "enum",
+   "meaning": "The specific service sold.",
+   "needs_columns": [
+    "'Service Name'[Service Name.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 51,
+   "sample_values": [
+    "UAE - Tourist Visa Service - 30 Days",
+    "Desert Safari",
+    "UAE - Visit Visa Service - 90 Days",
+    "Silver Meet & Greet Services Terminal 1",
+    "Dhow Cruise Dinner - Dubai Marina (With Transfers)",
+    "Saudi Arabia - Multiple Entries Invitation Letter",
+    "Abu Dhabi City Tour",
+    "Tour Guide"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Options'[Option]",
+   "label": "Service option",
+   "entity": "service_option",
+   "kind": "name",
+   "meaning": "Option or variant of the service booked.",
+   "needs_columns": [
+    "'Options'[Option.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 78,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Customer]",
+   "label": "Customer",
+   "entity": "customer",
+   "kind": "name",
+   "meaning": "The buying agency or client.",
+   "needs_columns": [
+    "'Customers'[Customer.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 6772,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Market]",
+   "label": "Market",
+   "entity": "market",
+   "kind": "enum",
+   "meaning": "The customer's market.",
+   "needs_columns": [
+    "'Customers'[Market.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 24,
+   "sample_values": [
+    "GCC - Except UAE and Local Residence",
+    "UAE",
+    "Middle East",
+    "North Africa",
+    "B2C ROW",
+    "Turkish Market",
+    "EUROPE",
+    "B2C UAE"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Agency Group]",
+   "label": "Agency group",
+   "entity": "agency_group",
+   "kind": "enum",
+   "meaning": "Customer pricing group (region and percentage).",
+   "needs_columns": [
+    "'Customers'[Agency Group.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 130,
+   "sample_values": [
+    "GCC Except UAE - 5%",
+    "UAE - 5%",
+    "Middle East - 5%",
+    "North Africa - 5%"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Master Agency]",
+   "label": "Master agency",
+   "entity": "agency",
+   "kind": "name",
+   "meaning": "Parent agency grouping several customer accounts.",
+   "needs_columns": [
+    "'Customers'[Master Agency.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 143,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Departments'[Product Group]",
+   "label": "Product group",
+   "entity": "product_group",
+   "kind": "enum",
+   "meaning": "Internal product group (business line).",
+   "needs_columns": [
+    "'Departments'[Product Group.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 122,
+   "sample_values": [
+    "DL Direct Prepayment",
+    "DL Direct GCC/Middle East",
+    "DL - Payment Service Charge",
+    "DL Direct America's"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Destinations'[Destination Parent]",
+   "label": "Destination (parent area)",
+   "entity": "destination",
+   "kind": "name",
+   "meaning": "Parent area of the service destination.",
+   "needs_columns": [
+    "'Destinations'[Destination Parent.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 8486,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Destinations'[Destination]",
+   "label": "Destination area",
+   "entity": "destination",
+   "kind": "name",
+   "meaning": "City or zone of the service.",
+   "needs_columns": [
+    "'Destinations'[Destination.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 129843,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Suppliers'[Supplier]",
+   "label": "Supplier",
+   "entity": "supplier",
+   "kind": "name",
+   "meaning": "Supplier providing the service.",
+   "needs_columns": [
+    "'Suppliers'[Supplier.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 2697,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Booking Date'[Year]",
+   "label": "Booking year",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Year of the booking date (text).",
+   "needs_columns": [
+    "'Booking Date'[Year.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 10,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Booking Date'[Month]",
+   "label": "Booking month number",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Month number of the booking date (\"01\"–\"12\") without the year; group with the year for trends.",
+   "needs_columns": [
+    "'Booking Date'[Month.Key0]"
+   ],
+   "sort_by": "",
+   "distinct": 13,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Booking Date'[Week]",
+   "label": "Booking week",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Week of the booking date, written like \"2020-09-15 / 2020-09-21\".",
+   "needs_columns": [
+    "'Booking Date'[Week.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 436,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Arrival Date'[Year]",
+   "label": "Arrival year",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Year of the arrival date (text).",
+   "needs_columns": [
+    "'Arrival Date'[Year.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 10,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Arrival Date'[Month]",
+   "label": "Arrival month number",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Month number (1–12) of the arrival date, without the year.",
+   "needs_columns": [],
+   "sort_by": "",
+   "distinct": null,
+   "sample_values": [],
+   "status": "active"
+  }
+ ],
+ "named_filters": [
+  {
+   "name": "uae tourist visa",
+   "meaning": "The UAE 30-day tourist visa service (the bulk of this cube's sales).",
+   "column": "'Service Name'[Service Name]",
+   "values": [
+    "UAE - Tourist Visa Service - 30 Days"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "visa services",
+   "meaning": "All visa services: UAE tourist and visit visas and Saudi invitation letters (by service name, since the service type is inconsistent).",
+   "column": "'Service Name'[Service Name]",
+   "values": [
+    "UAE - Tourist Visa Service - 30 Days",
+    "UAE - Visit Visa Service - 90 Days",
+    "Saudi Arabia - Multiple Entries Invitation Letter"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "tours",
+   "meaning": "Tour services.",
+   "column": "'Service Type'[Service Type]",
+   "values": [
+    "Tours"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "attraction tickets",
+   "meaning": "Attraction and park tickets.",
+   "column": "'Service Type'[Service Type]",
+   "values": [
+    "Tickets"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "chauffeur services",
+   "meaning": "Chauffeur services.",
+   "column": "'Service Type'[Service Type]",
+   "values": [
+    "Chauffeur Service"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "desert safari",
+   "meaning": "Desert safari service (packages that include a safari are separate services).",
+   "column": "'Service Name'[Service Name]",
+   "values": [
+    "Desert Safari"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "test services",
+   "meaning": "Test service rows; exclude them when asked for clean figures.",
+   "column": "'Service Name'[Service Name]",
+   "values": [
+    "Test Service"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "b2c customers",
+   "meaning": "Final-client (B2C) markets.",
+   "column": "'Customers'[Market]",
+   "values": [
+    "B2C ROW",
+    "B2C UAE",
+    "B2C GCC Except UAE and Local Residence",
+    "B2C Turkish",
+    "B2C Europe"
+   ],
+   "confidence": "medium"
+  }
+ ],
+ "rules": [
+  "Historical cube: data only from 2015-02 to 2022-06 and almost nothing after 2020. Never answer questions about 2022 or later from it; for recent ticket, transfer or visa sales use the Bookings cube.",
+  "Use the cube's measures only; never SUM a column.",
+  "List every breakdown column together with its needs_columns (group-with helper columns).",
+  "[% Profit] is profit ÷ cost (markup), not profit ÷ sales; never add it across rows.",
+  "Filter visas by 'Service Name'[Service Name]; 'Service Type' puts most tourist visas under \"Service\".",
+  "'Booking Date'[Month] and 'Arrival Date'[Month] are month numbers without the year; group with [Year] for monthly trends.",
+  "Never use the LY measures; compare periods by querying each period.",
+  "All amounts are in AED."
+ ],
+ "examples": [
+  {
+   "question": "Ticket and visa sales by year",
+   "measures": [
+    "[Sales]",
+    "[Bookings]"
+   ],
+   "breakdowns": [
+    "'Booking Date'[Year]"
+   ],
+   "date_role": "booking_date"
+  },
+  {
+   "question": "Ticket sales, cost and profit by service type in 2019",
+   "measures": [
+    "[Sales]",
+    "[Costs]",
+    "[Profit]"
+   ],
+   "breakdowns": [
+    "'Service Type'[Service Type]"
+   ],
+   "date_role": "booking_date"
+  },
+  {
+   "question": "Passengers by service for arrivals in 2018",
+   "measures": [
+    "[Total Pax]"
+   ],
+   "breakdowns": [
+    "'Service Name'[Service Name]"
+   ],
+   "date_role": "travel_date"
+  },
+  {
+   "question": "Visa bookings by market in 2017",
+   "measures": [
+    "[Bookings]"
+   ],
+   "breakdowns": [
+    "'Customers'[Market]"
+   ],
+   "date_role": "booking_date"
+  }
+ ],
+ "review": [
+  {
+   "id": "tickets.historical_use",
+   "question": "Keep the historical Tickets cube (data 2015–2021) available for questions?",
+   "options": [
+    "keep for 2015–2021 questions only",
+    "hide the cube"
+   ],
+   "proposed": "keep for 2015–2021 questions only",
+   "why": "It is the only source of visa and tour sales before they appear in Bookings; the coverage note stops the app from using it for recent periods."
+  }
+ ]
+}

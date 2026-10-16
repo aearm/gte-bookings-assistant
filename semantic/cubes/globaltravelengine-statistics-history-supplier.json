@@ -1,0 +1,1058 @@
+{
+ "cube": "GlobalTravelEngine - Statistics History Supplier",
+ "label": "Supplier requests (history)",
+ "purpose": "Daily history of the requests the GTE booking engine sends to suppliers (mostly hotel suppliers): volumes, hotels asked and returned, cache use, look-to-book, response times and outcomes. Use it for supplier-traffic questions about any past period; today is in Statistics Real Time Supplier.",
+ "grain": "Supplier requests aggregated per request day and hour (UAE time and CET), supplier connection, client, credential, interface, request type and context, availability type, cache flag, response-time band and outcome.",
+ "use_for": [
+  "supplier request volumes by day, week, month, hour, supplier or client",
+  "supplier response times (average, maximum) and response-time bands",
+  "supplier outcomes: correct, no results, supplier errors, time-outs",
+  "hotels requested from and returned by suppliers, supplier cache hit rate",
+  "supplier look-to-book (requests per booking)"
+ ],
+ "not_for": [
+  "today's supplier traffic (Statistics Real Time Supplier)",
+  "requests clients send to GTE (Statistics History Client)",
+  "searches (Statistics Zone)",
+  "hotel-level outcomes, travel windows, hotels or destinations requested (Statistics Hotel Supplier)",
+  "transfer and activity supplier APIs (Statistics Supplier API Transfer / Service)",
+  "bookings, sales or revenue (Bookings)",
+  "anything older than about one year (rolling window)"
+ ],
+ "coverage": {
+  "main_date": "'Calendario'[Fecha]",
+  "first": "2025-10",
+  "last": "2026-10",
+  "note": "Rolling window of about one year that ends yesterday: on 2026-10-16 it held 2025-10-16 to 2026-10-15, and the first day moves forward daily. 2025-10 and the current month are partial; today is only in Statistics Real Time Supplier."
+ },
+ "dates": [
+  {
+   "column": "'Calendario'[Fecha]",
+   "role": "request_date",
+   "label": "Request date (UAE time)",
+   "meaning": "Day the request was sent to the supplier, in UAE time (UTC+4). The cube's main date.",
+   "default": true,
+   "words": [
+    "request date",
+    "requested",
+    "sent",
+    "uae time",
+    "dubai time",
+    "local time"
+   ],
+   "first": "2025-10",
+   "last": "2026-10"
+  },
+  {
+   "column": "'Fecha'[Fecha]",
+   "role": "request_date",
+   "label": "Request date (UAE time, copy)",
+   "meaning": "Same request date as 'Calendario'[Fecha] in a separate table (identical figures); prefer 'Calendario'[Fecha].",
+   "default": false,
+   "words": [],
+   "first": "2025-10",
+   "last": "2026-10"
+  },
+  {
+   "column": "'Calendar CET'[Date CET]",
+   "role": "request_date_cet",
+   "label": "Request date (CET)",
+   "meaning": "request_date_cet = the request date in Central European time (2 hours behind UAE in summer, 3 in winter). Use only when CET is asked.",
+   "default": false,
+   "words": [
+    "cet",
+    "cest",
+    "central european time",
+    "european time",
+    "spain time"
+   ],
+   "first": "2025-10",
+   "last": "2026-10"
+  },
+  {
+   "column": "'Date CET'[Date CET]",
+   "role": "request_date_cet",
+   "label": "Request date (CET, copy)",
+   "meaning": "Same CET request date as 'Calendar CET'[Date CET] in a separate table; prefer 'Calendar CET'[Date CET].",
+   "default": false,
+   "words": [],
+   "first": "2025-10",
+   "last": "2026-10"
+  },
+  {
+   "column": "'Calendar CET'[Date CET LY]",
+   "role": "last_year_date",
+   "label": "Same date last year (CET)",
+   "meaning": "Last-year helper: CET request date shifted one year. Never use in questions; the app compares periods itself.",
+   "default": false,
+   "words": [],
+   "first": "2024-10",
+   "last": "2025-10"
+  },
+  {
+   "column": "'Calendar CET'[Date CET LY Slided]",
+   "role": "last_year_date",
+   "label": "Same weekday last year (CET)",
+   "meaning": "Last-year helper aligned on weekday. Never use in questions.",
+   "default": false,
+   "words": [],
+   "first": "2024-10",
+   "last": "2025-10"
+  }
+ ],
+ "measures": [
+  {
+   "name": "[Requests]",
+   "label": "Supplier requests",
+   "definition": "Number of request messages the booking engine sent to suppliers (availability, cancellation policy, booking, etc.).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "supplier requests",
+    "requests sent to suppliers",
+    "supplier calls",
+    "supplier request volume"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "request_date_cet"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Main measure. Billions per month; use with 'Tipo Fallos'[Fallo] for errors, time-outs and no results."
+  },
+  {
+   "name": "[Hotels Request]",
+   "label": "Hotels requested from suppliers",
+   "definition": "Number of hotels asked for in the supplier requests (one request can ask for many hotels).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "hotels requested from suppliers",
+    "supplier hotels requested"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "request_date_cet"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "About 5 hotels per request."
+  },
+  {
+   "name": "[AVG Hotels Request]",
+   "label": "Average hotels per supplier request",
+   "definition": "[Hotels Request] / [Requests]: hotels asked per supplier request.",
+   "unit": "count",
+   "format": ",.1f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [
+    "average hotels per supplier request"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "request_date_cet"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Verified as Hotels Request / Requests."
+  },
+  {
+   "name": "[Hotel Results]",
+   "label": "Hotels returned by suppliers",
+   "definition": "Number of hotels the suppliers returned with availability.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "hotels returned by suppliers",
+    "supplier hotel results"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "request_date_cet"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[AVG Hotel Results]",
+   "label": "Average hotels returned per supplier request",
+   "definition": "[Hotel Results] / [Requests]: hotels with availability returned per supplier request.",
+   "unit": "count",
+   "format": ",.1f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [
+    "average hotels returned per supplier request"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "request_date_cet"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Verified as Hotel Results / Requests."
+  },
+  {
+   "name": "[% Hotel Results]",
+   "label": "Supplier hotel result rate",
+   "definition": "[Hotel Results] / [Hotels Request]: share of the hotels asked that suppliers returned with availability.",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "supplier hotel result rate",
+    "share of requested hotels returned by suppliers"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "request_date_cet"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Verified ratio of the two counts."
+  },
+  {
+   "name": "[Hotels Cached]",
+   "label": "Hotels served from cache",
+   "definition": "Hotels answered from GTE's cache instead of a live supplier call (only where 'Request Cached' = Yes).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "supplier hotels served from cache",
+    "supplier cached hotels"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "request_date_cet"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Small: about 0.01-0.02% of hotels requested."
+  },
+  {
+   "name": "[% Hotels Cached]",
+   "label": "Supplier cache hit rate",
+   "definition": "[Hotels Cached] / [Hotels Request]: share of the hotels asked that were served from cache.",
+   "unit": "percent",
+   "format": ".3%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "supplier cache hit rate",
+    "supplier cache rate"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "request_date_cet"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Verified ratio; values around 0.01%, hence 3 decimals."
+  },
+  {
+   "name": "[L2B]",
+   "label": "Supplier look-to-book",
+   "definition": "Look-to-book ratio: supplier requests per booking ([Requests] / bookings). Exact inverse of [% L2B].",
+   "unit": "ratio",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "supplier look-to-book",
+    "supplier look to book",
+    "supplier l2b",
+    "supplier requests per booking"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "request_date_cet"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Not a count despite its integer format: values are about 1 million requests per booking and not whole numbers. The booking count behind it is not exposed. Only valid without request-context / outcome breakdowns (see rules)."
+  },
+  {
+   "name": "[% L2B]",
+   "label": "Supplier booking conversion",
+   "definition": "Bookings per supplier request (bookings / [Requests]), the inverse of [L2B], as a fraction.",
+   "unit": "percent",
+   "format": ".5%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "supplier booking conversion",
+    "supplier look-to-book percentage",
+    "supplier % l2b"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "request_date_cet"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Tiny values (about 0.0001%); prefer [L2B] when presenting look-to-book."
+  },
+  {
+   "name": "[AVG Response Time Sec]",
+   "label": "Average supplier response time",
+   "definition": "Average time suppliers took to answer a request, in seconds.",
+   "unit": "seconds",
+   "format": ",.2f",
+   "prefix": "",
+   "suffix": " s",
+   "aggregation": "average",
+   "terms": [
+    "supplier response time",
+    "average supplier response time",
+    "supplier latency"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "request_date_cet"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Verified in seconds (requests in the '1 - 2' band average 1.4). The cube's own format shows 0 decimals; about 0.4 s overall."
+  },
+  {
+   "name": "[Max Response Time Sec]",
+   "label": "Maximum supplier response time",
+   "definition": "Longest time a supplier took to answer a request, in seconds.",
+   "unit": "seconds",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": " s",
+   "aggregation": "max",
+   "terms": [
+    "maximum supplier response time",
+    "slowest supplier response"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "request_date_cet"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Capped at 180 s (time-out limit), so it is 180 for most periods."
+  }
+ ],
+ "breakdowns": [
+  {
+   "column": "'Suppliers'[Supplier Code]",
+   "label": "Supplier code",
+   "entity": "supplier",
+   "kind": "code",
+   "meaning": "Supplier connection code: how supplier-side cubes identify a supplier.",
+   "needs_columns": [
+    "'Suppliers'[Supplier Code.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 105,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Suppliers'[Supplier]",
+   "label": "Supplier connection",
+   "entity": "supplier",
+   "kind": "name",
+   "meaning": "Name of the supplier connection the request was sent to (not the same naming as the Bookings cube).",
+   "needs_columns": [
+    "'Suppliers'[Supplier.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 105,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Cliente'[Cliente]",
+   "label": "Client",
+   "entity": "customer",
+   "kind": "name",
+   "meaning": "Client (agency, integrator or B2C site) whose activity triggered the supplier request.",
+   "needs_columns": [
+    "'Cliente'[Cliente.Key0]"
+   ],
+   "sort_by": "",
+   "distinct": 6822,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Cliente'[Customer Code]",
+   "label": "Client code",
+   "entity": "customer",
+   "kind": "code",
+   "meaning": "Client code; the safest key to match clients with other cubes.",
+   "needs_columns": [
+    "'Cliente'[Customer Code.Key0]"
+   ],
+   "sort_by": "",
+   "distinct": 6851,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Cliente'[Market]",
+   "label": "Client market",
+   "entity": "market",
+   "kind": "enum",
+   "meaning": "Commercial market of the client.",
+   "needs_columns": [
+    "'Cliente'[Market.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 24,
+   "sample_values": [
+    "UAE",
+    "GCC - Except UAE and Local Residence",
+    "Middle East",
+    "EUROPE",
+    "ROW",
+    "Turkish Market",
+    "North Africa",
+    "CIS"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Cliente'[Category]",
+   "label": "Client category",
+   "entity": "customer_category",
+   "kind": "enum",
+   "meaning": "Client category.",
+   "needs_columns": [
+    "'Cliente'[Category.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 5,
+   "sample_values": [
+    "Dubai Link Category",
+    "Final Client Category",
+    "DL Business Trip - No Markup"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Cliente'[Agency Group]",
+   "label": "Agency group",
+   "entity": "agency_group",
+   "kind": "name",
+   "meaning": "Client's agency (pricing) group.",
+   "needs_columns": [
+    "'Cliente'[Agency Group.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 130,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Cliente'[Master Agency]",
+   "label": "Master agency",
+   "entity": "master_agency",
+   "kind": "name",
+   "meaning": "Parent agency of the client.",
+   "needs_columns": [
+    "'Cliente'[Master Agency.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 143,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Cliente'[Integrator Name]",
+   "label": "Integrator",
+   "entity": "integrator",
+   "kind": "name",
+   "meaning": "Technology integrator the client connects through.",
+   "needs_columns": [
+    "'Cliente'[Integrator Name.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 69,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Cliente'[Country]",
+   "label": "Client country",
+   "entity": "country",
+   "kind": "name",
+   "meaning": "Country of the client.",
+   "needs_columns": [
+    "'Cliente'[Country.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 96,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Credentials'[Credential]",
+   "label": "Credential",
+   "entity": "credential",
+   "kind": "name",
+   "meaning": "Login/credential used for the request.",
+   "needs_columns": [
+    "'Credentials'[Credential.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 206,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Interfaces'[Interfaz]",
+   "label": "Interface",
+   "entity": "interface",
+   "kind": "enum",
+   "meaning": "Client channel that triggered the supplier request: XML (client API, almost all traffic), WEB or CLC.",
+   "needs_columns": [
+    "'Interfaces'[Interfaz.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 4,
+   "sample_values": [
+    "XML",
+    "WEB",
+    "CLC"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Tipo Peticion'[Tipo Peticion]",
+   "label": "Request type",
+   "entity": "request_type",
+   "kind": "enum",
+   "meaning": "Kind of call sent to the supplier. Almost all traffic is Availability.",
+   "needs_columns": [
+    "'Tipo Peticion'[Tipo Peticion.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 65,
+   "sample_values": [
+    "Availability",
+    "Cancellation Policy",
+    "Hotel List",
+    "Check Availability",
+    "Hotel information",
+    "Reservation/Booking",
+    "Cancel",
+    "Read booking"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Context'[Context]",
+   "label": "Booking-flow step",
+   "entity": "request_context",
+   "kind": "enum",
+   "meaning": "Step of the client's booking flow during which the supplier was called.",
+   "needs_columns": [
+    "'Context'[Context.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 65,
+   "sample_values": [
+    "Availability",
+    "Cancellation Policy",
+    "Hotel List",
+    "Reservation/Booking",
+    "Modify Reservation/Booking",
+    "Read booking",
+    "Cancel",
+    "Another"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Integrator Context'[Integrator Context]",
+   "label": "Integrator context",
+   "entity": "integrator_context",
+   "kind": "enum",
+   "meaning": "What the client integration was doing: full or single availability, valuation, booking, cache robots, downloads. Most traffic is 'Other'.",
+   "needs_columns": [
+    "'Integrator Context'[Integrator Context.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 14,
+   "sample_values": [
+    "Full Avail",
+    "Single Avail",
+    "Valuation",
+    "Booking",
+    "Cache Metasearch",
+    "Cache Robot",
+    "Booking Flow Download",
+    "Other"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Availability Type'[Availability Type]",
+   "label": "Availability type",
+   "entity": "availability_type",
+   "kind": "enum",
+   "meaning": "Scope of the availability search: one hotel, several hotels or a whole zone.",
+   "needs_columns": [
+    "'Availability Type'[Availability Type.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 4,
+   "sample_values": [
+    "One Hotel",
+    "Multi-Hotel",
+    "Zone"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Tipo Fallos'[Fallo]",
+   "label": "Outcome",
+   "entity": "request_outcome",
+   "kind": "enum",
+   "meaning": "Result of the supplier request: correct, no results (no availability), supplier error or time-out.",
+   "needs_columns": [
+    "'Tipo Fallos'[Fallo.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 6,
+   "sample_values": [
+    "Correct",
+    "No results",
+    "SUPPLIER GENERAL ERROR",
+    "SUPPLIER INTERNAL ERROR",
+    "Time Outs"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Tipo Fallos'[Error Detail]",
+   "label": "Error detail",
+   "entity": "error_detail",
+   "kind": "name",
+   "meaning": "Detailed error reason (about 250 texts).",
+   "needs_columns": [
+    "'Tipo Fallos'[Error Detail.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 256,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Intervalo'[Intervalo]",
+   "label": "Response-time band",
+   "entity": "response_time_band",
+   "kind": "enum",
+   "meaning": "Supplier response time band in seconds ('0 - 1', '1 - 2', ... '> 180', 'Timeout'); sort by its order column.",
+   "needs_columns": [
+    "'Intervalo'[Intervalo.Key0]"
+   ],
+   "sort_by": "'Intervalo'[Intervalo.Orden]",
+   "distinct": 184,
+   "sample_values": [
+    "0 - 1",
+    "1 - 2",
+    "2 - 3",
+    "3 - 4",
+    "5 - 6",
+    "10 - 11",
+    "> 180",
+    "Timeout"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Request Cached'[Request Cached]",
+   "label": "Answered from cache",
+   "entity": "cache_flag",
+   "kind": "enum",
+   "meaning": "Whether the request was answered from GTE's cache.",
+   "needs_columns": [
+    "'Request Cached'[Request Cached.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 3,
+   "sample_values": [
+    "Yes",
+    "No"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Is Webservice Administrator'[Is Webservice Administrator]",
+   "label": "Via rate-optimisation tool",
+   "entity": "webservice_administrator_flag",
+   "kind": "enum",
+   "meaning": "Yes when the request came through a third-party webservice administrator (rate re-checking tool).",
+   "needs_columns": [
+    "'Is Webservice Administrator'[Is Webservice Administrator.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 3,
+   "sample_values": [
+    "Yes",
+    "No"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Webservice Administrator'[Webservice Administrator]",
+   "label": "Webservice administrator",
+   "entity": "webservice_administrator",
+   "kind": "name",
+   "meaning": "Third-party webservice administrator (rate re-checking tool) that made the request; 'Unknown' = none.",
+   "needs_columns": [
+    "'Webservice Administrator'[Webservice Administrator.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 5,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Horas'[Hora]",
+   "label": "Hour (UAE time)",
+   "entity": "hour",
+   "kind": "date_part",
+   "meaning": "Hour of day of the request, UAE time ('00'-'23').",
+   "needs_columns": [
+    "'Horas'[Hora.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 25,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Horas CET'[Hora]",
+   "label": "Hour (CET)",
+   "entity": "hour",
+   "kind": "date_part",
+   "meaning": "Hour of day of the request, Central European time ('00'-'23').",
+   "needs_columns": [
+    "'Horas CET'[Hora.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 25,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Calendario'[Día De La Semana]",
+   "label": "Weekday",
+   "entity": "weekday",
+   "kind": "date_part",
+   "meaning": "Day of week of the request date as 'Day 1' (Monday) to 'Day 7' (Sunday).",
+   "needs_columns": [
+    "'Calendario'[Día De La Semana.Key0]"
+   ],
+   "sort_by": "'Calendario'[Día De La Semana.Key0]",
+   "distinct": 8,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Calendario'[Mes]",
+   "label": "Month",
+   "entity": "month",
+   "kind": "date_part",
+   "meaning": "Month of the request date, e.g. 'September 2026'.",
+   "needs_columns": [
+    "'Calendario'[Mes.Key0]"
+   ],
+   "sort_by": "'Calendario'[Mes.Key0]",
+   "distinct": 229,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Calendario'[Semana]",
+   "label": "Week",
+   "entity": "week",
+   "kind": "date_part",
+   "meaning": "Week of the request date, e.g. 'Week 38, Calendar 2026'.",
+   "needs_columns": [
+    "'Calendario'[Semana.Key0]"
+   ],
+   "sort_by": "'Calendario'[Semana.Key0]",
+   "distinct": 993,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Calendario'[Trimestre]",
+   "label": "Quarter",
+   "entity": "quarter",
+   "kind": "date_part",
+   "meaning": "Quarter of the request date, e.g. 'Quarter 3, 2026'.",
+   "needs_columns": [
+    "'Calendario'[Trimestre.Key0]"
+   ],
+   "sort_by": "'Calendario'[Trimestre.Key0]",
+   "distinct": 77,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Calendario'[Año]",
+   "label": "Year",
+   "entity": "year",
+   "kind": "date_part",
+   "meaning": "Year of the request date, written 'Calendar 2026'.",
+   "needs_columns": [
+    "'Calendario'[Año.Key0]"
+   ],
+   "sort_by": "'Calendario'[Año.Key0]",
+   "distinct": 20,
+   "sample_values": [],
+   "status": "active"
+  }
+ ],
+ "named_filters": [
+  {
+   "name": "successful supplier requests",
+   "meaning": "Supplier answered correctly (with or without many results).",
+   "column": "'Tipo Fallos'[Fallo]",
+   "values": [
+    "Correct"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "supplier no results",
+   "meaning": "Supplier answered but had no availability.",
+   "column": "'Tipo Fallos'[Fallo]",
+   "values": [
+    "No results"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "supplier time-outs",
+   "meaning": "Supplier did not answer in time.",
+   "column": "'Tipo Fallos'[Fallo]",
+   "values": [
+    "Time Outs"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "supplier errors",
+   "meaning": "Supplier returned an error or timed out (excludes 'No results', which is a valid answer).",
+   "column": "'Tipo Fallos'[Fallo]",
+   "values": [
+    "SUPPLIER GENERAL ERROR",
+    "SUPPLIER INTERNAL ERROR",
+    "Time Outs"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "supplier availability requests",
+   "meaning": "Availability calls sent to suppliers.",
+   "column": "'Tipo Peticion'[Tipo Peticion]",
+   "values": [
+    "Availability"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "supplier booking requests",
+   "meaning": "Booking calls sent to suppliers (calls, not confirmed bookings).",
+   "column": "'Tipo Peticion'[Tipo Peticion]",
+   "values": [
+    "Reservation/Booking"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "cached supplier requests",
+   "meaning": "Requests answered from GTE's cache.",
+   "column": "'Request Cached'[Request Cached]",
+   "values": [
+    "Yes"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "xml client traffic to suppliers",
+   "meaning": "Supplier requests triggered by clients' XML API.",
+   "column": "'Interfaces'[Interfaz]",
+   "values": [
+    "XML"
+   ],
+   "confidence": "high"
+  }
+ ],
+ "rules": [
+  "This is supplier-side traffic (GTE -> suppliers). Requests clients send to GTE are in the client statistics cubes, and searches are in Statistics Zone; never mix them.",
+  "Data ends yesterday. For 'today' or 'right now' use Statistics Real Time Supplier; for yesterday and earlier use this cube.",
+  "The cube keeps only about the last 365 days; for older periods say the data is no longer available.",
+  "'Calendario'[Fecha] and 'Horas'[Hora] are UAE time (UTC+4); 'Calendar CET'[Date CET] and 'Horas CET'[Hora] are Central European time (2 hours behind UAE in summer, 3 in winter). Use the UAE pair unless CET is asked, and never mix a UAE date with CET hours.",
+  "Suppliers are identified by their connection code 'Suppliers'[Supplier Code] (always with 'Suppliers'[Supplier Code.UniqueName]); 'Suppliers'[Supplier] is the connection's name. The Bookings cube names suppliers differently: joining supplier-side figures to Bookings is by name only and may not match well, so say so whenever you combine them.",
+  "Only [Requests], [Hotels Request], [Hotel Results] and [Hotels Cached] add up. Averages, percentages, [L2B], [% L2B] and [Max Response Time Sec] must never be summed or averaged across rows, days or suppliers: query them at the level needed.",
+  "[L2B] = [Requests] / bookings (supplier requests per booking) and [% L2B] is its exact inverse. Bookings belong to particular request contexts, so never group or filter L2B by 'Integrator Context', 'Tipo Peticion', 'Context', 'Tipo Fallos', 'Intervalo', 'Request Cached' or 'Availability Type' (it becomes meaningless, e.g. equal to the request count where no booking happened). By date, supplier and client attributes it is fine.",
+  "[Requests] counts request messages; [Hotels Request] counts hotels asked (about 5 per request). Neither equals the Statistics Hotel Supplier cube's [Total Hotel Requests] (hotel level, different scope).",
+  "[Hotels Cached] is only non-zero where 'Request Cached'[Request Cached] = \"Yes\".",
+  "'Calendario' month/week/quarter/year columns need their .Key0 helper column (see needs_columns); the 'Calendario' .Value date columns cannot be queried alone (composite key), so filter periods on 'Calendario'[Fecha].",
+  "Volumes are in the billions: format them with ,.0f or ~s.",
+  "Use the cube's measures only; never SUM a column."
+ ],
+ "examples": [
+  {
+   "question": "Supplier requests by supplier last month",
+   "measures": [
+    "[Requests]"
+   ],
+   "breakdowns": [
+    "'Suppliers'[Supplier Code]",
+    "'Suppliers'[Supplier]"
+   ],
+   "date_role": "request_date"
+  },
+  {
+   "question": "Average supplier response time by month this year",
+   "measures": [
+    "[AVG Response Time Sec]"
+   ],
+   "breakdowns": [
+    "'Calendario'[Mes]"
+   ],
+   "date_role": "request_date"
+  },
+  {
+   "question": "Supplier requests by outcome yesterday",
+   "measures": [
+    "[Requests]"
+   ],
+   "breakdowns": [
+    "'Tipo Fallos'[Fallo]"
+   ],
+   "date_role": "request_date"
+  },
+  {
+   "question": "Supplier look-to-book by client market last quarter",
+   "measures": [
+    "[L2B]"
+   ],
+   "breakdowns": [
+    "'Cliente'[Market]"
+   ],
+   "date_role": "request_date"
+  },
+  {
+   "question": "Supplier cache hit rate per week in September",
+   "measures": [
+    "[% Hotels Cached]",
+    "[Hotels Cached]"
+   ],
+   "breakdowns": [
+    "'Calendario'[Semana]"
+   ],
+   "date_role": "request_date"
+  },
+  {
+   "question": "Supplier requests by hour last Monday",
+   "measures": [
+    "[Requests]"
+   ],
+   "breakdowns": [
+    "'Horas'[Hora]"
+   ],
+   "date_role": "request_date"
+  }
+ ],
+ "review": [
+  {
+   "id": "history_supplier.supplier_requests_term",
+   "question": "Does \"supplier requests\" mean request messages ([Requests]) or hotels asked ([Hotels Request], about 5 per message)?",
+   "options": [
+    "[Requests]",
+    "[Hotels Request]"
+   ],
+   "proposed": "[Requests]",
+   "why": "It is the cube's main count and what time-outs, errors and response times are measured on; hotels asked has its own term."
+  },
+  {
+   "id": "history_supplier.look_to_book_term",
+   "question": "Should \"supplier look-to-book\" be shown as requests per booking ([L2B], about 1 million) or as a conversion percentage ([% L2B], about 0.0001%)?",
+   "options": [
+    "[L2B]",
+    "[% L2B]"
+   ],
+   "proposed": "[L2B]",
+   "why": "Look-to-book is conventionally looks per booking; the percentage is its exact inverse and is hard to read."
+  },
+  {
+   "id": "history_supplier.error_rate_definition",
+   "question": "Does \"supplier error rate\" include 'No results' answers?",
+   "options": [
+    "errors and time-outs only",
+    "errors, time-outs and no results"
+   ],
+   "proposed": "errors and time-outs only",
+   "why": "'No results' is a valid answer meaning no availability (about 28% of requests) and would swamp the real failures (about 2%)."
+  },
+  {
+   "id": "history_supplier.time_zone",
+   "question": "Should plain date questions use the UAE-time calendar or the CET calendar?",
+   "options": [
+    "'Calendario'[Fecha] (UAE time)",
+    "'Calendar CET'[Date CET] (CET)"
+   ],
+   "proposed": "'Calendario'[Fecha] (UAE time)",
+   "why": "The company runs on UAE time; daily totals differ slightly between the two because days cut at different hours."
+  }
+ ]
+}

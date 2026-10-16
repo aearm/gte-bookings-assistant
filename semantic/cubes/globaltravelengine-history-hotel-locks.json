@@ -1,0 +1,481 @@
+{
+ "cube": "GlobalTravelEngine - History Hotel Locks",
+ "label": "Hotel Locks History",
+ "purpose": "Counts of hotel 'locks': hotel options that failed for a customer in the booking flow because the supplier returned no results, a changed price or an error. Used to watch supplier reliability and lost conversions.",
+ "grain": "One lock event (a failed availability / price recheck or booking attempt of a hotel option from a supplier for a customer).",
+ "use_for": [
+  "number of hotel locks by day, week, month or hour",
+  "locks by supplier, hotel, city or country",
+  "locks by lock reason (no results, price change, error) and booking-flow step",
+  "locks by customer, market, account manager, integrator or channel"
+ ],
+ "not_for": [
+  "supplier API connection locks (Supplier Lock API Hotel)",
+  "how often prices changed overall (KPI Change Price)",
+  "search volumes or look-to-book (Statistics cubes)",
+  "bookings or sales (Sales Per Owned Hotels, Bookings)"
+ ],
+ "coverage": {
+  "main_date": "'Calendar'[Date]",
+  "first": "2025-10",
+  "last": "2026-10",
+  "note": "Data starts mid-October 2025 (the calendar shows empty years back to 2021); the current month is partial. Volumes grew strongly during 2026, so compare periods with care."
+ },
+ "dates": [
+  {
+   "column": "'Calendar'[Date]",
+   "role": "lock_date",
+   "label": "Lock date",
+   "meaning": "Day the lock event happened (the cube's only date).",
+   "default": true,
+   "words": [
+    "locked",
+    "lock date",
+    "when locked",
+    "happened"
+   ],
+   "first": "2025-10",
+   "last": "2026-10"
+  }
+ ],
+ "measures": [
+  {
+   "name": "[Locks Number]",
+   "label": "Hotel locks",
+   "definition": "Number of hotel lock events: a hotel option failed for a customer in the booking flow (cancellation-policy check or booking step) because the supplier returned no results, a changed price or an error.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "hotel locks",
+    "locks",
+    "number of locks",
+    "hotel lock events",
+    "lock count",
+    "price-change locks",
+    "no-results locks"
+   ],
+   "default_date_role": "lock_date",
+   "date_roles": [
+    "lock_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "'price-change locks' and 'no-results locks' use the named filters of the same name. Not the same as supplier API connection locks (Supplier Lock API Hotel)."
+  }
+ ],
+ "breakdowns": [
+  {
+   "column": "'Lock Types'[Lock Type]",
+   "label": "Lock reason",
+   "entity": "lock_type",
+   "kind": "enum",
+   "meaning": "Why the hotel option was locked.",
+   "needs_columns": [
+    "'Lock Types'[Lock Type.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 5,
+   "sample_values": [
+    "No Results",
+    "Price Change",
+    "Error",
+    "Manual",
+    "Unknown"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Context'[Context]",
+   "label": "Booking-flow step",
+   "entity": "booking_flow_step",
+   "kind": "enum",
+   "meaning": "Step where the lock happened: cancellation-policy check (almost all) or reservation / booking.",
+   "needs_columns": [
+    "'Context'[Context.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 3,
+   "sample_values": [
+    "Cancellation Policy",
+    "Reservation/Booking",
+    "Unknown"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Channels'[Channel]",
+   "label": "Channel",
+   "entity": "sale_channel",
+   "kind": "enum",
+   "meaning": "Channel of the request: Xml (API), Web (B2B) or B2C.",
+   "needs_columns": [
+    "'Channels'[Channel.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 4,
+   "sample_values": [
+    "Xml",
+    "Web",
+    "B2C",
+    "Unknown"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Suppliers'[Supplier]",
+   "label": "Supplier",
+   "entity": "supplier",
+   "kind": "name",
+   "meaning": "Supplier connection whose hotel option was locked.",
+   "needs_columns": [
+    "'Suppliers'[Supplier.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 114,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Suppliers'[Supplier Code]",
+   "label": "Supplier code",
+   "entity": "supplier_code",
+   "kind": "code",
+   "meaning": "Short code of the supplier connection.",
+   "needs_columns": [
+    "'Suppliers'[Supplier Code.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 114,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hotels'[Hotel]",
+   "label": "Hotel",
+   "entity": "hotel",
+   "kind": "name",
+   "meaning": "Hotel that was locked.",
+   "needs_columns": [
+    "'Hotels'[Hotel.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 87101,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hotels'[City]",
+   "label": "Hotel city",
+   "entity": "hotel_city",
+   "kind": "name",
+   "meaning": "City of the hotel.",
+   "needs_columns": [
+    "'Hotels'[City.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 12988,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hotels'[Country]",
+   "label": "Hotel country",
+   "entity": "hotel_country",
+   "kind": "name",
+   "meaning": "Country of the hotel.",
+   "needs_columns": [
+    "'Hotels'[Country.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 202,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Customer]",
+   "label": "Customer",
+   "entity": "customer",
+   "kind": "name",
+   "meaning": "Client agency whose request was locked.",
+   "needs_columns": [
+    "'Customers'[Customer.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 6772,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Market]",
+   "label": "Market",
+   "entity": "market",
+   "kind": "enum",
+   "meaning": "Customer market.",
+   "needs_columns": [
+    "'Customers'[Market.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 24,
+   "sample_values": [
+    "ROW",
+    "EUROPE",
+    "GCC - Except UAE and Local Residence",
+    "UAE",
+    "Middle East",
+    "Turkish Market",
+    "North Africa",
+    "B2C UAE"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Account Manager]",
+   "label": "Account manager",
+   "entity": "account_manager",
+   "kind": "name",
+   "meaning": "Account manager responsible for the customer.",
+   "needs_columns": [
+    "'Customers'[Account Manager.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 19,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Master Integrator]",
+   "label": "Integrator",
+   "entity": "integrator",
+   "kind": "name",
+   "meaning": "Technology integrator the customer connects through.",
+   "needs_columns": [
+    "'Customers'[Master Integrator.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 68,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Type of Payment]",
+   "label": "Payment type",
+   "entity": "payment_type",
+   "kind": "enum",
+   "meaning": "Customer payment terms.",
+   "needs_columns": [
+    "'Customers'[Type of Payment.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 4,
+   "sample_values": [
+    "Credit",
+    "Pre-payment",
+    "POS",
+    "Unknown"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Hours'[Hour]",
+   "label": "Hour of day",
+   "entity": "hour",
+   "kind": "date_part",
+   "meaning": "Hour of day (00-23) of the lock.",
+   "needs_columns": [
+    "'Hours'[Hour.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 25,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Calendar'[Year]",
+   "label": "Year",
+   "entity": "lock_year",
+   "kind": "date_part",
+   "meaning": "Year of the lock.",
+   "needs_columns": [],
+   "sort_by": "'Calendar'[Year.Fecha ISO DESC Year]",
+   "distinct": null,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Calendar'[Quarter]",
+   "label": "Quarter",
+   "entity": "lock_quarter",
+   "kind": "date_part",
+   "meaning": "Quarter of the lock, e.g. Quarter 3, 2026.",
+   "needs_columns": [
+    "'Calendar'[Quarter.UniqueName]"
+   ],
+   "sort_by": "'Calendar'[Quarter.Fecha ISO DESC Quarter]",
+   "distinct": 22,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Calendar'[Month Name]",
+   "label": "Month",
+   "entity": "lock_month",
+   "kind": "date_part",
+   "meaning": "Month of the lock, e.g. July 2026.",
+   "needs_columns": [
+    "'Calendar'[Month Name.UniqueName]"
+   ],
+   "sort_by": "'Calendar'[Month Name.Fecha ISO DESC Month Name]",
+   "distinct": 61,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Calendar'[Week Of Year]",
+   "label": "Week of year",
+   "entity": "lock_week",
+   "kind": "date_part",
+   "meaning": "Week number of the lock.",
+   "needs_columns": [
+    "'Calendar'[Week Of Year.UniqueName]"
+   ],
+   "sort_by": "'Calendar'[Week Of Year.Week Of Year DESC]",
+   "distinct": 54,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Calendar'[Day Week]",
+   "label": "Weekday",
+   "entity": "lock_weekday",
+   "kind": "date_part",
+   "meaning": "Day of week of the lock.",
+   "needs_columns": [
+    "'Calendar'[Day Week.UniqueName]"
+   ],
+   "sort_by": "'Calendar'[Day Week.Day Week DESC]",
+   "distinct": 8,
+   "sample_values": [],
+   "status": "active"
+  }
+ ],
+ "named_filters": [
+  {
+   "name": "no-results locks",
+   "meaning": "Locks because the supplier returned no availability.",
+   "column": "'Lock Types'[Lock Type]",
+   "values": [
+    "No Results"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "price-change locks",
+   "meaning": "Locks because the supplier's price changed.",
+   "column": "'Lock Types'[Lock Type]",
+   "values": [
+    "Price Change"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "error locks",
+   "meaning": "Locks because of a supplier error.",
+   "column": "'Lock Types'[Lock Type]",
+   "values": [
+    "Error"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "cancellation-policy step",
+   "meaning": "Locks at the cancellation-policy (pre-booking) check.",
+   "column": "'Context'[Context]",
+   "values": [
+    "Cancellation Policy"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "booking step",
+   "meaning": "Locks at the reservation / booking step.",
+   "column": "'Context'[Context]",
+   "values": [
+    "Reservation/Booking"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "xml channel",
+   "meaning": "Requests through the XML / API channel.",
+   "column": "'Channels'[Channel]",
+   "values": [
+    "Xml"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "web channel",
+   "meaning": "Requests through the B2B web channel.",
+   "column": "'Channels'[Channel]",
+   "values": [
+    "Web"
+   ],
+   "confidence": "high"
+  }
+ ],
+ "rules": [
+  "[Locks Number] is the only measure; 'price-change locks', 'no-results locks' and 'error locks' are named filters on 'Lock Types'[Lock Type].",
+  "There is no data before 2025-10: say so instead of answering zero for earlier periods.",
+  "Always put a breakdown's needs_columns next to it; the Year column needs none.",
+  "Use the cube's measures only; never SUM a column."
+ ],
+ "examples": [
+  {
+   "question": "Hotel locks per month this year",
+   "measures": [
+    "[Locks Number]"
+   ],
+   "breakdowns": [
+    "'Calendar'[Month Name]"
+   ],
+   "date_role": "lock_date"
+  },
+  {
+   "question": "Top 10 suppliers by price-change locks last quarter",
+   "measures": [
+    "[Locks Number]"
+   ],
+   "breakdowns": [
+    "'Suppliers'[Supplier]"
+   ],
+   "date_role": "lock_date"
+  },
+  {
+   "question": "Locks by lock reason and booking-flow step last week",
+   "measures": [
+    "[Locks Number]"
+   ],
+   "breakdowns": [
+    "'Lock Types'[Lock Type]",
+    "'Context'[Context]"
+   ],
+   "date_role": "lock_date"
+  }
+ ],
+ "review": [
+  {
+   "id": "history_hotel_locks.locks_term",
+   "question": "Does a plain 'locks' mean hotel option locks in the booking flow (this cube) or supplier API connection locks (Supplier Lock API Hotel)?",
+   "options": [
+    "History Hotel Locks [Locks Number]",
+    "Supplier Lock API Hotel lock count"
+   ],
+   "proposed": "History Hotel Locks [Locks Number]; 'supplier locks' / 'api locks' go to Supplier Lock API Hotel",
+   "why": "Hotel locks are the business-facing event (about 1 million since 2025-10) that account and supplier managers follow; connection locks are a technical safeguard."
+  }
+ ]
+}

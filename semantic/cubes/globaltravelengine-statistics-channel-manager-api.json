@@ -1,0 +1,626 @@
+{
+  "cube": "GlobalTravelEngine - Statistics Channel Manager API",
+  "label": "Channel manager API",
+  "purpose": "Requests that hotels' channel managers send to the Channel Manager API to push rate updates and hotel information into GlobalTravelEngine. Includes the hotels and contracts the requests carry, response times, errors and warnings.",
+  "grain": "Aggregated channel manager API requests per day, hour, API user, channel manager, integration type, request type, error, warning and response-time band.",
+  "use_for": [
+    "channel manager requests by day, hour, channel manager or API user",
+    "channel manager response times (average and by time band)",
+    "channel manager errors and warnings",
+    "hotels and contracts carried by channel manager requests"
+  ],
+  "not_for": [
+    "number of rate changes or rate updates (Statistics Rate Changes Channel Manager API)",
+    "the rates or prices themselves (not stored)",
+    "bookings, sales or revenue (Bookings)",
+    "supplier or client API traffic (Statistics Hotel Supplier, Statistics Hotel Client)",
+    "anything older than about one year"
+  ],
+  "coverage": {
+    "main_date": "'Calendar'[Date]",
+    "first": "2025-10",
+    "last": "2026-10",
+    "note": "Rolling window of about one year: the oldest day drops off every day (on 2026-10-16 the Calendar started around 2025-10-17), so October 2025 is partial and last-year comparisons are not possible. The oldest day still loaded (about 0.66 million requests) has no 'Calendar' date: all-time totals and 'Date'[Date] include it, and monthly figures from 'Calendar' do not."
+  },
+  "dates": [
+    {
+      "column": "'Calendar'[Date]",
+      "role": "request_date",
+      "label": "Request date",
+      "meaning": "Day the request was received (the cube's main date, with year, quarter, month and week attributes).",
+      "default": true,
+      "words": [
+        "request date",
+        "received",
+        "sent",
+        "day"
+      ],
+      "first": "2025-10",
+      "last": "2026-10"
+    },
+    {
+      "column": "'Date'[Date]",
+      "role": "request_date",
+      "label": "Request date (plain table)",
+      "meaning": "The same request date in a plain date table with no attributes. It matches 'Calendar'[Date] month by month, except that it also holds the oldest loaded day (October 2025), which 'Calendar' lacks.",
+      "default": false,
+      "words": [],
+      "first": "2025-10",
+      "last": "2026-10"
+    }
+  ],
+  "measures": [
+    {
+      "name": "[Requests]",
+      "label": "Channel manager requests",
+      "definition": "Number of API requests received from channel managers (successful or not).",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [
+        "channel manager requests",
+        "channel manager api requests",
+        "channel manager calls"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": "Main measure. 199.7 million all-time, 188.9 million in the last 12 months."
+    },
+    {
+      "name": "[Hotels]",
+      "label": "Hotels in requests",
+      "definition": "Hotels carried by the requests, added up per request: a hotel sent in 100 requests counts 100 times. It is not a number of distinct hotels.",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [
+        "hotels in channel manager requests"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "medium",
+      "notes": "About 0.98 per request."
+    },
+    {
+      "name": "[Contracts]",
+      "label": "Contracts in requests",
+      "definition": "Hotel contracts carried by the requests, added up per request (not distinct contracts).",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [
+        "contracts in channel manager requests"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "medium",
+      "notes": "About 0.99 per request."
+    },
+    {
+      "name": "[Bookings]",
+      "label": "Bookings in requests",
+      "definition": "Bookings carried or returned by channel manager requests. The exact meaning is not confirmed.",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [
+        "bookings in channel manager requests"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "low",
+      "notes": "About 93,000 all-time against about 200 million requests, although 'Get bookings' requests have no data. Never use it for \"bookings\" questions (see review)."
+    },
+    {
+      "name": "[Total Time]",
+      "label": "Total response time",
+      "definition": "Sum of response times of the requests, in milliseconds.",
+      "unit": "milliseconds",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": " ms",
+      "aggregation": "sum",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date"
+      ],
+      "status": "hidden",
+      "hidden_reason": "helper of [AVG Time] (sum of response times in milliseconds)",
+      "confidence": "medium",
+      "notes": "[AVG Time] = [Total Time] ÷ [Requests] (checked on the data)."
+    },
+    {
+      "name": "[AVG Time]",
+      "label": "Average response time",
+      "definition": "Average response time per request ([Total Time] ÷ [Requests]), in milliseconds.",
+      "unit": "milliseconds",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": " ms",
+      "aggregation": "average",
+      "terms": [
+        "channel manager response time",
+        "channel manager average response time",
+        "channel manager latency"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "medium",
+      "notes": "About 218 ms all-time. The unit is inferred from the 'Range Times' bands (0 - 100, 100 - 200 ...), where most requests fall."
+    },
+    {
+      "name": "[AVG Hotels]",
+      "label": "Hotels per request",
+      "definition": "Average hotels per request ([Hotels] ÷ [Requests]).",
+      "unit": "ratio",
+      "format": ",.2f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "average",
+      "terms": [
+        "hotels per channel manager request"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "medium",
+      "notes": "About 0.98."
+    },
+    {
+      "name": "[AVG Contracts]",
+      "label": "Contracts per request",
+      "definition": "Average contracts per request ([Contracts] ÷ [Requests]).",
+      "unit": "ratio",
+      "format": ",.2f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "average",
+      "terms": [
+        "contracts per channel manager request"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "medium",
+      "notes": "About 0.99."
+    },
+    {
+      "name": "[AVG Bookings]",
+      "label": "Bookings per request",
+      "definition": "Average bookings per request ([Bookings] ÷ [Requests]).",
+      "unit": "ratio",
+      "format": ",.2f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "average",
+      "terms": [
+        "bookings per channel manager request"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "low",
+      "notes": "About 0.0005: it shows 0.00 at this format. Same open question as [Bookings]."
+    }
+  ],
+  "breakdowns": [
+    {
+      "column": "'Request Types'[Request Type]",
+      "label": "Request type",
+      "entity": "request_type",
+      "kind": "enum",
+      "meaning": "Kind of request. Almost all are 'Update rates'; 'Hotel information' is the only other type with data.",
+      "needs_columns": [
+        "'Request Types'[Request Type.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 7,
+      "sample_values": [
+        "Update rates",
+        "Hotel information",
+        "Get rates",
+        "Get bookings",
+        "Offers",
+        "Others",
+        "Unknown"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Integrators'[Integrator]",
+      "label": "Channel manager",
+      "entity": "channel_manager",
+      "kind": "name",
+      "meaning": "Channel manager company that sent the request. One company sends about 98% of the traffic.",
+      "needs_columns": [
+        "'Integrators'[Integrator.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 5,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Integration Types'[Integration Type]",
+      "label": "Integration type",
+      "entity": "integration_type",
+      "kind": "enum",
+      "meaning": "Integration protocol or connector used. Two types have data; one channel manager's V2 connector carries almost everything.",
+      "needs_columns": [
+        "'Integration Types'[Integration Type.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 10,
+      "sample_values": [
+        "Generic JPDM",
+        "Generic JP",
+        "Other",
+        "Unknown"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Users'[User]",
+      "label": "API user",
+      "entity": "api_user",
+      "kind": "name",
+      "meaning": "API login of the hotel or hotel chain sending the requests.",
+      "needs_columns": [
+        "'Users'[User.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 304,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Error Types'[Error Type]",
+      "label": "Error",
+      "entity": "error_type",
+      "kind": "enum",
+      "meaning": "Error returned to the request; 'Correct' means no error.",
+      "needs_columns": [
+        "'Error Types'[Error Type.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 96,
+      "sample_values": [
+        "Correct",
+        "Invalid value",
+        "Invalid roomtype code",
+        "Zero price not valid",
+        "Login fails - Invalid user or password"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Error Types'[Error Type Code]",
+      "label": "Error code",
+      "entity": "error_type",
+      "kind": "code",
+      "meaning": "Technical code of the error; 'Correct' means no error.",
+      "needs_columns": [
+        "'Error Types'[Error Type Code.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 97,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Warning Types'[Warning Type]",
+      "label": "Warning",
+      "entity": "warning_type",
+      "kind": "enum",
+      "meaning": "Warning returned with the request; 'Correct' means no warning. 'Incorrect Additional Price' is about 30% of the hotel volume.",
+      "needs_columns": [
+        "'Warning Types'[Warning Type.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 25,
+      "sample_values": [
+        "Correct",
+        "Incorrect Additional Price",
+        "Allotment can not be modified because the used allotment is higher than the base-extra",
+        "Contract changed",
+        "Incorrect privileges",
+        "Problem with room",
+        "Other warnings",
+        "Unknown"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Range Times'[Range Time]",
+      "label": "Response-time band",
+      "entity": "response_time_band",
+      "kind": "enum",
+      "meaning": "Response-time band in milliseconds.",
+      "needs_columns": [
+        "'Range Times'[Range Time.UniqueName]"
+      ],
+      "sort_by": "'Range Times'[Range Time.Orden]",
+      "distinct": 22,
+      "sample_values": [
+        "0 - 100",
+        "100 - 200",
+        "200 - 300",
+        "500 - 600",
+        "1000 - 2000",
+        "> 10000",
+        "Timeout"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Calendar'[Year]",
+      "label": "Year",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Year of the request (number).",
+      "needs_columns": [],
+      "sort_by": "'Calendar'[Year.Fecha ISO DESC Year]",
+      "distinct": null,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendar'[Quarter]",
+      "label": "Quarter",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Quarter, written \"Quarter 1, 2026\".",
+      "needs_columns": [
+        "'Calendar'[Quarter.UniqueName]"
+      ],
+      "sort_by": "'Calendar'[Quarter.Fecha ISO DESC Quarter]",
+      "distinct": 6,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendar'[Month Year]",
+      "label": "Month",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Month, written \"1-2026\" (month-year).",
+      "needs_columns": [
+        "'Calendar'[Month Year.UniqueName]"
+      ],
+      "sort_by": "'Calendar'[Month Year.Fecha ISO DESC MonthYear]",
+      "distinct": 14,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendar'[Week Year]",
+      "label": "Week",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Week with its year, written \"02 (2026)\".",
+      "needs_columns": [
+        "'Calendar'[Week Year.UniqueName]"
+      ],
+      "sort_by": "'Calendar'[Week Year.Fecha ISO DESC WeekYear]",
+      "distinct": 55,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendar'[Day Week]",
+      "label": "Weekday",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Day of the week (Monday to Sunday).",
+      "needs_columns": [
+        "'Calendar'[Day Week.UniqueName]"
+      ],
+      "sort_by": "'Calendar'[Day Week.Day Week DESC]",
+      "distinct": 8,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Hours'[Hour]",
+      "label": "Hour of day",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Hour the request was received, \"00\" to \"23\".",
+      "needs_columns": [
+        "'Hours'[Hour.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 25,
+      "sample_values": [],
+      "status": "active"
+    }
+  ],
+  "named_filters": [
+    {
+      "name": "rate update requests",
+      "meaning": "Requests that push rate updates (API calls, not the number of rate changes they carry).",
+      "column": "'Request Types'[Request Type]",
+      "values": [
+        "Update rates"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "hotel information requests",
+      "meaning": "Requests that send hotel information.",
+      "column": "'Request Types'[Request Type]",
+      "values": [
+        "Hotel information"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "successful channel manager requests",
+      "meaning": "Requests answered without an error.",
+      "column": "'Error Types'[Error Type Code]",
+      "values": [
+        "Correct"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "channel manager requests without warnings",
+      "meaning": "Requests answered without a warning.",
+      "column": "'Warning Types'[Warning Type Code]",
+      "values": [
+        "Correct"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "incorrect additional price warnings",
+      "meaning": "Requests that got the 'Incorrect Additional Price' warning.",
+      "column": "'Warning Types'[Warning Type Code]",
+      "values": [
+        "warmIncorrectAdditionalPrice"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "slow channel manager requests",
+      "meaning": "Requests that took more than 1 second, or timed out.",
+      "column": "'Range Times'[Range Time]",
+      "values": [
+        "1000 - 2000",
+        "2000 - 3000",
+        "3000 - 4000",
+        "4000 - 5000",
+        "5000 - 6000",
+        "6000 - 7000",
+        "7000 - 8000",
+        "8000 - 9000",
+        "9000 - 10000",
+        "> 10000",
+        "Timeout"
+      ],
+      "confidence": "medium"
+    }
+  ],
+  "rules": [
+    "[Requests] counts API calls. \"Rate changes\" and \"rate updates\" are counted by [Changes] in Statistics Rate Changes Channel Manager API; the 'rate update requests' filter here counts the calls that carried them.",
+    "[Hotels], [Contracts] and [Bookings] add up per request, so a hotel counts once for every request. Never present them as a number of distinct hotels, contracts or bookings.",
+    "[AVG Time], [AVG Hotels], [AVG Contracts] and [AVG Bookings] are averages per request: never add them across rows. [AVG Time] is in milliseconds.",
+    "Error share = [Requests] with Error Type Code other than 'Correct' ÷ all [Requests]. Warning share works the same way with Warning Type Code.",
+    "About one year of data (rolling window). Last-year comparisons are not possible and October 2025 is partial.",
+    "'IPs'[IP] is almost entirely 'Unknown': do not break down by IP.",
+    "Get rates, Get bookings, Offers and Others requests have no data."
+  ],
+  "examples": [
+    {
+      "question": "Channel manager requests per month in 2026",
+      "measures": [
+        "[Requests]"
+      ],
+      "breakdowns": [
+        "'Calendar'[Month Year]"
+      ],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Average channel manager response time by channel manager last week",
+      "measures": [
+        "[AVG Time]"
+      ],
+      "breakdowns": [
+        "'Integrators'[Integrator]"
+      ],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Most frequent channel manager errors in September 2026",
+      "measures": [
+        "[Requests]"
+      ],
+      "breakdowns": [
+        "'Error Types'[Error Type]"
+      ],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Channel manager requests by hour of day this month",
+      "measures": [
+        "[Requests]"
+      ],
+      "breakdowns": [
+        "'Hours'[Hour]"
+      ],
+      "date_role": "request_date"
+    }
+  ],
+  "review": [
+    {
+      "id": "channel_manager.default_date",
+      "question": "Which date should plain questions use: 'Calendar'[Date] or 'Date'[Date]?",
+      "options": [
+        "'Calendar'[Date]",
+        "'Date'[Date]"
+      ],
+      "proposed": "'Calendar'[Date]",
+      "why": "Both are the request date and match month by month. 'Calendar' has the month, week and quarter attributes used for grouping; it misses only the oldest loaded day (about 0.66 million requests, October 2025)."
+    },
+    {
+      "id": "channel_manager.bookings_measure",
+      "question": "What do [Bookings] and [AVG Bookings] count in channel manager requests, and should they be shown at all?",
+      "options": [
+        "Keep them active, only for \"bookings in channel manager requests\"",
+        "Hide them"
+      ],
+      "proposed": "Keep them active, only for \"bookings in channel manager requests\"",
+      "why": "They have data (about 93,000 in all), but 'Get bookings' requests show none, so their meaning is unclear. They must never answer plain \"bookings\" questions."
+    },
+    {
+      "id": "channel_manager.hotels_count",
+      "question": "\"How many hotels use channel managers\": hotel occurrences in requests, or distinct hotels?",
+      "options": [
+        "[Hotels] here (added up per request)",
+        "Distinct hotels: count of 'Hotels'[Hotel] with [Changes] in Statistics Rate Changes Channel Manager API"
+      ],
+      "proposed": "Distinct hotels: count of 'Hotels'[Hotel] with [Changes] in Statistics Rate Changes Channel Manager API",
+      "why": "[Hotels] counts a hotel once for every request (about 196 million all-time), so it measures volume, not how many hotels."
+    }
+  ]
+}

@@ -68,17 +68,22 @@ DAX_RULES = """Rules for DAX queries (Analysis Services cubes):
 - Use only the exact table, column and measure names of the cube it runs on (see its details).
   Write columns as 'Table'[Column] and measures as [Measure Name].
 - If a column has "group with" columns, list those hidden columns right next to it every time you
-  group by that column (SUMMARIZECOLUMNS, SUMMARIZE, VALUES), e.g.
+  group by or filter that column (SUMMARIZECOLUMNS, SUMMARIZE, ALL), e.g.
   SUMMARIZECOLUMNS('Countries'[Country.UniqueName], 'Countries'[Country], "Bookings", [Bookings]).
-  Otherwise the server rejects the query. They are removed from the result automatically.
+  Filter such a column with KEEPFILTERS(FILTER(ALL('Countries'[Country], 'Countries'[Country.UniqueName]),
+  'Countries'[Country] = "Spain")), never with TREATAS or 'Countries'[Country] = "Spain" as a CALCULATE
+  filter. Otherwise the server rejects the query. They are removed from the result automatically.
   To put such a column in its natural order, also group by its "sort by" column and ORDER BY it.
 - Prefer existing measures. Typical shape:
     EVALUATE
     SUMMARIZECOLUMNS('Date'[Year], 'Destination'[Country], "Bookings", [Total Bookings])
     ORDER BY 'Date'[Year]
 - Give each measure a short readable label in SUMMARIZECOLUMNS ("Bookings", "Revenue").
-- Filters go inside SUMMARIZECOLUMNS, e.g. TREATAS({"Spain"}, 'Destination'[Country])
-  or KEEPFILTERS(FILTER(ALL('Date'[Year]), 'Date'[Year] >= 2025)).
+- Show people names, not only codes: when a breakdown (customer, supplier, hotel, agency...) has a name
+  column, group by it too, so the result reads "Desert Pearl Tours", not "1042". Keep the code as well
+  when it is needed to join cubes or to tell apart members with the same name.
+- Filters go inside SUMMARIZECOLUMNS, e.g. KEEPFILTERS(FILTER(ALL('Date'[Year]), 'Date'[Year] >= 2025)),
+  with the column's group-with columns inside ALL() when it has them (TREATAS only for a column without).
 - For "top N" questions wrap with TOPN(N, <table>, [Label], DESC) and ORDER BY the label.
 - Always add ORDER BY (dates ascending, rankings descending).
 - Keep results small (well under MAX_ROWS rows): pick a sensible grain, e.g. months not days
@@ -92,6 +97,8 @@ SQL_RULES = """Rules for SQL queries (DuckDB dialect, local data files):
 - Use only the exact table and column names listed in the schema. Tables can be joined in the query.
   Always wrap column names in double quotes, e.g. "Booking Date", "Sales USD".
 - Aggregate with GROUP BY and give result columns short readable aliases ("Bookings", "Revenue").
+- Show names, not only codes: when a breakdown has a name column, return it (keep the code too when it is
+  needed to join or to tell members apart).
 - Months: strftime(date_trunc('month', "Some Date"), '%Y-%m') AS "Month". Years: year("Some Date").
 - Round money to 2 decimals. For "top N" use ORDER BY ... DESC LIMIT N.
 - Always add ORDER BY (dates ascending, rankings descending).
@@ -133,7 +140,8 @@ Joining cubes (several steps):
 - In combine_sql, quote column names in double quotes. A step's result columns are named like this:
   a grouped column by its column name without the table ('Customers'[Code] -> "Code"; when two have
   the same name: "Customers Code"), a measure by the label you gave it. Give the final columns clear
-  names ("Customer", "Sales", "Payments") and an ORDER BY.
+  names ("Customer", "Sales", "Payments") and an ORDER BY. When steps are joined on a code, carry the
+  name through (from the step that has it), so the result shows who each row is.
 
 LANGUAGE_RULES
 
@@ -221,8 +229,13 @@ STYLE = {
         "label_angle": {"type": "integer", "enum": [0, -30, -45, -90]},
         "legend": {"type": "string", "enum": ["top", "right", "bottom", "none"]},
         "log_scale": {"type": "boolean"},
+        "measures": {"type": "string", "enum": ["auto", "one_chart", "panels"],
+                     "description": "How several measures of different size or unit are drawn: auto (one panel "
+                                    "each), one_chart (all in one chart, each measure on its own axis, bars side by "
+                                    "side - when the user asks for them in one chart), panels."},
     },
-    "required": ["formats", "x_title", "y_title", "sort", "show_values", "label_angle", "legend", "log_scale"],
+    "required": ["formats", "x_title", "y_title", "sort", "show_values", "label_angle", "legend", "log_scale",
+                 "measures"],
     "additionalProperties": False,
 }
 
@@ -241,11 +254,11 @@ CHART_TOOL = {
                                "second one with few values; heatmap for two breakdowns with many values (e.g. "
                                "market by month); scatter to relate two numbers; table when a chart would not "
                                "help (e.g. a single row with many numbers); custom only for a chart the user "
-                               "described that no other type draws exactly. Never put two measures with very "
-                               "different scales on one axis.")},
+                               "described that no other type draws exactly. Several measures of very different "
+                               "size or unit are drawn automatically as one panel each, with their own scales.")},
             "x": {"type": "string", "description": "Column for the x-axis, the labels, or the countries (map). Exact column name."},
             "y": {"type": "array", "items": {"type": "string"}, "description": "Numeric column(s) to plot. Exact column names."},
-            "color": {"type": "string", "description": "Second breakdown column (series of a line / stacked bar, rows of a heatmap), or empty."},
+            "color": {"type": "string", "description": "Second breakdown column (series of a line / bars side by side / stacked bar, rows of a heatmap), e.g. the day or channel, or empty."},
             "custom_chart": {"type": "string", "description": "Only for chart_type custom: the chart spec as JSON, else empty."},
             "style": STYLE,
             "title": {"type": "string"},
@@ -273,7 +286,14 @@ FORMAT_RULES = """Format the chart so it reads best for this data and question; 
   (use horizontal_bar instead when names are long).
 - legend: none for a single series; top otherwise.
 - log_scale: only when values span several orders of magnitude and the point is to compare many items.
-- Never put measures of very different size on one axis: pick the main one, or a chart the user asked for.
+- Several measures: put every measure the question asks for in y - never drop one. When they differ a lot
+  in size or unit (requests in millions, bookings in tens, sales in AED) they are drawn as one panel per
+  measure, each with its own scale and format, sharing the categories; with a second breakdown in color
+  (e.g. the day), each panel shows one bar per value side by side ("3 bars for each day" = y with the 3
+  measures, color the day). Use bar or horizontal_bar for categories, line for time.
+- measures: one_chart when the user wants them together in one chart (e.g. "6 bars for each customer, 3
+  per day", "all in one chart"): each measure gets its own axis (up to 3, coloured like its bars) and the
+  bars stand side by side, the second breakdown in shades of each measure's colour. Otherwise auto.
 - For chart_type custom, put the same formatting in the Plotly spec (tickformat, tickprefix, hovertemplate,
   texttemplate, axis titles, categoryorder) and still fill style."""
 
@@ -316,6 +336,9 @@ def _structured_call(system: list, tool: dict, user_text: str | list, tools: lis
         extra = {}
         if tools and run_tool:
             extra["tools"] = tools
+            # the whole conversation so far is re-read from the cache in the next round of checks (a single
+            # call has no next round: caching its unique tail would only add the 25% write premium)
+            extra["cache_control"] = {"type": "ephemeral"}
             if check_round == MAX_CHECK_ROUNDS:
                 extra["tool_choice"] = {"type": "none"}  # enough checking: answer now
         response = _create(
@@ -325,7 +348,6 @@ def _structured_call(system: list, tool: dict, user_text: str | list, tools: lis
             system=system,
             output_config=output_config,
             messages=messages,
-            cache_control={"type": "ephemeral"},  # earlier rounds of checks are re-read from the cache
             **extra,
         )
         if response.stop_reason == "refusal":
@@ -363,23 +385,27 @@ def question_to_plan(question: str, cards: str, details: list[tuple[str, str]], 
                      language: str = "DAX", context: list[dict] | None = None, failed_plan: str | None = None,
                      error: str | None = None, clarification: tuple[str, str] | None = None,
                      instructions: str = "", hits: str = "", join: str = "", examples: list[dict] | None = None,
-                     tools: list | None = None, run_tool=None, on_step=None) -> dict:
+                     tools: list | None = None, run_tool=None, on_step=None, periods: str = "") -> dict:
     """The plan for a question: one query per cube (+ the SQL joining them).
     cards = every cube's index card (always the same, so it stays cached); details = [(cube, full
     details)] of the cubes picked for this question; hits = values of the question found in the data;
-    join = how the picked cubes join; examples = verified answers to similar questions.
+    join = how the picked cubes join; examples = verified answers to similar questions; periods = the
+    question's periods with their exact dates, worked out by code (rewrite.py).
     clarification = (question Claude asked, the user's answer). instructions = extra requirements,
     e.g. for a dashboard chart. tools + run_tool let Claude check the data (on_step(name, input)
     reports each check). A result with needs_clarification or reuse_previous has no steps."""
-    # The rules and cards are the same for every question: cached for an hour. A cube's details are
-    # re-read in the same question's later rounds: cached for 5 minutes (cheaper to write).
-    system = [{"type": "text", "text": plan_rules(language, today) + "\n\n" + cards,
+    # The rules and cards are the same for every question, and a cube's details for every question about
+    # it: both cached for an hour (the next questions read them for a twentieth of the price). The cubes
+    # always come in the same order, so a question about the same cubes finds them in the cache.
+    checking = "\n\n" + CHECK_RULES.replace("MAX_ROUNDS", str(MAX_CHECK_ROUNDS)) if tools and run_tool else ""
+    system = [{"type": "text", "text": plan_rules(language, today) + checking + "\n\n" + cards,
                "cache_control": {"type": "ephemeral", "ttl": "1h"}}]
+    details = sorted(details)
     blocks = []
     for i, (cube, text) in enumerate(details):
         block = {"type": "text", "text": f"# Full details of the cube \"{cube}\"\n{text}"}
         if i < 2:  # at most 4 cache points per request: system, two cubes, and the conversation
-            block["cache_control"] = {"type": "ephemeral"}
+            block["cache_control"] = {"type": "ephemeral", "ttl": "1h"}
         blocks.append(block)
 
     parts = []
@@ -390,6 +416,9 @@ def question_to_plan(question: str, cards: str, details: list[tuple[str, str]], 
         parts.append("How these cubes join:\n" + join)
     if hits:
         parts.append("Values of the question found in the data (cube, column = exact value (amount of data)):\n" + hits)
+    if periods:
+        parts.append("Periods of the question, worked out by code from today's date (filter exactly these first and "
+                     "last days, on the date each number is counted on):\n" + periods)
     for ex in examples or []:
         parts.append(f"A similar question answered correctly before (adapt it, including the dates, to today):\n"
                      f"Question: {ex['question']}\nUnderstood as: {ex['understanding']}\nPlan:\n"
@@ -406,8 +435,6 @@ def question_to_plan(question: str, cards: str, details: list[tuple[str, str]], 
         parts.append(f"Your previous plan failed.\nPlan:\n{failed_plan}\n\nError:\n{error}\n\n"
                      "Fix it (check names against the cube details, and the steps' column names). "
                      "Do not ask for clarification.")
-    if tools and run_tool:
-        parts.append(CHECK_RULES.replace("MAX_ROUNDS", str(MAX_CHECK_ROUNDS)))
     content = lambda: blocks + [{"type": "text", "text": "\n\n".join(parts)}]
     result = _structured_call(system, PLAN_TOOL, content(), tools, run_tool, on_step,
                               effort=config.CLAUDE_PLAN_EFFORT, purpose="plan")
@@ -420,7 +447,9 @@ def question_to_plan(question: str, cards: str, details: list[tuple[str, str]], 
     if not [s for s in result.get("steps", []) if s.get("query", "").strip()]:
         parts.append("You did not return any query. Using what you found, write the plan now "
                      "(needs_clarification false, reuse_previous false).")
-        result = _structured_call(system, PLAN_TOOL, content(), effort=config.CLAUDE_PLAN_EFFORT, purpose="plan")
+        # the same tools as the first call: different tools would make the whole cached prompt a miss
+        result = _structured_call(system, PLAN_TOOL, content(), tools, run_tool, on_step,
+                                  effort=config.CLAUDE_PLAN_EFFORT, purpose="plan")
     result["needs_clarification"] = False
     result["reuse_previous"] = False
     if language == "DAX":
@@ -495,7 +524,7 @@ def describe_result(question: str, df: pd.DataFrame, chart_request: str = "", qu
              + FORMAT_RULES)
     if chart_request:
         rules += "\n\n" + DYNAMIC_RULES
-    system = [{"type": "text", "text": rules}]
+    system = [{"type": "text", "text": rules, "cache_control": {"type": "ephemeral", "ttl": "1h"}}]  # same every time
     hint = charts.suggest(df)
     user = (f"Question: {question}\n\nResult has {len(df)} rows. Columns:\n{data_profile(df)}\n"
             + (f"\nThe query that produced it:\n{query[:2500]}\n" if query else "")

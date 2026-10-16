@@ -7,15 +7,18 @@ query): every step runs on its own cube, in parallel, and the results are joined
 
 Stored on dashboards as chart["plan"] = {"steps": [...], "combine_sql": "..."}; charts from before
 plans existed have a single chart["query"] on chart["cube"] and still work."""
+import difflib
 import re
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
+from functools import lru_cache
 
 import duckdb
 import pandas as pd
 
 import config
+import cubes
 import value_check
 from backends import get_backend
 
@@ -103,10 +106,115 @@ def validate(plan: Plan, allowed_cubes: list[str] | None = None) -> None:
                              + ", ".join(f'"{c}"' for c in allowed_cubes))
         if not s.query.strip():
             raise ValueError(f"Step {s.name} has no query.")
+        import semantic
+        off = semantic.hidden(s.cube)
+        used = [m for m in dict.fromkeys(re.findall(r"\[[^\]]+\]", s.query)) if m in off]
+        if used:  # helpers, duplicates, broken or empty measures (the cube's meaning layer)
+            raise ValueError(f"Step {s.name} uses {', '.join(used)}, which must not be used in \"{s.cube}\" ("
+                             + "; ".join(f"{m}: {off[m]}" for m in used) + "). Use the measures its meaning layer lists.")
+        unknown = unknown_names(s)
+        if unknown:  # a misspelt or made-up name: Claude fixes it from the suggestion instead of the server failing
+            raise ValueError(f"Step {s.name} uses names that are not in the cube \"{s.cube}\": " + "; ".join(unknown)
+                             + ". Use only the exact names in the cube's details.")
     if not plan.single:
         if not plan.combine_sql:
             raise ValueError("The plan has several steps but no combine_sql to join them.")
         _validate_select(plan.combine_sql)
+
+
+_QUALIFIED = re.compile(r"'((?:[^']|'')+)'\[([^\]]+)\]|\b([A-Za-z_]\w*)\[([^\]]+)\]")
+_DEFINED = re.compile(r"\b(?:MEASURE|COLUMN)\s+(?:'(?:[^']|'')+'|\w+)\[([^\]]+)\]|\bTABLE\s+(\w+)\s*=", re.IGNORECASE)
+_KEY_PART = re.compile(r"\.(UniqueName|Key\d+|Name)$", re.IGNORECASE)
+
+
+@lru_cache(maxsize=64)
+def _cube_names(cube: str, _changed: float) -> tuple[frozenset, frozenset, frozenset, frozenset]:
+    """(tables, (table, column) pairs, column names, measure names) of a cube, lower case."""
+    import semantic
+    schema = semantic.parse_schema(get_backend(cube).schema_text() or "")
+    pairs = set()
+    for c in schema["columns"]:
+        for ref in [c["column"], *c["group_with"], c["sort_by"]]:
+            if m := _QUALIFIED.fullmatch(ref.strip()):
+                pairs.add(((m.group(1) or "").replace("''", "'").lower(), m.group(2).lower()))
+    measures = frozenset(m["name"].strip("[]").lower() for m in schema["measures"])
+    return frozenset(t for t, _ in pairs), frozenset(pairs), frozenset(c for _, c in pairs), measures
+
+
+def unknown_names(step: Step) -> list[str]:
+    """Tables, columns and measures a DAX step uses that its cube doesn't have, each with the closest
+    real name. Labels the query gives its own columns ("Bookings", then ORDER BY [Bookings]) and names
+    it defines (DEFINE MEASURE ...) are fine. Empty when the cube's structure isn't known."""
+    backend = get_backend(step.cube)
+    path = cubes.schema_file(step.cube)
+    if backend.language != "DAX" or not path.exists():
+        return []
+    tables, pairs, column_names, measures = _cube_names(step.cube, path.stat().st_mtime)
+    if not pairs:
+        return []
+    body = re.sub(r"(--|//).*?$", "", step.query, flags=re.MULTILINE)
+    body = re.sub(r"/\*.*?\*/", "", body, flags=re.DOTALL)
+    labels = {t.replace('""', '"').lower(): t.replace('""', '"') for t in re.findall(r'"((?:[^"]|"")*)"', body)}
+    body = re.sub(r'"(?:[^"]|"")*"', '""', body)
+    defined = {(a or "").lower() for a, _ in _DEFINED.findall(body)} - {""}
+    defined_tables = {(b or "").lower() for _, b in _DEFINED.findall(body)} - {""}
+    real = {f"'{t}'[{c}]": (t, c) for t, c in pairs}
+    problems = []
+    for m in _QUALIFIED.finditer(body):
+        table = (m.group(1) or "").replace("''", "'") if m.group(1) is not None else m.group(3)
+        column = m.group(2) if m.group(1) is not None else m.group(4)
+        t, c = table.lower(), column.lower()
+        if t in defined_tables or c in measures or c in defined or (t, c) in pairs or (t, _KEY_PART.sub("", c)) in pairs:
+            continue
+        near = difflib.get_close_matches(f"'{t}'[{c}]", list(real), n=1, cutoff=0.6)
+        problems.append(f"'{table}'[{column}]" + (f" (did you mean {_display(near[0], step.cube)}?)" if near else ""))
+    import semantic
+    allowed = [m for m in measures if f"[{m}]" not in {h.lower() for h in semantic.hidden(step.cube)}]
+    for name in re.findall(r"\[([^\]]+)\]", _QUALIFIED.sub(" ", body)):
+        n = name.lower()
+        if n in measures or n in labels or n in defined or n in column_names:
+            continue
+        near = difflib.get_close_matches(n, allowed + sorted(labels), n=1, cutoff=0.6)
+        shown = near and (f"[{labels[near[0]]}]" if near[0] in labels else _display(f"[{near[0]}]", step.cube))
+        problems.append(f"[{name}]" + (f" (did you mean {shown}?)" if near else ""))
+    return list(dict.fromkeys(problems))
+
+
+def _display(lower_name: str, cube: str) -> str:
+    """A name as the cube writes it (the checks compare in lower case)."""
+    import semantic
+    schema = semantic.parse_schema(get_backend(cube).schema_text() or "")
+    names = [m["name"] for m in schema["measures"]] + [c["column"] for c in schema["columns"]]
+    return next((n for n in names if n.lower() == lower_name), lower_name)
+
+
+_DATE_LITERAL = re.compile(r"\bDATE\s*\(\s*(\d{4})\s*,\s*(\d{1,2})\s*,\s*(\d{1,2})\s*\)|\bDATE\s*'(\d{4})-(\d{2})-(\d{2})'",
+                           re.IGNORECASE)
+
+
+def check_periods(plan: Plan, periods: list) -> None:
+    """Raises when a step filters on dates and none of them is a first or last day of the question's
+    periods (worked out by code, see rewrite.py): the plan counted another period. Steps that filter by
+    month names or years instead of dates aren't checked."""
+    if not periods:
+        return
+    edges = set()
+    for p in periods:
+        edges |= {p.start, p.end - timedelta(days=1), p.end}
+    for s in plan.steps:
+        found = set()
+        for m in _DATE_LITERAL.finditer(s.query):
+            y, mo, d = (g for g in m.groups() if g is not None)
+            try:
+                found.add(date(int(y), int(mo), int(d)))
+            except ValueError:
+                found.add(None)
+        if found and not found & edges:
+            shown = ", ".join(sorted(d.isoformat() for d in found if d)) or "an impossible date"
+            raise ValueError(f"Step {s.name} filters on {shown}, but the question's period"
+                             f"{'s are' if len(periods) > 1 else ' is'} "
+                             + "; ".join(p.text() for p in periods)
+                             + " (worked out from today's date). Filter exactly from the first to the last day given.")
 
 
 def _validate_select(sql: str) -> None:
@@ -137,18 +245,39 @@ def run(plan: Plan, max_rows: int | None = None) -> pd.DataFrame:
     """Run every step (in parallel, each on its cube) and join them. Errors name the failing step."""
     max_rows = max_rows or config.MAX_ROWS
     if plan.single:
-        s = plan.steps[0]
-        return get_backend(s.cube).run(s.query, max_rows)
+        return _run_step(plan.steps[0], max_rows)
 
     def one(s: Step) -> pd.DataFrame:
         try:
-            return get_backend(s.cube).run(s.query, max_rows)
+            return _run_step(s, max_rows)
+        except StepError:
+            raise
         except Exception as exc:
             raise StepError(f"Step {s.name} (cube \"{s.cube}\") failed: {exc}") from exc
     workers = min(4, len(plan.steps)) if config.resolve_source() == "ssas" else 1
     with ThreadPoolExecutor(max_workers=workers) as pool:
         frames = dict(zip([s.name for s in plan.steps], pool.map(one, plan.steps)))
     return combine(frames, plan.combine_sql, max_rows)
+
+
+def _run_step(s: Step, max_rows: int | None) -> pd.DataFrame:
+    try:
+        return get_backend(s.cube).run(_with_needed_columns(s), max_rows)
+    except Exception as exc:
+        import semantic
+        hint = semantic.composite_key_hint(s.cube, str(exc))
+        if hint:  # the server's error names the column; this says what goes with it and how to filter it
+            raise StepError(f"Step {s.name} (cube \"{s.cube}\") failed: {exc}{hint}") from exc
+        raise
+
+
+def _with_needed_columns(s: Step) -> str:
+    """A DAX step with the helper columns its cube requires next to every grouped column (composite keys)."""
+    backend = get_backend(s.cube)
+    if backend.language != "DAX":
+        return s.query
+    import semantic
+    return semantic.add_needed_columns(s.query, semantic.needed_columns(s.cube))
 
 
 class StepError(RuntimeError):

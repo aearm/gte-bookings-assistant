@@ -1,0 +1,1607 @@
+{
+ "cube": "GlobalTravelEngine - Booking Payments",
+ "label": "Booking Payments",
+ "purpose": "Payments received against bookings (number and amount in AED) by payment type, gateway, channel, market and customer, plus card payment-gateway transactions with success and error counts. Data from January 2022.",
+ "grain": "One payment record on a booking line; about 5% of payments also carry card payment-gateway transactions.",
+ "use_for": [
+  "payments collected (number and amount)",
+  "payment mix by payment type and gateway",
+  "card / gateway transaction success and error rates",
+  "payments by customer, market, channel, supplier and product type",
+  "number of bookings that were paid"
+ ],
+ "not_for": [
+  "sales, cost and profit (Bookings)",
+  "booking counts in general: only bookings with payments are here (Bookings)",
+  "payments before 2022",
+  "outstanding balances or receivables (not in the cube)"
+ ],
+ "coverage": {
+  "main_date": "'Payment Date'[Payment Date]",
+  "first": "2022-01",
+  "last": "2026-10",
+  "note": "Payments only from January 2022 (no earlier history); the current month is partial. By booking or travel date, recent months look low because many bookings are paid later."
+ },
+ "dates": [
+  {
+   "column": "'Payment Date'[Payment Date]",
+   "role": "payment_date",
+   "label": "Payment date",
+   "meaning": "When the payment was made (the cube's main date). Plain period questions use it.",
+   "default": true,
+   "words": [
+    "paid",
+    "payment date",
+    "collected",
+    "received",
+    "paid on"
+   ],
+   "first": "2022-01",
+   "last": "2026-10"
+  },
+  {
+   "column": "'Booking Date'[Booking Date]",
+   "role": "booking_date",
+   "label": "Booking date",
+   "meaning": "When the paid booking was made.",
+   "default": false,
+   "words": [
+    "booked",
+    "booking date",
+    "made",
+    "booked on"
+   ],
+   "first": "2022-01",
+   "last": "2026-10"
+  },
+  {
+   "column": "'Travel Date Start'[Travel Date Start]",
+   "role": "travel_date",
+   "label": "Travel date (check-in)",
+   "meaning": "Service start (check-in) date of the paid booking line.",
+   "default": false,
+   "words": [
+    "travel",
+    "travel date",
+    "check-in",
+    "check in",
+    "arrival",
+    "service date"
+   ],
+   "first": "2021-11",
+   "last": "2027-03"
+  }
+ ],
+ "measures": [
+  {
+   "name": "[% Payments Without Errors]",
+   "label": "Error-free payment rate",
+   "definition": "[Payments Without Errors] ÷ [Payments].",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "% payments without errors",
+    "payment error-free rate"
+   ],
+   "default_date_role": "payment_date",
+   "date_roles": [
+    "payment_date",
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[% Success Payments]",
+   "label": "Payment success rate",
+   "definition": "[Success Payments] ÷ [Booking Lines] (booking lines, not payments).",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "payment success rate",
+    "% successful payments"
+   ],
+   "default_date_role": "payment_date",
+   "date_roles": [
+    "payment_date",
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Within a payment-date period it is about 95%; without a date filter it drops to 54% because booking lines without any payment are counted too. Always filter a period (see review payments.success_rate)."
+  },
+  {
+   "name": "[% Success Transactions]",
+   "label": "Gateway success rate",
+   "definition": "[Success Transactions] ÷ [Transactions].",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "transaction success rate",
+    "gateway success rate",
+    "card success rate",
+    "approval rate"
+   ],
+   "default_date_role": "payment_date",
+   "date_roles": [
+    "payment_date",
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[% Transactions Without Errors]",
+   "label": "Error-free transaction rate",
+   "definition": "[Transactions Without Errors] ÷ [Transactions].",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "% transactions without errors",
+    "transaction error-free rate"
+   ],
+   "default_date_role": "payment_date",
+   "date_roles": [
+    "payment_date",
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[AVG Diff Miliseconds]",
+   "label": "Average gateway transaction duration",
+   "definition": "[Diff Miliseconds] ÷ [Transactions]: average duration of a gateway transaction, in milliseconds.",
+   "unit": "milliseconds",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": " ms",
+   "aggregation": "average",
+   "terms": [
+    "average transaction duration",
+    "average payment processing time"
+   ],
+   "default_date_role": "payment_date",
+   "date_roles": [
+    "payment_date",
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "low",
+   "notes": "Averages 1.8–3.3 hours, so it is likely the time from transaction start to its final status, not the gateway's response time (see review payments.duration_meaning)."
+  },
+  {
+   "name": "[Antifraud Error]",
+   "label": "Antifraud errors",
+   "definition": "Payments rejected by antifraud checks.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "no data: 0 in all data (2022–2026); antifraud rejections are not recorded",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Booking Error]",
+   "label": "Booking errors",
+   "definition": "Number of payment records where the booking reported an error.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "booking errors",
+    "payment booking errors"
+   ],
+   "default_date_role": "payment_date",
+   "date_roles": [
+    "payment_date",
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Exact rule unknown; larger than the payments with errors, so it may count booking lines."
+  },
+  {
+   "name": "[Booking Lines]",
+   "label": "Booking lines with payments",
+   "definition": "Number of booking lines in the payment records.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "booking lines with payments",
+    "paid booking lines"
+   ],
+   "default_date_role": "payment_date",
+   "date_roles": [
+    "payment_date",
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Without a date filter it also counts booking lines that have no payment (542K lines vs 299K payments)."
+  },
+  {
+   "name": "[Diff Miliseconds]",
+   "label": "Total gateway transaction duration",
+   "definition": "Sum of gateway transaction durations, in ms.",
+   "unit": "milliseconds",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": " ms",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "technical: numerator of [AVG Diff Miliseconds]; a sum of durations answers no business question",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Max Diff Miliseconds]",
+   "label": "Longest gateway transaction duration",
+   "definition": "Longest gateway transaction duration in the selection, in milliseconds.",
+   "unit": "milliseconds",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": " ms",
+   "aggregation": "max",
+   "terms": [
+    "longest transaction duration",
+    "slowest payment"
+   ],
+   "default_date_role": "payment_date",
+   "date_roles": [
+    "payment_date",
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "low",
+   "notes": "Up to about 92 days in the data; see review payments.duration_meaning."
+  },
+  {
+   "name": "[Min Diff Miliseconds]",
+   "label": "Shortest gateway transaction duration",
+   "definition": "Shortest transaction duration, in ms.",
+   "unit": "milliseconds",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": " ms",
+   "aggregation": "min",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "always 0: payments without a gateway transaction count as 0 ms, so the minimum carries no information",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Payments]",
+   "label": "Payments",
+   "definition": "Number of payments recorded against booking lines.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "payments",
+    "number of payments",
+    "payment count",
+    "how many payments"
+   ],
+   "default_date_role": "payment_date",
+   "date_roles": [
+    "payment_date",
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Payments Without Errors]",
+   "label": "Payments without errors",
+   "definition": "Number of payments with no error recorded.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "payments without errors",
+    "error-free payments"
+   ],
+   "default_date_role": "payment_date",
+   "date_roles": [
+    "payment_date",
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Revenue Payments]",
+   "label": "Payment amount",
+   "definition": "Total amount of the payments received, in AED.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "payment amount",
+    "payments collected",
+    "collections",
+    "amount collected",
+    "amount paid",
+    "cash collected",
+    "money received",
+    "payments received"
+   ],
+   "default_date_role": "payment_date",
+   "date_roles": [
+    "payment_date",
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Money collected, not sales: for sales use the Bookings cube."
+  },
+  {
+   "name": "[Revenue Transactions]",
+   "label": "Gateway transaction amount",
+   "definition": "Amount processed through card payment-gateway transactions, in AED. Covers only card payments made through a payment gateway (about 5% of payments); bank transfers, cash and journal entries have no gateway transaction.",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "gateway amount",
+    "card payment amount",
+    "online payment amount",
+    "transaction amount"
+   ],
+   "default_date_role": "payment_date",
+   "date_roles": [
+    "payment_date",
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Not known whether failed attempts are included; for money received use [Revenue Payments]."
+  },
+  {
+   "name": "[Success Payments]",
+   "label": "Successful payments",
+   "definition": "Number of payments that completed successfully.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "successful payments",
+    "completed payments"
+   ],
+   "default_date_role": "payment_date",
+   "date_roles": [
+    "payment_date",
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": ""
+  },
+  {
+   "name": "[Success Transactions]",
+   "label": "Successful gateway transactions",
+   "definition": "Gateway transactions that succeeded. Covers only card payments made through a payment gateway (about 5% of payments); bank transfers, cash and journal entries have no gateway transaction.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "successful transactions",
+    "approved transactions",
+    "successful card payments"
+   ],
+   "default_date_role": "payment_date",
+   "date_roles": [
+    "payment_date",
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Transaction Error]",
+   "label": "Gateway transaction errors",
+   "definition": "Gateway transactions that ended in an error. Covers only card payments made through a payment gateway (about 5% of payments); bank transfers, cash and journal entries have no gateway transaction.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "transaction errors",
+    "gateway errors",
+    "card payment errors",
+    "failed card payments"
+   ],
+   "default_date_role": "payment_date",
+   "date_roles": [
+    "payment_date",
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Transactions]",
+   "label": "Gateway transactions",
+   "definition": "Number of card payment-gateway transactions (attempts). Covers only card payments made through a payment gateway (about 5% of payments); bank transfers, cash and journal entries have no gateway transaction.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "gateway transactions",
+    "card transactions",
+    "payment attempts",
+    "online payment transactions"
+   ],
+   "default_date_role": "payment_date",
+   "date_roles": [
+    "payment_date",
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "About 1.7 transactions per gateway payment, so retries count separately."
+  },
+  {
+   "name": "[Transactions Without Errors]",
+   "label": "Gateway transactions without errors",
+   "definition": "Gateway transactions with no error. Covers only card payments made through a payment gateway (about 5% of payments); bank transfers, cash and journal entries have no gateway transaction.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "transactions without errors",
+    "error-free transactions"
+   ],
+   "default_date_role": "payment_date",
+   "date_roles": [
+    "payment_date",
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[% Payments Without Errors LYS]",
+   "label": "% Payments Without Errors LYS",
+   "definition": "Error-free payment rate for the same period last year (same weekday).",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [% Payments Without Errors]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[% Success Payments LYS]",
+   "label": "% Success Payments LYS",
+   "definition": "Payment success rate for the same period last year (same weekday).",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [% Success Payments]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[% Success Transactions LYS]",
+   "label": "% Success Transactions LYS",
+   "definition": "Gateway success rate for the same period last year (same weekday).",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [% Success Transactions]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[% Transactions Without Errors LYS]",
+   "label": "% Transactions Without Errors LYS",
+   "definition": "Error-free transaction rate for the same period last year (same weekday).",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [% Transactions Without Errors]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[AVG Diff Miliseconds LYS]",
+   "label": "AVG Diff Miliseconds LYS",
+   "definition": "Average gateway transaction duration for the same period last year (same weekday).",
+   "unit": "milliseconds",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [AVG Diff Miliseconds]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Antifraud Error LYS]",
+   "label": "Antifraud Error LYS",
+   "definition": "Antifraud errors for the same period last year (same weekday).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Antifraud Error]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Booking Error LYS]",
+   "label": "Booking Error LYS",
+   "definition": "Booking errors for the same period last year (same weekday).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Booking Error]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Booking Lines LYS]",
+   "label": "Booking Lines LYS",
+   "definition": "Booking lines with payments for the same period last year (same weekday).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Booking Lines]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Diff Miliseconds LYS]",
+   "label": "Diff Miliseconds LYS",
+   "definition": "Total gateway transaction duration for the same period last year (same weekday).",
+   "unit": "milliseconds",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Diff Miliseconds]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Max Diff Miliseconds LYS]",
+   "label": "Max Diff Miliseconds LYS",
+   "definition": "Longest gateway transaction duration for the same period last year (same weekday).",
+   "unit": "milliseconds",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "max",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Max Diff Miliseconds]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Min Diff Miliseconds LYS]",
+   "label": "Min Diff Miliseconds LYS",
+   "definition": "Shortest gateway transaction duration for the same period last year (same weekday).",
+   "unit": "milliseconds",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "min",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Min Diff Miliseconds]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Payments LYS]",
+   "label": "Payments LYS",
+   "definition": "Payments for the same period last year (same weekday).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Payments]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Payments Without Errors LYS]",
+   "label": "Payments Without Errors LYS",
+   "definition": "Payments without errors for the same period last year (same weekday).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Payments Without Errors]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Revenue Payments LYS]",
+   "label": "Revenue Payments LYS",
+   "definition": "Payment amount for the same period last year (same weekday).",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Revenue Payments]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Revenue Transactions LYS]",
+   "label": "Revenue Transactions LYS",
+   "definition": "Gateway transaction amount for the same period last year (same weekday).",
+   "unit": "currency:AED",
+   "format": ",.0f",
+   "prefix": "AED ",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Revenue Transactions]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Success Payments LYS]",
+   "label": "Success Payments LYS",
+   "definition": "Successful payments for the same period last year (same weekday).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Success Payments]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Success Transactions LYS]",
+   "label": "Success Transactions LYS",
+   "definition": "Successful gateway transactions for the same period last year (same weekday).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Success Transactions]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Transaction Error LYS]",
+   "label": "Transaction Error LYS",
+   "definition": "Gateway transaction errors for the same period last year (same weekday).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Transaction Error]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Transactions LYS]",
+   "label": "Transactions LYS",
+   "definition": "Gateway transactions for the same period last year (same weekday).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Transactions]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Transactions Without Errors LYS]",
+   "label": "Transactions Without Errors LYS",
+   "definition": "Gateway transactions without errors for the same period last year (same weekday).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Transactions Without Errors]",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Distinct Bookings]",
+   "label": "Paid bookings",
+   "definition": "Number of distinct bookings that have payment records.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "distinct_count",
+   "terms": [
+    "paid bookings",
+    "bookings with payments",
+    "number of paid bookings",
+    "distinct bookings"
+   ],
+   "default_date_role": "payment_date",
+   "date_roles": [
+    "payment_date",
+    "booking_date",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Distinct count: never add it across rows."
+  },
+  {
+   "name": "[Distinct Bookings LYS]",
+   "label": "Distinct Bookings LYS",
+   "definition": "Paid bookings for the same period last year (same weekday).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "distinct_count",
+   "terms": [],
+   "default_date_role": "",
+   "date_roles": [],
+   "status": "hidden",
+   "hidden_reason": "last-year (same weekday) helper of [Distinct Bookings]",
+   "confidence": "high",
+   "notes": ""
+  }
+ ],
+ "breakdowns": [
+  {
+   "column": "'Payment Type'[Payment Type]",
+   "label": "Payment type",
+   "entity": "payment_type",
+   "kind": "enum",
+   "meaning": "How the payment was made.",
+   "needs_columns": [
+    "'Payment Type'[Payment Type.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 20,
+   "sample_values": [
+    "Bank Transfer",
+    "Journal entry",
+    "Credit card",
+    "Cash",
+    "Check",
+    "Points",
+    "Mail order"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Gateway'[Gateway]",
+   "label": "Payment gateway",
+   "entity": "payment_gateway",
+   "kind": "enum",
+   "meaning": "Card payment gateway used, or \"Without Gateway\" for offline payments.",
+   "needs_columns": [
+    "'Gateway'[Gateway.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 8,
+   "sample_values": [
+    "Without Gateway",
+    "MasterCard (old version)",
+    "Payment Gateway",
+    "Mastercard-DubaiLink_100",
+    "Payment Gateway EUR",
+    "Paypal"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'With Transaction'[With Transaction]",
+   "label": "Paid through a gateway",
+   "entity": "gateway_flag",
+   "kind": "enum",
+   "meaning": "Whether the payment has a card payment-gateway transaction.",
+   "needs_columns": [
+    "'With Transaction'[With Transaction.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 3,
+   "sample_values": [
+    "No",
+    "Yes"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Channel'[Channel]",
+   "label": "Sale channel",
+   "entity": "sale_channel",
+   "kind": "enum",
+   "meaning": "How the paid booking was sold: B2B web, XML (API) or B2C.",
+   "needs_columns": [
+    "'Channel'[Channel.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 4,
+   "sample_values": [
+    "XML - GTE - Global Travel Engine",
+    "B2B - GTE - Global Travel Engine",
+    "B2C - GTE - Global Travel Engine"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Market]",
+   "label": "Market",
+   "entity": "market",
+   "kind": "enum",
+   "meaning": "The customer's market (same column as in the Bookings cube).",
+   "needs_columns": [
+    "'Customers'[Market.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 24,
+   "sample_values": [
+    "UAE",
+    "GCC - Except UAE and Local Residence",
+    "EUROPE",
+    "ROW",
+    "Middle East",
+    "North Africa",
+    "Turkish Market",
+    "B2C UAE"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Market'[Market]",
+   "label": "Booking market",
+   "entity": "market",
+   "kind": "enum",
+   "meaning": "Market recorded on the booking; can differ from the customer's market (e.g. CIS).",
+   "needs_columns": [
+    "'Market'[Market.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 36,
+   "sample_values": [
+    "UAE",
+    "GCC - Except UAE and Local Residence",
+    "EUROPE",
+    "ROW",
+    "North Africa",
+    "Middle East",
+    "Turkish Market",
+    "CIS"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Customer]",
+   "label": "Customer",
+   "entity": "customer",
+   "kind": "name",
+   "meaning": "The paying agency or client.",
+   "needs_columns": [
+    "'Customers'[Customer.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 6772,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Code]",
+   "label": "Customer code",
+   "entity": "customer",
+   "kind": "code",
+   "meaning": "The customer's code.",
+   "needs_columns": [
+    "'Customers'[Code.Key0]"
+   ],
+   "sort_by": "",
+   "distinct": 6851,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Customer Country]",
+   "label": "Customer country",
+   "entity": "country",
+   "kind": "enum",
+   "meaning": "Country of the paying customer.",
+   "needs_columns": [
+    "'Customers'[Customer Country.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 96,
+   "sample_values": [
+    "UNITED ARAB EMIRATES",
+    "SAUDI ARABIA",
+    "SPAIN",
+    "CHINA",
+    "UNITED STATES"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Account Manager]",
+   "label": "Account manager",
+   "entity": "account_manager",
+   "kind": "name",
+   "meaning": "Sales person or desk managing the customer account.",
+   "needs_columns": [
+    "'Customers'[Account Manager.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 19,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Type of Payment]",
+   "label": "Customer payment terms",
+   "entity": "payment_terms",
+   "kind": "enum",
+   "meaning": "How the customer pays: on credit, pre-payment or POS.",
+   "needs_columns": [
+    "'Customers'[Type of Payment.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 4,
+   "sample_values": [
+    "Credit",
+    "Pre-payment",
+    "POS"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Category]",
+   "label": "Customer category",
+   "entity": "customer_category",
+   "kind": "enum",
+   "meaning": "Customer category.",
+   "needs_columns": [
+    "'Customers'[Category.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 5,
+   "sample_values": [
+    "Dubai Link Category",
+    "Final Client Category",
+    "DL Business Trip - No Markup"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Agency Group]",
+   "label": "Agency group",
+   "entity": "agency_group",
+   "kind": "enum",
+   "meaning": "Customer pricing group (region and percentage).",
+   "needs_columns": [
+    "'Customers'[Agency Group.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 130,
+   "sample_values": [
+    "UAE - 5%",
+    "GCC Except UAE - 5%",
+    "ROW - 5%",
+    "European - 4%",
+    "European - 5%"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Integrator Name]",
+   "label": "Integrator",
+   "entity": "integrator",
+   "kind": "name",
+   "meaning": "Technology integrator through which an XML customer connects.",
+   "needs_columns": [
+    "'Customers'[Integrator Name.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 69,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Master Agency]",
+   "label": "Master agency",
+   "entity": "agency",
+   "kind": "name",
+   "meaning": "Parent agency grouping several customer accounts.",
+   "needs_columns": [
+    "'Customers'[Master Agency.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 143,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Product Type'[Product Type]",
+   "label": "Product type",
+   "entity": "product_type",
+   "kind": "enum",
+   "meaning": "Type of service paid for.",
+   "needs_columns": [
+    "'Product Type'[Product Type.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 8,
+   "sample_values": [
+    "Accommodation",
+    "Generic Booking",
+    "Adjustment",
+    "Transfer",
+    "Ticket",
+    "Service"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Product Type'[External]",
+   "label": "External product",
+   "entity": "product_source",
+   "kind": "enum",
+   "meaning": "Whether the product comes from an external (third-party) connection.",
+   "needs_columns": [
+    "'Product Type'[External.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 3,
+   "sample_values": [
+    "Yes",
+    "No"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Product Type'[Module]",
+   "label": "Booking module / connection",
+   "entity": "product_module",
+   "kind": "name",
+   "meaning": "Booking module or supplier connection of the paid service.",
+   "needs_columns": [
+    "'Product Type'[Module.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 114,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Suppliers'[Supplier]",
+   "label": "Supplier",
+   "entity": "supplier",
+   "kind": "name",
+   "meaning": "Supplier of the paid service.",
+   "needs_columns": [
+    "'Suppliers'[Supplier.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 2697,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Booking Code'[Booking Code]",
+   "label": "Booking code",
+   "entity": "booking",
+   "kind": "code",
+   "meaning": "Booking locator, to look up the payments of one booking.",
+   "needs_columns": [
+    "'Booking Code'[Booking Code.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 475512,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Payment Date'[Year]",
+   "label": "Payment year",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Year of the payment date.",
+   "needs_columns": [],
+   "sort_by": "'Payment Date'[Year.Fecha ISO DESC Year]",
+   "distinct": null,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Payment Date'[Quarter]",
+   "label": "Payment quarter",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Quarter of the payment date, written like \"Quarter 3, 2025\".",
+   "needs_columns": [
+    "'Payment Date'[Quarter.UniqueName]"
+   ],
+   "sort_by": "'Payment Date'[Quarter.Fecha ISO DESC Quarter]",
+   "distinct": 25,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Payment Date'[Month Name]",
+   "label": "Payment month",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Month of the payment date, written like \"August 2025\".",
+   "needs_columns": [
+    "'Payment Date'[Month Name.UniqueName]"
+   ],
+   "sort_by": "'Payment Date'[Month Name.Fecha ISO DESC Month Name]",
+   "distinct": 71,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Payment Date'[Week Of Year]",
+   "label": "Payment week",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Week number of the payment date (\"01\"–\"53\"), without the year.",
+   "needs_columns": [
+    "'Payment Date'[Week Of Year.UniqueName]"
+   ],
+   "sort_by": "'Payment Date'[Week Of Year.Week Of Year DESC]",
+   "distinct": 54,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Payment Date'[Day Week]",
+   "label": "Payment weekday",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Weekday of the payment date.",
+   "needs_columns": [
+    "'Payment Date'[Day Week.UniqueName]"
+   ],
+   "sort_by": "'Payment Date'[Day Week.Day Week DESC]",
+   "distinct": 8,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Booking Date'[Month Name]",
+   "label": "Booking month",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Month of the booking date, written like \"July 2025\".",
+   "needs_columns": [
+    "'Booking Date'[Month Name.UniqueName]"
+   ],
+   "sort_by": "'Booking Date'[Month Name.Fecha ISO DESC Month Name]",
+   "distinct": 71,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Travel Date Start'[Month Name]",
+   "label": "Travel month",
+   "entity": "date",
+   "kind": "date_part",
+   "meaning": "Month of the travel (check-in) date, written like \"August 2025\".",
+   "needs_columns": [
+    "'Travel Date Start'[Month Name.UniqueName]"
+   ],
+   "sort_by": "'Travel Date Start'[Month Name.Fecha ISO DESC Month Name]",
+   "distinct": 96,
+   "sample_values": [],
+   "status": "active"
+  }
+ ],
+ "named_filters": [
+  {
+   "name": "card payments",
+   "meaning": "Payments made by credit card.",
+   "column": "'Payment Type'[Payment Type]",
+   "values": [
+    "Credit card"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "bank transfers",
+   "meaning": "Payments made by bank transfer.",
+   "column": "'Payment Type'[Payment Type]",
+   "values": [
+    "Bank Transfer"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "cash payments",
+   "meaning": "Payments made in cash.",
+   "column": "'Payment Type'[Payment Type]",
+   "values": [
+    "Cash"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "journal entries",
+   "meaning": "Payments recorded as accounting journal entries (offsets), not money received directly.",
+   "column": "'Payment Type'[Payment Type]",
+   "values": [
+    "Journal entry"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "online payments",
+   "meaning": "Payments made through a card payment gateway.",
+   "column": "'With Transaction'[With Transaction]",
+   "values": [
+    "Yes"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "xml bookings",
+   "meaning": "Payments of bookings sold through the XML (API) channel.",
+   "column": "'Channel'[Channel]",
+   "values": [
+    "XML - GTE - Global Travel Engine"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "b2b bookings",
+   "meaning": "Payments of bookings sold through the B2B web channel.",
+   "column": "'Channel'[Channel]",
+   "values": [
+    "B2B - GTE - Global Travel Engine"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "b2c bookings",
+   "meaning": "Payments of bookings sold to final clients (B2C).",
+   "column": "'Channel'[Channel]",
+   "values": [
+    "B2C - GTE - Global Travel Engine"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "hotel bookings",
+   "meaning": "Payments for accommodation (hotel) bookings only.",
+   "column": "'Product Type'[Product Type]",
+   "values": [
+    "Accommodation"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "credit customers",
+   "meaning": "Customers buying on credit terms.",
+   "column": "'Customers'[Type of Payment]",
+   "values": [
+    "Credit"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "pre-payment customers",
+   "meaning": "Customers who pay before the booking.",
+   "column": "'Customers'[Type of Payment]",
+   "values": [
+    "Pre-payment"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "uae market",
+   "meaning": "Customers of the UAE market (B2B and XML; \"B2C UAE\" is a separate market).",
+   "column": "'Customers'[Market]",
+   "values": [
+    "UAE"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "name": "test bookings",
+   "meaning": "Payments of test customers; exclude them when asked for clean figures.",
+   "column": "'Customers'[Market]",
+   "values": [
+    "Market for Testing Purposes"
+   ],
+   "confidence": "medium"
+  }
+ ],
+ "rules": [
+  "Use the cube's measures only; never SUM a column.",
+  "List every breakdown column together with its needs_columns (group-with helper columns).",
+  "Plain period questions filter 'Payment Date'[Payment Date] (when the money was paid); use the booking or travel date only when the question says so.",
+  "[Revenue Payments] is money collected, not sales; for sales, cost or profit use the Bookings cube.",
+  "Gateway measures ([Transactions], [Success Transactions], [Transaction Error], [Revenue Transactions], [AVG Diff Miliseconds], [Max Diff Miliseconds] and their rates) only cover card payments through a payment gateway, about 5% of payments.",
+  "Success and error rates are ratios and [Distinct Bookings] is a distinct count: never add or average them across rows; ask the cube at the level needed.",
+  "Always give [% Success Payments] a period filter; without one it is diluted by booking lines with no payment.",
+  "Never use the LYS measures; compare periods by querying each period.",
+  "Data starts in January 2022; all amounts are in AED."
+ ],
+ "examples": [
+  {
+   "question": "Payment amount by payment type last month",
+   "measures": [
+    "[Revenue Payments]"
+   ],
+   "breakdowns": [
+    "'Payment Type'[Payment Type]"
+   ],
+   "date_role": "payment_date"
+  },
+  {
+   "question": "How many payments did we receive this year by channel?",
+   "measures": [
+    "[Payments]"
+   ],
+   "breakdowns": [
+    "'Channel'[Channel]"
+   ],
+   "date_role": "payment_date"
+  },
+  {
+   "question": "Gateway success rate by gateway in 2026",
+   "measures": [
+    "[% Success Transactions]"
+   ],
+   "breakdowns": [
+    "'Gateway'[Gateway]"
+   ],
+   "date_role": "payment_date"
+  },
+  {
+   "question": "Collections by market in Q3 2026",
+   "measures": [
+    "[Revenue Payments]"
+   ],
+   "breakdowns": [
+    "'Customers'[Market]"
+   ],
+   "date_role": "payment_date"
+  },
+  {
+   "question": "Payments collected for bookings travelling next month",
+   "measures": [
+    "[Revenue Payments]"
+   ],
+   "breakdowns": [],
+   "date_role": "travel_date"
+  },
+  {
+   "question": "Monthly collections this year",
+   "measures": [
+    "[Revenue Payments]",
+    "[Payments]"
+   ],
+   "breakdowns": [
+    "'Payment Date'[Month Name]"
+   ],
+   "date_role": "payment_date"
+  }
+ ],
+ "review": [
+  {
+   "id": "payments.market_column",
+   "question": "\"By market\" in payments: the customer's market or the market recorded on the booking?",
+   "options": [
+    "'Customers'[Market]",
+    "'Market'[Market]"
+   ],
+   "proposed": "'Customers'[Market]",
+   "why": "Matches the Bookings cube, which only has the customer's market; the two differ for a few markets (e.g. CIS)."
+  },
+  {
+   "id": "payments.success_rate",
+   "question": "\"Payment success rate\" = the cube's [% Success Payments], which divides successful payments by booking lines (not by payments). Keep it?",
+   "options": [
+    "[% Success Payments]",
+    "[% Payments Without Errors]"
+   ],
+   "proposed": "[% Success Payments]",
+   "why": "It is the cube's own success rate and gives about 95% for any payment-date period; only its all-time figure (54%) is distorted, and the app always filters a period."
+  },
+  {
+   "id": "payments.duration_meaning",
+   "question": "What does \"Diff Miliseconds\" measure on gateway transactions?",
+   "options": [
+    "time from transaction start to final status",
+    "gateway response time"
+   ],
+   "proposed": "time from transaction start to final status",
+   "why": "The average is 1.8–3.3 hours and the maximum about 92 days, far too long for a gateway response time; the app labels it \"transaction duration\" until confirmed."
+  }
+ ]
+}

@@ -19,7 +19,8 @@ The app has two modes and picks one automatically:
 Data layer (built once): every cube's structure + values -> Claude's profile of each cube
                          -> shared dimensions (customer, supplier, hotel...) measured on the values
 
-Your question  ->  Claude reads the data layer, checks values, writes a plan:
+Your question  ->  Claude Haiku makes it a standalone question; code works out its dates
+               ->  Claude reads the data layer, checks values, writes a plan:
                    one query per cube (+ SQL joining them when several cubes are needed)
                ->  runs on the live cubes or local files  ->  results saved as CSV
                ->  Claude picks a chart (or draws the one you described) + writes the answer
@@ -134,11 +135,21 @@ It follows the usual layering of a semantic model:
    match quality). This is what Claude reads with every question (`routing.py`).
 
 How a question is answered, quickly and cheaply:
+- **Prepare the question** (`rewrite.py`): Claude Haiku turns a follow-up ("and by market?") into a
+  standalone question with everything it depends on, sets apart how to draw it, and describes each
+  period ("last month", "week 41", "H1 2019") in a small grammar that **code** turns into exact dates.
+  The planner gets the standalone question and those dates, not the conversation. A message that only
+  asks to show the last answer differently ("as a pie") is redrawn without planning.
 - **Pick the cubes**: Claude Haiku (fast, cheap) reads the cards and picks the cube(s) the question needs;
   the words of the question are also looked up as exact values in every cube ("UAE" -> Market = "UAE").
 - **Plan**: Claude Sonnet gets the cards, the picked cubes' full details, how they join, the values found
-  and verified examples - so it rarely needs extra rounds. The cards are cached for an hour, a cube's
-  details for 5 minutes. Planning runs at medium effort (`CLAUDE_PLAN_EFFORT`).
+  and verified examples - so it rarely needs extra rounds. The rules, cards and each cube's details are
+  cached for an hour (the cubes always in the same order, so the next question about them reads them for
+  a twentieth of the price). Planning runs at medium effort (`CLAUDE_PLAN_EFFORT`).
+- **Checks in code before anything runs**: every table, column and measure must exist in its cube (a
+  misspelt name goes back to Claude with the closest real one), hidden measures are refused, the dates
+  filtered must be the question's dates, and filter values must be in the data. A plan that returns no
+  rows gets one more look (wrong value format, wrong date, a join that matches nothing).
 - **Chart**: standard charts are formatted by Claude Haiku (`CLAUDE_FAST_MODEL`); charts described in words
   by Claude Sonnet.
 - **Answer memory** (`data/answers.db`): the same question again on the same day reruns its saved plan,
@@ -153,6 +164,37 @@ under each answer shows every step and the joining SQL.
 Run it again after cubes change: the Cubes page says which cubes are new or changed, and **Update new
 and changed cubes** only asks Claude about those. The layer is built with `CLAUDE_LAYER_MODEL`
 (default `claude-opus-5-5`); questions use `CLAUDE_MODEL`.
+
+## The meaning layer (ships with the app)
+
+On top of the data layer, `semantic/` holds **what every number means**, built once from the real
+cubes and shipped with each release, so a new installation is ready without building it:
+
+- **One measure per business word.** 562 terms, each pointing to exactly one measure of one cube
+  ("searches" → Statistics Zone `[Total Requests]`, never "hotels requested"; "sales" → Bookings `[Sale]`).
+  Words found in a question are matched in code and given to Claude as facts, like values ("UAE").
+- **A default date per cube**, the words that pick another one ("created", "travel", "stay"), and the months
+  each date has data for.
+- **Measures that must never be used** (last-year helpers, duplicates, broken or empty ones) - a query that
+  uses one is refused before it runs - plus each measure's unit and whether it can be added up (ratios and
+  averages never are).
+- **Data coverage**: cubes with no data are never picked; historical cubes (tickets, relocations) and recent
+  ones (statistics) say which periods they cover.
+- **The helper columns** each breakdown needs: added to every query automatically.
+- **Named filters** ("owned hotels", "cancelled bookings", "UAE market") with their exact stored values,
+  and rules per cube.
+
+How it was built: facts were read from every cube by code (`python semantic.py facts`: which measures have
+data, the months each date covers, the helper columns), the meanings were drafted by Claude Opus at its
+highest effort from those facts, and every claim was checked against the cubes again
+(`python semantic.py check`; `python semantic.py build` writes the shared files). The checks also found
+problems in the cubes themselves - e.g. supplier error counts overflow above 2.1 billion (ask per month),
+swapped markup and margin measures, response times stored 1000 times too small - which the files explain.
+
+**Decisions only a person can make** (51, e.g. *does "sales" mean Sale or Final Sales?*) come with a
+proposed answer, which is used until an admin agrees on the **Glossary** page › **Decisions**. Agreed
+answers are kept in `data/semantic_overrides.json`, so updates never overwrite them. No customer, hotel,
+supplier or person names are in `semantic/`; actual values stay in each installation's value index.
 
 ## Cubes page: connect cubes and build the data layer (admins)
 
@@ -178,7 +220,8 @@ Answers become the cube's **Glossary** - the agreed meaning Claude follows for e
 
 Open **Glossary** (menu › Ask) and pick a cube. It shows each business word and what it means in
 the data. **Agreed** terms are always followed; **Draft** ones make Claude ask or say what it
-assumed. Admins can edit terms at the bottom of the page. Each cube has its own glossary and its
+assumed. **Decisions** lists the meaning layer's open questions for that cube with the proposed answer;
+admins choose and click **Agree**. Admins can edit terms at the bottom of the page. Each cube has its own glossary and its
 own notes (`models/<cube>/notes.md`) for hints Claude reads with every question.
 
 If something goes wrong, the app shows a plain-English message; the technical text is under
@@ -251,7 +294,10 @@ measure is in the data layer; headline numbers and data tables use the same form
 **Charts** are chosen to fit the data: a **world map** when the breakdown is by country, **line** or
 **area** for trends, **donut** for a few parts of a whole, **treemap** for many parts, **bars** for
 rankings, **stacked columns** or a **heatmap** for two breakdowns, **scatter** for two numbers. You can
-always pick another type when editing a chart.
+always pick another type when editing a chart. Several measures of different size (requests in millions,
+bookings in tens, sales in AED) get **one panel each**, sharing the categories; ask for them **in one
+chart** (*"6 bars for each customer, 3 for each day"*) and they stand side by side, up to three, each on
+its own axis in its own colour, the second breakdown in shades of that colour.
 
 ### Chat
 
@@ -312,6 +358,17 @@ Every answer is saved automatically:
 `python bench.py run <name>` asks a fixed set of 12 real questions (this costs a little) and
 `python bench.py compare <before> <after>` shows the difference in time, cost and answers.
 
+**Accuracy test set** (`eval_set.py`, questions in `data/eval/questions.json`, not in git): 60 questions
+joining 1 to 5 cubes, with chart requests, reworded versions of the same question, follow-up
+conversations, questions whose right answer is a question back, and relative dates ("last month").
+Every answer is checked against reference numbers computed from the cubes at the same moment, and its
+chart against what was asked. `python eval_set.py run <name> --repeat 3` asks each question 3 times (a
+full run costs about $20): the report gives pass rates with their 95% range, which questions passed
+every time, where each failure happened (plan, query, cubes, numbers, chart) and the code, prompt and
+meaning-layer version tested. `python eval_set.py compare <before> <after>` says which questions got
+better or worse and how likely that is to be luck. A third of the questions are marked holdout: they
+are not looked at while changing prompts.
+
 ### Signed in or not
 
 A pill at the top right of every page says whether you're signed in: amber **View only · Sign in**,
@@ -355,10 +412,12 @@ You can point Excel or Power BI at those CSVs, or ask the app new questions any 
 | `data_layer.py` | The data layer: reads every cube, Claude's profile of each, shared dimensions measured on the values, the catalog |
 | `build_layer.py` | Builds the data layer from the command line (`--all` connects every cube first, `--update` only changed cubes) |
 | `answering.py` | Answers a question: pick cubes, plan, check values, run, retry once, chart; reuses today's answers |
+| `rewrite.py` | Prepares each message: standalone question, how to draw it apart, periods turned into exact dates by code |
 | `routing.py` | Index cards and graph of the cubes; picks the cubes a question needs; finds its values in the data |
 | `answer_memory.py` | Remembers answers (SQLite): same-day repeats without Claude, verified answers as examples |
 | `usage.py` | Measures each question: Claude calls, tokens, cache, cost, time per stage (`data/usage.jsonl`) |
 | `bench.py` | Benchmark: a fixed set of real questions, run and compared between versions |
+| `eval_set.py` | Accuracy test set: 60 questions (1-5 cubes, charts, rewordings, follow-ups, ask-back, relative dates), repeated runs with 95% ranges, checked against reference numbers computed at run time (questions in `data/eval/`, not in git) |
 | `warm_up.py` | At server start, in the background: the server connector and the value indexes |
 | `plans.py` | Query plans: one query per cube, run in parallel, joined in memory with SQL |
 | `dynamic_chart.py` | Charts described in words: checks Claude's chart description and draws it |
@@ -373,6 +432,7 @@ You can point Excel or Power BI at those CSVs, or ask the app new questions any 
 | `dashboards.py` | Dashboards: saved charts (each with its cube), periods, running and building charts |
 | `ui.py` | Small pieces of UI shared by the pages, and the Apple-like styling |
 | `value_index.py` | Local index of every value in the data (built on Refresh data structure): small columns in memory, big ones in `models/values.db` |
+| `semantic.py`, `semantic/` | The meaning layer: one measure per business word, default dates, hidden measures, coverage, helper columns, named filters, decisions (see above) |
 | `data_tools.py` | Read-only tools Claude uses before writing a plan: a cube's details, finding values in every cube, test-running a query |
 | `tests/` | Automated tests (`python -m pytest`; `RUN_LIVE=1` adds tests on the live server and Claude) |
 | `value_check.py` | Checks the values a query filters on against the real data before it runs |

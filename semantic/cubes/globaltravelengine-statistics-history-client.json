@@ -1,0 +1,1083 @@
+{
+  "cube": "GlobalTravelEngine - Statistics History Client",
+  "label": "Client API requests (history)",
+  "purpose": "Daily history of requests clients send to the booking engine API (almost all XML): volumes by request type and outcome, hotels requested and returned, response times and sizes, and look-to-book. Covers 2025-10-16 to yesterday; today is in Statistics Real Time Client.",
+  "grain": "Client API requests aggregated per day and hour, customer, request type, outcome (error type), interface, integrator context, availability/package type, warning and response-time band.",
+  "use_for": [
+    "client API request volumes and trends since October 2025",
+    "look-to-book ratio by customer, integrator or market",
+    "API outcomes: correct, no results, errors (too many requests, invalid dates...)",
+    "API response times and response sizes",
+    "hotels requested and returned per API request"
+  ],
+  "not_for": [
+    "\"searches\" (Statistics Zone [Total Requests]) except for periods before 2026-07-18 (see review)",
+    "today's traffic (Statistics Real Time Client)",
+    "B2B web portal traffic (Statistics Client Web)",
+    "bookings or sales (Bookings)",
+    "supplier-side requests (supplier statistics cubes)"
+  ],
+  "coverage": {
+    "main_date": "'Calendario'[Fecha]",
+    "first": "2025-10",
+    "last": "2026-10",
+    "note": "Daily from 2025-10-16 to yesterday (UAE date); today's traffic is only in Statistics Real Time Client."
+  },
+  "dates": [
+    {
+      "column": "'Calendario'[Fecha]",
+      "role": "request_date",
+      "label": "Request date",
+      "meaning": "Day the request was received, UAE time (the cube's main date).",
+      "default": true,
+      "words": [
+        "request date",
+        "requested on",
+        "received"
+      ],
+      "first": "2025-10",
+      "last": "2026-10"
+    },
+    {
+      "column": "'Calendar CET'[Date CET]",
+      "role": "request_date_cet",
+      "label": "Request date (CET)",
+      "meaning": "The same request date in Central European Time (the engine's server time); differs from the UAE date for requests made around midnight. Use only when CET is asked for.",
+      "default": false,
+      "words": [
+        "cet",
+        "central european time",
+        "spain time"
+      ],
+      "first": "2025-10",
+      "last": "2026-10"
+    },
+    {
+      "column": "'Calendar CET'[Date CET LY]",
+      "role": "last_year_date",
+      "label": "Last-year helper date (CET)",
+      "meaning": "Last-year helper: each CET date shifted one year back. Never filter questions on it.",
+      "default": false,
+      "words": [],
+      "first": "2024-10",
+      "last": "2025-10"
+    },
+    {
+      "column": "'Calendar CET'[Date CET LY Slided]",
+      "role": "last_year_date",
+      "label": "Last-year helper date, weekday-aligned (CET)",
+      "meaning": "Last-year helper aligned on the same weekday a year back. Never filter questions on it.",
+      "default": false,
+      "words": [],
+      "first": "2024-10",
+      "last": "2025-10"
+    }
+  ],
+  "measures": [
+    {
+      "name": "[% Hotel Results]",
+      "label": "API hotel result rate",
+      "definition": "Hotels returned as a share of hotels requested in client API requests ([Hotel Results] / [Hotels Request]).",
+      "unit": "percent",
+      "format": ".1%",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "ratio",
+      "terms": [
+        "api hotel result rate"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[% L2B]",
+      "label": "Look-to-book %",
+      "definition": "Bookings as a share of availability requests: the inverse of [L2B] (1 / [L2B]), a tiny percentage.",
+      "unit": "percent",
+      "format": ".6%",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "ratio",
+      "terms": [
+        "look-to-book %",
+        "look to book percentage",
+        "l2b %"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "medium",
+      "notes": "Verified: [L2B] x [% L2B] = 1. Breaks when filtered or grouped by request type."
+    },
+    {
+      "name": "[AVG Hotel Results]",
+      "label": "Hotel results per API request",
+      "definition": "Average hotels returned per client API request ([Hotel Results] / [Requests]).",
+      "unit": "count",
+      "format": ",.2f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "average",
+      "terms": [
+        "hotel results per api request"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[AVG Hotels Request]",
+      "label": "Hotels per API request",
+      "definition": "Average hotels asked for per client API request ([Hotels Request] / [Requests]).",
+      "unit": "count",
+      "format": ",.2f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "average",
+      "terms": [
+        "hotels per api request",
+        "average hotels per request"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[AVG Response Time Sec]",
+      "label": "API average response time",
+      "definition": "Average time the engine took to answer a client API request, in seconds (the period).",
+      "unit": "seconds",
+      "format": ",.2f",
+      "prefix": "",
+      "suffix": " s",
+      "aggregation": "average",
+      "terms": [
+        "api response time",
+        "average api response time",
+        "client api latency",
+        "response time"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": "The cube's own format shows no decimals; typical value is about 0.5 s."
+    },
+    {
+      "name": "[AVG Size Bytes Response]",
+      "label": "API average response size (bytes)",
+      "definition": "Average response size per API request in bytes.",
+      "unit": "bytes",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "average",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet"
+      ],
+      "status": "hidden",
+      "hidden_reason": "duplicate of [AVG Size Kb Response] in bytes",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[AVG Size Kb Response]",
+      "label": "API average response size",
+      "definition": "Average response size per client API request in KB (bytes / 1024).",
+      "unit": "kilobytes",
+      "format": ",.1f",
+      "prefix": "",
+      "suffix": " KB",
+      "aggregation": "average",
+      "terms": [
+        "average api response size"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[Hotel Results]",
+      "label": "API hotels returned",
+      "definition": "Number of hotels returned with availability in client API responses.",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [
+        "hotel results in api requests",
+        "api hotels returned"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[Hotels Request]",
+      "label": "API hotels requested",
+      "definition": "Number of hotels asked for inside client API requests (about 5 per availability request).",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [
+        "hotels requested in api requests",
+        "api hotels requested"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[L2B]",
+      "label": "Look-to-book ratio",
+      "definition": "Availability requests per booking (about 613,000 availability requests for each booking over the last year).",
+      "unit": "ratio",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": ":1",
+      "aggregation": "ratio",
+      "terms": [
+        "look-to-book",
+        "look to book",
+        "look-to-book ratio",
+        "l2b",
+        "searches per booking"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "medium",
+      "notes": "Formula not published; verified that grouped by request type it returns the availability requests, so it is availability requests / bookings."
+    },
+    {
+      "name": "[Max Response Time Sec]",
+      "label": "API maximum response time",
+      "definition": "Longest time taken to answer a single client API request, in seconds; capped by the engine time-out.",
+      "unit": "seconds",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": " s",
+      "aggregation": "max",
+      "terms": [
+        "maximum api response time",
+        "slowest api response"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[Requests]",
+      "label": "API requests",
+      "definition": "Number of requests clients sent to the booking engine API, all request types (availability, cancellation policy, hotel information, booking, cancel...); 99.99% through the XML interface.",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [
+        "api requests",
+        "client api requests",
+        "xml requests",
+        "api calls",
+        "api traffic",
+        "requests"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[Size Bytes Response]",
+      "label": "API response data (bytes)",
+      "definition": "Total size of API responses in bytes.",
+      "unit": "bytes",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet"
+      ],
+      "status": "hidden",
+      "hidden_reason": "duplicate of [Size Gb Response] in bytes",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[Size Gb Response]",
+      "label": "API response data volume",
+      "definition": "Total size of client API responses in GB (binary: bytes / 1024^3).",
+      "unit": "gigabytes",
+      "format": ",.2f",
+      "prefix": "",
+      "suffix": " GB",
+      "aggregation": "sum",
+      "terms": [
+        "api data volume",
+        "api response data",
+        "response data volume"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[Size Kb Response]",
+      "label": "API response data (KB)",
+      "definition": "Total size of API responses in KB.",
+      "unit": "kilobytes",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet"
+      ],
+      "status": "hidden",
+      "hidden_reason": "duplicate of [Size Gb Response] in KB",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "name": "[Size Mb Response]",
+      "label": "API response data (MB)",
+      "definition": "Total size of API responses in MB.",
+      "unit": "megabytes",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "request_date_cet"
+      ],
+      "status": "hidden",
+      "hidden_reason": "duplicate of [Size Gb Response] in MB",
+      "confidence": "high",
+      "notes": ""
+    }
+  ],
+  "breakdowns": [
+    {
+      "column": "'Cliente'[Cliente]",
+      "label": "Customer",
+      "entity": "customer",
+      "kind": "name",
+      "meaning": "Client agency or integrator account sending the requests.",
+      "needs_columns": [
+        "'Cliente'[Cliente.Key0]"
+      ],
+      "sort_by": "",
+      "distinct": 6822,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Cliente'[Customer Code]",
+      "label": "Customer code",
+      "entity": "customer",
+      "kind": "code",
+      "meaning": "Customer code (same codes as the Bookings cube).",
+      "needs_columns": [
+        "'Cliente'[Customer Code.Key0]"
+      ],
+      "sort_by": "",
+      "distinct": 6851,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Cliente'[Market]",
+      "label": "Market",
+      "entity": "market",
+      "kind": "enum",
+      "meaning": "Commercial market of the customer.",
+      "needs_columns": [
+        "'Cliente'[Market.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 24,
+      "sample_values": [
+        "ROW",
+        "EUROPE",
+        "Turkish Market",
+        "GCC - Except UAE and Local Residence",
+        "UAE",
+        "Middle East",
+        "North Africa"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Cliente'[Country]",
+      "label": "Customer country",
+      "entity": "customer_country",
+      "kind": "name",
+      "meaning": "Country of the agency.",
+      "needs_columns": [
+        "'Cliente'[Country.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 96,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Cliente'[Integrator Name]",
+      "label": "Integrator",
+      "entity": "integrator",
+      "kind": "name",
+      "meaning": "Technology platform the customer connects through.",
+      "needs_columns": [
+        "'Cliente'[Integrator Name.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 69,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Cliente'[Master Agency]",
+      "label": "Master agency",
+      "entity": "master_agency",
+      "kind": "name",
+      "meaning": "Parent agency that groups several customer accounts.",
+      "needs_columns": [
+        "'Cliente'[Master Agency.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 143,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Cliente'[Agency Group]",
+      "label": "Agency group",
+      "entity": "agency_group",
+      "kind": "name",
+      "meaning": "Commercial group of the customer (region and markup tier).",
+      "needs_columns": [
+        "'Cliente'[Agency Group.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 130,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Cliente'[Category]",
+      "label": "Customer category",
+      "entity": "customer_category",
+      "kind": "enum",
+      "meaning": "Customer category.",
+      "needs_columns": [
+        "'Cliente'[Category.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 5,
+      "sample_values": [
+        "Dubai Link Category",
+        "Final Client Category",
+        "DL Business Trip - No Markup"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Tipo Peticion'[Tipo Peticion]",
+      "label": "Request type",
+      "entity": "request_type",
+      "kind": "enum",
+      "meaning": "API method: Availability (over 99% of requests), hotel information, cancellation policy, cancel fee, booking, cancel...",
+      "needs_columns": [
+        "'Tipo Peticion'[Tipo Peticion.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 66,
+      "sample_values": [
+        "Availability",
+        "Hotel information",
+        "Cancellation Policy",
+        "Cancel Fee",
+        "Reservation/Booking",
+        "Cancel",
+        "Read booking",
+        "Hotels"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Tipo Fallos'[Fallo]",
+      "label": "Outcome / error type",
+      "entity": "request_outcome",
+      "kind": "enum",
+      "meaning": "Outcome of the request: Correct, No results, or the error returned.",
+      "needs_columns": [
+        "'Tipo Fallos'[Fallo.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 256,
+      "sample_values": [
+        "Correct",
+        "No results",
+        "HTTP Too Many Requests",
+        "Invalid Dates",
+        "HTTP Bad Request",
+        "Invalid customer",
+        "Time Outs",
+        "Generic Failure"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Tipo Fallos'[Facturable]",
+      "label": "Billable",
+      "entity": "billable",
+      "kind": "enum",
+      "meaning": "Whether the request counts as billable (invoiceable).",
+      "needs_columns": [
+        "'Tipo Fallos'[Facturable.Key0]"
+      ],
+      "sort_by": "",
+      "distinct": 3,
+      "sample_values": [
+        "True",
+        "False"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'With Error Or Warning'[Error Or Warning]",
+      "label": "With error or warning",
+      "entity": "request_outcome",
+      "kind": "enum",
+      "meaning": "Yes when the request returned an error or a warning.",
+      "needs_columns": [
+        "'With Error Or Warning'[Error Or Warning.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 3,
+      "sample_values": [
+        "No",
+        "Yes"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Warnings'[Warning]",
+      "label": "Warning",
+      "entity": "warning",
+      "kind": "enum",
+      "meaning": "Warning returned with the response.",
+      "needs_columns": [
+        "'Warnings'[Warning.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 68,
+      "sample_values": [
+        "All Supplier Results Ignored",
+        "API Required Practices Not Complied",
+        "Booking Hotel Id Change",
+        "Cabin Required"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Interfaces'[Interfaz]",
+      "label": "Interface",
+      "entity": "api_interface",
+      "kind": "enum",
+      "meaning": "Interface the request came through; almost all XML.",
+      "needs_columns": [
+        "'Interfaces'[Interfaz.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 4,
+      "sample_values": [
+        "XML",
+        "CLC",
+        "WEB"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Integrator Context'[Integrator Context]",
+      "label": "Integrator context",
+      "entity": "integrator_context",
+      "kind": "enum",
+      "meaning": "Purpose the integrator declared for the call: full or single availability, cache robot/metasearch, valuation, booking...",
+      "needs_columns": [
+        "'Integrator Context'[Integrator Context.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 14,
+      "sample_values": [
+        "Other",
+        "Full Avail",
+        "Single Avail",
+        "Cache Metasearch",
+        "Cache Robot",
+        "Valuation",
+        "Rebook",
+        "Booking"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Availability Type'[Availability Type]",
+      "label": "Search type",
+      "entity": "availability_type",
+      "kind": "enum",
+      "meaning": "One Hotel, Multi-Hotel or Zone search.",
+      "needs_columns": [
+        "'Availability Type'[Availability Type.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 4,
+      "sample_values": [
+        "One Hotel",
+        "Multi-Hotel",
+        "Zone"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Package Type'[Package Type]",
+      "label": "Package type",
+      "entity": "package_type",
+      "kind": "enum",
+      "meaning": "Package context of the request.",
+      "needs_columns": [
+        "'Package Type'[Package Type.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 7,
+      "sample_values": [
+        "None",
+        "Preferred package",
+        "Hotel",
+        "Exclusive package",
+        "Dynamic package",
+        "Search package"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'WS Protocol'[WS Protocol]",
+      "label": "API protocol",
+      "entity": "api_protocol",
+      "kind": "enum",
+      "meaning": "API protocol used: JP (the engine's own) or OTA.",
+      "needs_columns": [
+        "'WS Protocol'[WS Protocol.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 3,
+      "sample_values": [
+        "JP",
+        "OTA"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Intervalo'[Intervalo]",
+      "label": "Response-time band (s)",
+      "entity": "response_time_band",
+      "kind": "enum",
+      "meaning": "Response time in one-second bands ('0 - 1' = under one second, most requests).",
+      "needs_columns": [
+        "'Intervalo'[Intervalo.Key0]"
+      ],
+      "sort_by": "'Intervalo'[Intervalo.Orden]",
+      "distinct": 184,
+      "sample_values": [
+        "0 - 1",
+        "1 - 2",
+        "2 - 3",
+        "3 - 4"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Is Webservice Administrator'[Is Webservice Administrator]",
+      "label": "Rate-checker traffic",
+      "entity": "rate_checker",
+      "kind": "enum",
+      "meaning": "Yes when the request came from a third-party rate-checking tool acting for a customer.",
+      "needs_columns": [
+        "'Is Webservice Administrator'[Is Webservice Administrator.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 3,
+      "sample_values": [
+        "No",
+        "Yes"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Webservice Administrator'[Webservice Administrator]",
+      "label": "Rate-checker tool",
+      "entity": "rate_checker",
+      "kind": "name",
+      "meaning": "Which third-party rate-checking tool sent the request ('Unknown' for normal traffic).",
+      "needs_columns": [
+        "'Webservice Administrator'[Webservice Administrator.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 5,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Horas'[Hora]",
+      "label": "Request hour",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Hour of the request, 00-23 (UAE time).",
+      "needs_columns": [
+        "'Horas'[Hora.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 25,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendario'[Mes]",
+      "label": "Request month",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Month of the request, e.g. 'October 2026'.",
+      "needs_columns": [
+        "'Calendario'[Mes.Key0]"
+      ],
+      "sort_by": "'Calendario'[Mes.Key0]",
+      "distinct": 229,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendario'[Semana]",
+      "label": "Request week",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Week of the request, e.g. 'Week 41, Calendar 2026'.",
+      "needs_columns": [
+        "'Calendario'[Semana.Key0]"
+      ],
+      "sort_by": "'Calendario'[Semana.Key0]",
+      "distinct": 993,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendario'[Trimestre]",
+      "label": "Request quarter",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Quarter of the request.",
+      "needs_columns": [
+        "'Calendario'[Trimestre.Key0]"
+      ],
+      "sort_by": "'Calendario'[Trimestre.Key0]",
+      "distinct": 77,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendario'[Año]",
+      "label": "Request year",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Year of the request, e.g. 'Calendar 2026'.",
+      "needs_columns": [
+        "'Calendario'[Año.Key0]"
+      ],
+      "sort_by": "'Calendario'[Año.Key0]",
+      "distinct": 20,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendario'[Día De La Semana]",
+      "label": "Request weekday",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Weekday as 'Day 1' to 'Day 7'; which weekday is Day 1 is not documented.",
+      "needs_columns": [
+        "'Calendario'[Día De La Semana.Key0]"
+      ],
+      "sort_by": "'Calendario'[Día De La Semana.Key0]",
+      "distinct": 8,
+      "sample_values": [],
+      "status": "active"
+    }
+  ],
+  "named_filters": [
+    {
+      "name": "successful api requests",
+      "meaning": "API requests answered correctly.",
+      "column": "'Tipo Fallos'[Fallo]",
+      "values": [
+        "Correct"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "api requests with no results",
+      "meaning": "API requests answered with no availability.",
+      "column": "'Tipo Fallos'[Fallo]",
+      "values": [
+        "No results"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "rate-limited requests",
+      "meaning": "Requests rejected for exceeding the allowed request rate.",
+      "column": "'Tipo Fallos'[Fallo]",
+      "values": [
+        "HTTP Too Many Requests"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "timed-out requests",
+      "meaning": "Requests that timed out.",
+      "column": "'Tipo Fallos'[Fallo]",
+      "values": [
+        "Time Outs"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "name": "availability requests",
+      "meaning": "Availability (search) requests only.",
+      "column": "'Tipo Peticion'[Tipo Peticion]",
+      "values": [
+        "Availability"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "booking requests",
+      "meaning": "Booking requests.",
+      "column": "'Tipo Peticion'[Tipo Peticion]",
+      "values": [
+        "Reservation/Booking"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "cancellation requests",
+      "meaning": "Cancel requests.",
+      "column": "'Tipo Peticion'[Tipo Peticion]",
+      "values": [
+        "Cancel"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "requests with errors or warnings",
+      "meaning": "Requests that returned an error or a warning.",
+      "column": "'With Error Or Warning'[Error Or Warning]",
+      "values": [
+        "Yes"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "name": "billable requests",
+      "meaning": "Requests flagged as billable.",
+      "column": "'Tipo Fallos'[Facturable]",
+      "values": [
+        "True"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "name": "xml api traffic",
+      "meaning": "Requests through the XML interface.",
+      "column": "'Interfaces'[Interfaz]",
+      "values": [
+        "XML"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "excluding rate-checker traffic",
+      "meaning": "Normal client traffic, without rate-checking tools.",
+      "column": "'Is Webservice Administrator'[Is Webservice Administrator]",
+      "values": [
+        "No"
+      ],
+      "confidence": "medium"
+    }
+  ],
+  "rules": [
+    "\"Searches\" are answered by Statistics Zone [Total Requests]. Use [Requests] here for API requests of all types, and for availability requests only where Statistics Zone has no data (before 2026-07-18), saying which source is used.",
+    "Data runs to yesterday; for today use Statistics Real Time Client.",
+    "[Max Response Time Sec] tops out at the engine time-out (180 s).",
+    "[L2B] = availability requests per booking and [% L2B] = 1 / [L2B]. Both are ratios: never add them, and never filter or group them by request type ('Tipo Peticion'): that breaks the ratio (it then just returns the availability requests).",
+    "Averages ([AVG ...]) and [Max Response Time Sec] must be asked from the cube at the level needed; never sum or average them across rows.",
+    "Filter days on 'Calendario'[Fecha] (UAE time). 'Fecha'[Fecha] and 'Date CET'[Date CET] are flat copies of 'Calendario'[Fecha] and 'Calendar CET'[Date CET] with identical data; do not use them. Never use the 'Calendario' columns ending in '.Value' (they fail: composite key).",
+    "'Solicitante' holds requester IP addresses: technical, never group by it.",
+    "[Size Gb Response] is binary GB (bytes / 1024^3); the bytes/KB/MB size measures are hidden duplicates.",
+    "Show response times with 2 decimals (the cube's own format rounds them to whole seconds).",
+    "Use the cube's measures only; never SUM a column."
+  ],
+  "examples": [
+    {
+      "question": "How many API requests did we receive last month?",
+      "measures": [
+        "[Requests]"
+      ],
+      "breakdowns": [],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Look-to-book by customer in September 2026",
+      "measures": [
+        "[L2B]"
+      ],
+      "breakdowns": [
+        "'Cliente'[Cliente]"
+      ],
+      "date_role": "request_date"
+    },
+    {
+      "question": "API requests by outcome last week",
+      "measures": [
+        "[Requests]"
+      ],
+      "breakdowns": [
+        "'Tipo Fallos'[Fallo]"
+      ],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Average API response time by request type this month",
+      "measures": [
+        "[AVG Response Time Sec]"
+      ],
+      "breakdowns": [
+        "'Tipo Peticion'[Tipo Peticion]"
+      ],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Monthly API requests since October 2025",
+      "measures": [
+        "[Requests]"
+      ],
+      "breakdowns": [
+        "'Calendario'[Mes]"
+      ],
+      "date_role": "request_date"
+    }
+  ],
+  "review": [
+    {
+      "id": "history_client.look_to_book",
+      "question": "Does \"look-to-book\" mean Statistics History Client [L2B] (availability requests per booking, about 613,000:1 over the last year)?",
+      "options": [
+        "Statistics History Client [L2B]",
+        "Statistics Hotel Client [L2B] (hotel-level requests per booking, about 2,000,000:1)"
+      ],
+      "proposed": "Statistics History Client [L2B]",
+      "why": "It is the request-level ratio, covers all clients and has the longest history (from 2025-10-16). Hotel Client counts every hotel inside a search and starts 2026-08-17. Supplier-side look-to-book belongs to the supplier cubes."
+    },
+    {
+      "id": "history_client.requests_term",
+      "question": "Does plain \"requests\" / \"API requests\" mean Statistics History Client [Requests] (all API request types), while \"searches\" stays Statistics Zone [Total Requests]?",
+      "options": [
+        "Statistics History Client [Requests]",
+        "Statistics Zone [Total Requests]"
+      ],
+      "proposed": "Statistics History Client [Requests]",
+      "why": "History Client counts every API call type (availability, cancellation policy, hotel information, booking...) with 12 months of history; Statistics Zone starts 2026-07-18 and is the agreed source for searches."
+    }
+  ]
+}

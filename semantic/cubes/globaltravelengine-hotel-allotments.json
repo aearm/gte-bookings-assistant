@@ -1,0 +1,579 @@
+{
+ "cube": "GlobalTravelEngine - Hotel Allotments",
+ "label": "Hotel Allotments",
+ "purpose": "Contracted hotel room allotments per hotel, room type, contract and stay night, with how much bookings have used and how much is still available. Use it for allotment, pickup and utilisation questions on upcoming stay nights.",
+ "grain": "One allotment per hotel, room type and contract for each stay night; used rooms also carry the booking's date, customer and supplier.",
+ "use_for": [
+  "total, used and available allotment by stay night, hotel, city, chain or room type",
+  "allotment utilisation by hotel or contract",
+  "allotment pickup by booking date, customer market or supplier",
+  "free sale vs allotment inventory",
+  "extranet vs non-extranet contracts"
+ ],
+ "not_for": [
+  "sales, cost, prices or profit (Sales Per Owned Hotels, Bookings)",
+  "booking or guest counts (Sales Per Owned Hotels, Bookings)",
+  "past stay nights before 2026-04",
+  "total or available allotment by customer, supplier or booking date"
+ ],
+ "coverage": {
+  "main_date": "'Occupancy Calendar'[Occupancy Date]",
+  "first": "2026-04",
+  "last": "2027-12",
+  "note": "Stay nights from 2026-04 to 2027-12, mostly future nights: months far ahead have allotment but almost no usage yet. Booking dates of used allotment run from 2025-06 to 2026-10."
+ },
+ "dates": [
+  {
+   "column": "'Occupancy Calendar'[Occupancy Date]",
+   "role": "occupancy_date",
+   "label": "Stay night (occupancy date)",
+   "meaning": "The night the allotment applies to (the cube's main date); includes future nights.",
+   "default": true,
+   "words": [
+    "stay night",
+    "stay",
+    "stays",
+    "occupancy",
+    "occupancy date",
+    "night",
+    "nights of",
+    "for stays in"
+   ],
+   "first": "2026-04",
+   "last": "2027-12"
+  },
+  {
+   "column": "'Booking Calendar'[Booking Date]",
+   "role": "booking_date",
+   "label": "Booking date",
+   "meaning": "When the booking that used the allotment was made; only [Used Allotment] has it (pickup analysis).",
+   "default": false,
+   "words": [
+    "booked",
+    "booking date",
+    "picked up",
+    "pickup date",
+    "made"
+   ],
+   "first": "2025-06",
+   "last": "2026-10"
+  }
+ ],
+ "measures": [
+  {
+   "name": "[Total Allotment]",
+   "label": "Total allotment",
+   "definition": "Rooms contracted in allotment for each stay night; summed over several nights it gives room-nights.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "total allotment",
+    "allotment",
+    "contracted allotment",
+    "allotment rooms",
+    "blocked rooms"
+   ],
+   "default_date_role": "occupancy_date",
+   "date_roles": [
+    "occupancy_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Only breaks down by hotel-side attributes (stay night, hotel, city, country, chain, category, room type, contract, extranet, free sale): by customer it repeats the overall total and by booking date, supplier or cancellation it is blank (checked). Totals include very large allotments on extranet contracts (thousands of rooms per room type per night; 99% of all allotment), so utilisation is tiny overall; see review item hotel_allotments.utilisation_reliability."
+  },
+  {
+   "name": "[Used Allotment]",
+   "label": "Used allotment",
+   "definition": "Rooms per stay night taken by non-cancelled bookings (free-sale bookings included).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "used allotment",
+    "allotment used",
+    "allotment pickup",
+    "allotment sold",
+    "rooms sold from allotment"
+   ],
+   "default_date_role": "occupancy_date",
+   "date_roles": [
+    "occupancy_date",
+    "booking_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Can be broken down by any attribute, including customer, market, supplier and booking date. About three quarters of it is free-sale inventory, which has no allotment."
+  },
+  {
+   "name": "[Avail Allotment]",
+   "label": "Available allotment",
+   "definition": "Total Allotment minus Used Allotment (checked).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "available allotment",
+    "remaining allotment",
+    "unsold allotment",
+    "allotment availability"
+   ],
+   "default_date_role": "occupancy_date",
+   "date_roles": [
+    "occupancy_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Only breaks down by hotel-side attributes (stay night, hotel, city, country, chain, category, room type, contract, extranet, free sale): by customer it repeats the overall total and by booking date, supplier or cancellation it is blank (checked). Totals include very large allotments on extranet contracts (thousands of rooms per room type per night; 99% of all allotment), so utilisation is tiny overall; see review item hotel_allotments.utilisation_reliability."
+  },
+  {
+   "name": "[% Used Allotment]",
+   "label": "Allotment utilisation",
+   "definition": "Used Allotment divided by Total Allotment.",
+   "unit": "percent",
+   "format": ".2%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "allotment utilisation",
+    "allotment utilization",
+    "% allotment used",
+    "allotment usage rate"
+   ],
+   "default_date_role": "occupancy_date",
+   "date_roles": [
+    "occupancy_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Only breaks down by hotel-side attributes (stay night, hotel, city, country, chain, category, room type, contract, extranet, free sale): by customer it repeats the overall total and by booking date, supplier or cancellation it is blank (checked). Totals include very large allotments on extranet contracts (thousands of rooms per room type per night; 99% of all allotment), so utilisation is tiny overall; see review item hotel_allotments.utilisation_reliability."
+  },
+  {
+   "name": "[% Avail Allotment]",
+   "label": "Allotment availability %",
+   "definition": "Available Allotment divided by Total Allotment.",
+   "unit": "percent",
+   "format": ".2%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "% allotment available",
+    "allotment availability %"
+   ],
+   "default_date_role": "occupancy_date",
+   "date_roles": [
+    "occupancy_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Only breaks down by hotel-side attributes (stay night, hotel, city, country, chain, category, room type, contract, extranet, free sale): by customer it repeats the overall total and by booking date, supplier or cancellation it is blank (checked). Totals include very large allotments on extranet contracts (thousands of rooms per room type per night; 99% of all allotment), so utilisation is tiny overall; see review item hotel_allotments.utilisation_reliability."
+  }
+ ],
+ "breakdowns": [
+  {
+   "column": "'Hotels'[Hotel]",
+   "label": "Hotel",
+   "entity": "hotel",
+   "kind": "name",
+   "meaning": "Hotel the allotment is contracted with.",
+   "needs_columns": [
+    "'Hotels'[Hotel.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 4109,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hotels'[City]",
+   "label": "Hotel city",
+   "entity": "hotel_city",
+   "kind": "name",
+   "meaning": "City of the hotel.",
+   "needs_columns": [
+    "'Hotels'[City.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 220,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hotels'[Region]",
+   "label": "Hotel region",
+   "entity": "hotel_region",
+   "kind": "name",
+   "meaning": "Region / emirate of the hotel.",
+   "needs_columns": [
+    "'Hotels'[Region.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 185,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hotels'[Country]",
+   "label": "Hotel country",
+   "entity": "hotel_country",
+   "kind": "name",
+   "meaning": "Country of the hotel.",
+   "needs_columns": [
+    "'Hotels'[Country.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 52,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hotels'[Hotel Chain]",
+   "label": "Hotel chain",
+   "entity": "hotel_chain",
+   "kind": "name",
+   "meaning": "Hotel chain or group.",
+   "needs_columns": [
+    "'Hotels'[Hotel Chain.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 58,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hotels'[Hotel Category]",
+   "label": "Hotel category (stars)",
+   "entity": "hotel_category",
+   "kind": "enum",
+   "meaning": "Star rating or apartment type.",
+   "needs_columns": [
+    "'Hotels'[Hotel Category.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 13,
+   "sample_values": [
+    "5 Stars",
+    "4 Stars",
+    "3 Stars",
+    "2 Stars",
+    "1 Star",
+    "Deluxe Apartment",
+    "Standard Apartment",
+    "Apartment"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Room Type'[Room Type]",
+   "label": "Room type",
+   "entity": "room_type",
+   "kind": "name",
+   "meaning": "Room type of the allotment.",
+   "needs_columns": [
+    "'Room Type'[Room Type.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 22034,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Contracts'[Contract]",
+   "label": "Contract",
+   "entity": "contract",
+   "kind": "name",
+   "meaning": "Hotel contract the allotment belongs to.",
+   "needs_columns": [
+    "'Contracts'[Contract.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 2671,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Contracts'[Extranet]",
+   "label": "Extranet contract",
+   "entity": "extranet_flag",
+   "kind": "enum",
+   "meaning": "Whether the contract is loaded through the hotelier extranet (these hold almost all allotment).",
+   "needs_columns": [
+    "'Contracts'[Extranet.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 3,
+   "sample_values": [
+    "Yes",
+    "No",
+    "Unknown"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Is Free Sale'[Is Free Sale]",
+   "label": "Free sale",
+   "entity": "free_sale_flag",
+   "kind": "enum",
+   "meaning": "Whether the inventory is free sale (no allotment limit); free sale has used rooms but no total.",
+   "needs_columns": [
+    "'Is Free Sale'[Is Free Sale.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 3,
+   "sample_values": [
+    "Yes",
+    "No",
+    "Unknown"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Suppliers'[Supplier]",
+   "label": "Supplier",
+   "entity": "supplier",
+   "kind": "name",
+   "meaning": "Supplier of the inventory; only [Used Allotment] splits by it.",
+   "needs_columns": [
+    "'Suppliers'[Supplier.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 2697,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Market]",
+   "label": "Market",
+   "entity": "market",
+   "kind": "enum",
+   "meaning": "Market of the customer that used the allotment; only [Used Allotment] splits by it.",
+   "needs_columns": [
+    "'Customers'[Market.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 24,
+   "sample_values": [
+    "UAE",
+    "GCC - Except UAE and Local Residence",
+    "EUROPE",
+    "ROW",
+    "Middle East",
+    "North Africa",
+    "Turkish Market",
+    "CIS"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Customer]",
+   "label": "Customer",
+   "entity": "customer",
+   "kind": "name",
+   "meaning": "Customer that used the allotment; only [Used Allotment] splits by it.",
+   "needs_columns": [
+    "'Customers'[Customer.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 6772,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Occupancy Calendar'[Year]",
+   "label": "Stay year",
+   "entity": "stay_year",
+   "kind": "date_part",
+   "meaning": "Year of the stay night.",
+   "needs_columns": [],
+   "sort_by": "'Occupancy Calendar'[Year.Fecha ISO DESC Year]",
+   "distinct": null,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Occupancy Calendar'[Quarter]",
+   "label": "Stay quarter",
+   "entity": "stay_quarter",
+   "kind": "date_part",
+   "meaning": "Quarter of the stay night, e.g. Quarter 1, 2027.",
+   "needs_columns": [
+    "'Occupancy Calendar'[Quarter.UniqueName]"
+   ],
+   "sort_by": "'Occupancy Calendar'[Quarter.Fecha ISO DESC Quarter]",
+   "distinct": 8,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Occupancy Calendar'[Month Name]",
+   "label": "Stay month",
+   "entity": "stay_month",
+   "kind": "date_part",
+   "meaning": "Month of the stay night, e.g. December 2026.",
+   "needs_columns": [
+    "'Occupancy Calendar'[Month Name.UniqueName]"
+   ],
+   "sort_by": "'Occupancy Calendar'[Month Name.Fecha ISO DESC Month Name]",
+   "distinct": 22,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Occupancy Calendar'[Week Of Year]",
+   "label": "Stay week of year",
+   "entity": "stay_week",
+   "kind": "date_part",
+   "meaning": "Week number of the stay night.",
+   "needs_columns": [
+    "'Occupancy Calendar'[Week Of Year.UniqueName]"
+   ],
+   "sort_by": "'Occupancy Calendar'[Week Of Year.Week Of Year DESC]",
+   "distinct": 54,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Occupancy Calendar'[Day Week]",
+   "label": "Stay weekday",
+   "entity": "stay_weekday",
+   "kind": "date_part",
+   "meaning": "Day of week of the stay night.",
+   "needs_columns": [
+    "'Occupancy Calendar'[Day Week.UniqueName]"
+   ],
+   "sort_by": "'Occupancy Calendar'[Day Week.Day Week DESC]",
+   "distinct": 8,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Booking Calendar'[Month Name]",
+   "label": "Booking month",
+   "entity": "booking_month",
+   "kind": "date_part",
+   "meaning": "Month the booking that used the allotment was made (Used Allotment only).",
+   "needs_columns": [
+    "'Booking Calendar'[Month Name.UniqueName]"
+   ],
+   "sort_by": "'Booking Calendar'[Month Name.Fecha ISO DESC Month Name]",
+   "distinct": 18,
+   "sample_values": [],
+   "status": "active"
+  }
+ ],
+ "named_filters": [
+  {
+   "name": "free-sale inventory",
+   "meaning": "Free-sale inventory (no allotment limit).",
+   "column": "'Is Free Sale'[Is Free Sale]",
+   "values": [
+    "Yes"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "allotment inventory",
+   "meaning": "Inventory with a real allotment limit (not free sale).",
+   "column": "'Is Free Sale'[Is Free Sale]",
+   "values": [
+    "No"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "extranet contracts",
+   "meaning": "Contracts loaded through the hotelier extranet.",
+   "column": "'Contracts'[Extranet]",
+   "values": [
+    "Yes"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "non-extranet contracts",
+   "meaning": "Contracts not loaded through the extranet.",
+   "column": "'Contracts'[Extranet]",
+   "values": [
+    "No"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "uae hotels",
+   "meaning": "Hotels in the United Arab Emirates.",
+   "column": "'Hotels'[Country]",
+   "values": [
+    "United Arab Emirates"
+   ],
+   "confidence": "high"
+  }
+ ],
+ "rules": [
+  "Total allotment, available allotment and both % measures only break down by hotel-side attributes (stay night, hotel, city, region, country, chain, category, room type, contract, extranet, free sale). By customer they repeat the overall total; by booking date, supplier or cancellation they are blank.",
+  "[Used Allotment] breaks down by anything, including customer, market, supplier and booking date.",
+  "Allotment summed over several stay nights is room-nights, not rooms; for 'rooms on a night' filter a single night.",
+  "Utilisation is tiny overall because extranet contracts carry very large allotments, and free-sale rooms count as used but have no allotment; say so when giving utilisation.",
+  "% measures are ratios: never add them across rows.",
+  "Always put a breakdown's needs_columns next to it; the Year and Month (number) columns need none.",
+  "Use the cube's measures only; never SUM a column."
+ ],
+ "examples": [
+  {
+   "question": "Total, used and available allotment for UAE hotels in December 2026",
+   "measures": [
+    "[Total Allotment]",
+    "[Used Allotment]",
+    "[Avail Allotment]"
+   ],
+   "breakdowns": [
+    "'Hotels'[City]"
+   ],
+   "date_role": "occupancy_date"
+  },
+  {
+   "question": "Allotment utilisation by hotel for stays next month",
+   "measures": [
+    "[% Used Allotment]"
+   ],
+   "breakdowns": [
+    "'Hotels'[Hotel]"
+   ],
+   "date_role": "occupancy_date"
+  },
+  {
+   "question": "Allotment pickup by customer market for bookings made in September 2026",
+   "measures": [
+    "[Used Allotment]"
+   ],
+   "breakdowns": [
+    "'Customers'[Market]"
+   ],
+   "date_role": "booking_date"
+  }
+ ],
+ "review": [
+  {
+   "id": "hotel_allotments.utilisation_reliability",
+   "question": "Total allotment holds very large values (thousands of rooms per room type per night, 99% on extranet contracts), so overall utilisation is about 0.1%. Should answers show utilisation as is, or limit it to non-extranet contracts?",
+   "options": [
+    "Show as is, with a caveat",
+    "Default to the 'non-extranet contracts' filter"
+   ],
+   "proposed": "Show as is, with a caveat, and let the contracting team confirm which contracts hold real allotment",
+   "why": "Non-extranet utilisation is also low (about 0.5%), so the filter does not fix the figure; hiding data would surprise users more than a stated caveat."
+  }
+ ]
+}

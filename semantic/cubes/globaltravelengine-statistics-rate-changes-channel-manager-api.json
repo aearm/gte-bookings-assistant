@@ -1,0 +1,475 @@
+{
+  "cube": "GlobalTravelEngine - Statistics Rate Changes Channel Manager API",
+  "label": "Channel manager rate changes",
+  "purpose": "Number of rate changes (rate updates) that hotels push into GlobalTravelEngine through channel managers. Broken down by hotel, contract, API user, channel manager and outcome (correct or error type).",
+  "grain": "One rate change received through a channel manager API request.",
+  "use_for": [
+    "rate changes or rate updates per day, week or month",
+    "rate changes by hotel, city, country or contract",
+    "rejected rate changes and their error types",
+    "rate changes by channel manager or API user"
+  ],
+  "not_for": [
+    "number of API calls or response times (Statistics Channel Manager API)",
+    "rate or price values (only counts are stored)",
+    "price changes found during the booking flow (KPI Change Price)",
+    "bookings, sales or revenue (Bookings)",
+    "anything older than about one year"
+  ],
+  "coverage": {
+    "main_date": "'Calendar'[Date]",
+    "first": "2025-10",
+    "last": "2026-10",
+    "note": "Rolling window of about one year: the oldest day drops off every day (on 2026-10-16 the Calendar started around 2025-10-17), so October 2025 is partial and last-year comparisons are not possible. The oldest day still loaded (about 0.65 million changes) falls in the Calendar's 'Unknown' member: all-time totals and 'Date'[Date] include it, and monthly figures from 'Calendar' do not."
+  },
+  "dates": [
+    {
+      "column": "'Calendar'[Date]",
+      "role": "request_date",
+      "label": "Change date",
+      "meaning": "Day the rate change was received (the cube's main date, with year, quarter, month and week attributes).",
+      "default": true,
+      "words": [
+        "received",
+        "pushed",
+        "sent",
+        "change date",
+        "update date"
+      ],
+      "first": "2025-10",
+      "last": "2026-10"
+    },
+    {
+      "column": "'Date'[Date]",
+      "role": "request_date",
+      "label": "Change date (plain table)",
+      "meaning": "The same receipt date in a plain date table with no attributes. It matches 'Calendar'[Date] month by month, except that it also holds the oldest loaded day (October 2025), which 'Calendar' puts in 'Unknown'.",
+      "default": false,
+      "words": [],
+      "first": "2025-10",
+      "last": "2026-10"
+    },
+    {
+      "column": "'Contracts'[Begin Date]",
+      "role": "contract_start_date",
+      "label": "Contract start",
+      "meaning": "Start of the validity period of the contract whose rates changed. This role is new: no shared role fits a contract's validity start.",
+      "default": false,
+      "words": [
+        "contract start",
+        "contract begin",
+        "contract valid from"
+      ],
+      "first": "2019-08",
+      "last": "2026-09"
+    },
+    {
+      "column": "'Contracts'[End Date]",
+      "role": "contract_end_date",
+      "label": "Contract end",
+      "meaning": "End of the validity period of the contract whose rates changed. This role is new: no shared role fits a contract's validity end.",
+      "default": false,
+      "words": [
+        "contract end",
+        "contract expiry",
+        "contract valid until"
+      ],
+      "first": "2023-12",
+      "last": "2029-01"
+    }
+  ],
+  "measures": [
+    {
+      "name": "[Changes]",
+      "label": "Rate changes",
+      "definition": "Number of rate changes received from hotels through channel managers, accepted and rejected.",
+      "unit": "count",
+      "format": ",.0f",
+      "prefix": "",
+      "suffix": "",
+      "aggregation": "sum",
+      "terms": [
+        "rate changes",
+        "rate updates",
+        "channel manager rate changes",
+        "rate changes pushed by hotels"
+      ],
+      "default_date_role": "request_date",
+      "date_roles": [
+        "request_date",
+        "contract_start_date",
+        "contract_end_date"
+      ],
+      "status": "active",
+      "hidden_reason": "",
+      "confidence": "high",
+      "notes": "Only measure of the cube. 188.9 million all-time, 179.2 million in the last 12 months."
+    }
+  ],
+  "breakdowns": [
+    {
+      "column": "'Hotels'[Hotel]",
+      "label": "Hotel",
+      "entity": "hotel",
+      "kind": "name",
+      "meaning": "Hotel whose rates changed.",
+      "needs_columns": [
+        "'Hotels'[Hotel.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 4109,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Hotels'[JP Code]",
+      "label": "Hotel JP code",
+      "entity": "hotel",
+      "kind": "code",
+      "meaning": "Hotel code in the booking engine; the key shared with the hotel statistics cubes.",
+      "needs_columns": [
+        "'Hotels'[JP Code.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 2606,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Hotels'[City]",
+      "label": "Hotel city",
+      "entity": "city",
+      "kind": "enum",
+      "meaning": "City of the hotel.",
+      "needs_columns": [
+        "'Hotels'[City.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 227,
+      "sample_values": [
+        "Dubai",
+        "Sharm El Sheikh",
+        "Hurghada",
+        "Istanbul",
+        "N/A"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Hotels'[Country]",
+      "label": "Hotel country",
+      "entity": "country",
+      "kind": "enum",
+      "meaning": "Country of the hotel. The United Arab Emirates account for about 74% of changes.",
+      "needs_columns": [
+        "'Hotels'[Country.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 51,
+      "sample_values": [
+        "United Arab Emirates",
+        "Egypt",
+        "Saudi Arabia",
+        "Turkey",
+        "Australia",
+        "Malaysia",
+        "Bahrain",
+        "Maldives"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Contracts'[Contract]",
+      "label": "Contract",
+      "entity": "contract",
+      "kind": "name",
+      "meaning": "Hotel contract (rate plan) whose rates changed.",
+      "needs_columns": [
+        "'Contracts'[Contract.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 9460,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Contracts'[Rate Type]",
+      "label": "Contract rate type",
+      "entity": "rate_type",
+      "kind": "enum",
+      "meaning": "Rate type of the contract. Every change with data is 'Hotelier extranet'.",
+      "needs_columns": [
+        "'Contracts'[Rate Type.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 4,
+      "sample_values": [
+        "Hotelier extranet",
+        "FIT",
+        "Rack",
+        "Unknown"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Integrators'[Integrator]",
+      "label": "Channel manager",
+      "entity": "channel_manager",
+      "kind": "name",
+      "meaning": "Channel manager company that sent the change. One company sends about 98% of changes.",
+      "needs_columns": [
+        "'Integrators'[Integrator.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 5,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Integration Types'[Integration Type]",
+      "label": "Integration type",
+      "entity": "integration_type",
+      "kind": "enum",
+      "meaning": "Integration protocol or connector used. Two types have data; one channel manager's V2 connector carries almost everything.",
+      "needs_columns": [
+        "'Integration Types'[Integration Type.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 10,
+      "sample_values": [
+        "Generic JPDM",
+        "Generic JP",
+        "Other",
+        "Unknown"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Users'[User]",
+      "label": "API user",
+      "entity": "api_user",
+      "kind": "name",
+      "meaning": "API login of the hotel or hotel chain that sent the change.",
+      "needs_columns": [
+        "'Users'[User.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 304,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Error Types'[Error Type]",
+      "label": "Error",
+      "entity": "error_type",
+      "kind": "enum",
+      "meaning": "Outcome of the change: 'Correct' (accepted) or the reason it was rejected.",
+      "needs_columns": [
+        "'Error Types'[Error Type.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 96,
+      "sample_values": [
+        "Correct",
+        "Invalid value",
+        "Invalid roomtype code",
+        "Zero price not valid",
+        "Login fails - Invalid user or password"
+      ],
+      "status": "active"
+    },
+    {
+      "column": "'Error Types'[Error Type Code]",
+      "label": "Error code",
+      "entity": "error_type",
+      "kind": "code",
+      "meaning": "Technical code of the outcome; 'Correct' means accepted.",
+      "needs_columns": [
+        "'Error Types'[Error Type Code.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 97,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendar'[Year]",
+      "label": "Year",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Year the change was received (number).",
+      "needs_columns": [],
+      "sort_by": "'Calendar'[Year.Fecha ISO DESC Year]",
+      "distinct": null,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendar'[Quarter]",
+      "label": "Quarter",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Quarter, written \"Quarter 1, 2026\".",
+      "needs_columns": [
+        "'Calendar'[Quarter.UniqueName]"
+      ],
+      "sort_by": "'Calendar'[Quarter.Fecha ISO DESC Quarter]",
+      "distinct": 6,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendar'[Month Year]",
+      "label": "Month",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Month, written \"1-2026\" (month-year).",
+      "needs_columns": [
+        "'Calendar'[Month Year.UniqueName]"
+      ],
+      "sort_by": "'Calendar'[Month Year.Fecha ISO DESC MonthYear]",
+      "distinct": 14,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendar'[Week Of Year]",
+      "label": "Week number",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Week number \"01\" to \"53\" without the year: always group it with 'Calendar'[Year].",
+      "needs_columns": [
+        "'Calendar'[Week Of Year.UniqueName]"
+      ],
+      "sort_by": "",
+      "distinct": 54,
+      "sample_values": [],
+      "status": "active"
+    },
+    {
+      "column": "'Calendar'[Day Week]",
+      "label": "Weekday",
+      "entity": "date",
+      "kind": "date_part",
+      "meaning": "Day of the week (Monday to Sunday).",
+      "needs_columns": [
+        "'Calendar'[Day Week.UniqueName]"
+      ],
+      "sort_by": "'Calendar'[Day Week.Day Week DESC]",
+      "distinct": 8,
+      "sample_values": [],
+      "status": "active"
+    }
+  ],
+  "named_filters": [
+    {
+      "name": "successful rate changes",
+      "meaning": "Rate changes accepted without an error.",
+      "column": "'Error Types'[Error Type Code]",
+      "values": [
+        "Correct"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "rate change login errors",
+      "meaning": "Rate changes rejected because the API login or password was invalid.",
+      "column": "'Error Types'[Error Type Code]",
+      "values": [
+        "INVALID_USER_OR_PASSWORD"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "name": "uae hotels",
+      "meaning": "Hotels in the United Arab Emirates.",
+      "column": "'Hotels'[Country]",
+      "values": [
+        "United Arab Emirates"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "rules": [
+    "\"Rate changes\" and \"rate updates\" mean [Changes] here: the individual changes hotels push. The number of API calls is [Requests] in Statistics Channel Manager API.",
+    "These are rate changes pushed by hotels. They are not price changes detected during the booking flow (KPI Change Price).",
+    "Rejected changes = [Changes] with Error Type Code other than 'Correct'. Rejection rate = rejected changes ÷ all [Changes] for the same period and breakdown.",
+    "About one year of data (rolling window): last-year comparisons are not possible and October 2025 is partial. The Calendar 'Unknown' member holds the oldest loaded day, so leave it out of monthly views.",
+    "Only 'Update rates' requests have data, and every contract with data has Rate Type 'Hotelier extranet'.",
+    "Hotels match the hotel statistics cubes by JP code and the sales cubes by hotel name only. Expect gaps when comparing with other cubes."
+  ],
+  "examples": [
+    {
+      "question": "Rate changes per month in 2026",
+      "measures": [
+        "[Changes]"
+      ],
+      "breakdowns": [
+        "'Calendar'[Month Year]"
+      ],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Which hotels sent the most rate updates last month?",
+      "measures": [
+        "[Changes]"
+      ],
+      "breakdowns": [
+        "'Hotels'[Hotel]"
+      ],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Rejected rate changes by error type in September 2026",
+      "measures": [
+        "[Changes]"
+      ],
+      "breakdowns": [
+        "'Error Types'[Error Type]"
+      ],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Rate changes by hotel country this quarter",
+      "measures": [
+        "[Changes]"
+      ],
+      "breakdowns": [
+        "'Hotels'[Country]"
+      ],
+      "date_role": "request_date"
+    },
+    {
+      "question": "Rate changes by contract for contracts ending in 2027",
+      "measures": [
+        "[Changes]"
+      ],
+      "breakdowns": [
+        "'Contracts'[Contract]"
+      ],
+      "date_role": "contract_end_date"
+    }
+  ],
+  "review": [
+    {
+      "id": "rate_changes.include_rejected",
+      "question": "Does \"rate changes\" (or \"rate updates\") mean every change received, or only accepted ones?",
+      "options": [
+        "All received ([Changes] with no filter)",
+        "Only accepted ('successful rate changes' filter)"
+      ],
+      "proposed": "All received ([Changes] with no filter)",
+      "why": "That is what the measure counts and what hotels sent. Accepted or rejected changes are asked for explicitly, using the named filter or the error breakdown."
+    },
+    {
+      "id": "rate_changes.default_date",
+      "question": "Which date should plain questions use: 'Calendar'[Date] or 'Date'[Date]?",
+      "options": [
+        "'Calendar'[Date]",
+        "'Date'[Date]"
+      ],
+      "proposed": "'Calendar'[Date]",
+      "why": "Both are the receipt date and match month by month. 'Calendar' has the month, week and quarter attributes; it misses only the oldest loaded day (about 0.65 million changes)."
+    }
+  ]
+}

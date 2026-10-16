@@ -1,0 +1,1109 @@
+{
+ "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+ "label": "Hotel supplier requests (hotel level)",
+ "purpose": "Hotel-level statistics of the requests GTE sends to hotel suppliers: each hotel asked counts once, with its outcome (OK, no results, other failure), cache use, room-rate combinations and look-to-book, by hotel, destination, customer and travel window. Data only from 2026-08-17.",
+ "grain": "Hotel requests (one hotel asked in a supplier request) aggregated per request day, supplier connection, customer, credential, hotel, request type and context, availability type, interface and travel window.",
+ "use_for": [
+  "supplier hotel-request outcomes (OK, KO, no results, other failures) and their rates",
+  "which hotels, cities or countries are requested from suppliers",
+  "supplier hotel requests by travel window (days before check-in)",
+  "room-rate combinations returned by suppliers",
+  "cached hotel requests with and without availability"
+ ],
+ "not_for": [
+  "any period before 2026-08-17 (Statistics History Supplier)",
+  "request-message counts, response times, time-outs or error types (Statistics History Supplier)",
+  "today's traffic (Statistics Real Time Supplier)",
+  "bookings, sales or room nights (Bookings)",
+  "searches (Statistics Zone)",
+  "requests clients send to GTE (Statistics Hotel Client)"
+ ],
+ "coverage": {
+  "main_date": "'Request Calendar'[Request Day]",
+  "first": "2026-08",
+  "last": "2026-10",
+  "note": "Recent only: data starts on 2026-08-17 and ends yesterday (2026-10-15 when read on 2026-10-16), so 2026-08 is partial and there is no earlier history. For older periods use Statistics History Supplier."
+ },
+ "dates": [
+  {
+   "column": "'Request Calendar'[Request Day]",
+   "role": "request_date",
+   "label": "Request date",
+   "meaning": "Day the hotel request was sent to the supplier. The cube's only date.",
+   "default": true,
+   "words": [
+    "request date",
+    "request day",
+    "requested",
+    "sent"
+   ],
+   "first": "2026-08",
+   "last": "2026-10"
+  }
+ ],
+ "measures": [
+  {
+   "name": "[Total Hotel Requests]",
+   "label": "Supplier hotel requests",
+   "definition": "Hotel requests sent to suppliers: each hotel asked in a supplier request counts once. Equals OK + KO.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "supplier hotel requests",
+    "hotel requests sent to suppliers",
+    "hotel-level supplier requests"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Main measure. Hotel level, so about 5 times the number of request messages in Statistics History Supplier."
+  },
+  {
+   "name": "[Hotel Requests OK]",
+   "label": "Supplier hotel requests OK",
+   "definition": "Hotel requests for which the supplier returned availability.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "successful supplier hotel requests",
+    "supplier hotel requests with availability"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Hotel Requests KO]",
+   "label": "Supplier hotel requests KO",
+   "definition": "Hotel requests that did not return availability: no results (NR) plus other failures (OTH).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "unsuccessful supplier hotel requests",
+    "failed supplier hotel requests"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Verified: KO = NR + OTH and OK + KO = Total."
+  },
+  {
+   "name": "[Hotel Requests NR]",
+   "label": "Supplier hotel requests with no results",
+   "definition": "Hotel requests the supplier answered without availability (no results).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "supplier hotel requests with no results",
+    "supplier hotel no availability"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": ""
+  },
+  {
+   "name": "[Hotel Requests OTH]",
+   "label": "Supplier hotel requests failed (other)",
+   "definition": "Hotel requests that failed for a reason other than no results (supplier errors, time-outs and similar).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "supplier hotel request errors",
+    "supplier hotel requests failed with errors"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Meaning inferred: OTH = KO minus NR. The cube has no error-type breakdown; for error kinds use Statistics History Supplier."
+  },
+  {
+   "name": "[% Hotel Requests OK]",
+   "label": "Supplier hotel success rate",
+   "definition": "[Hotel Requests OK] / [Total Hotel Requests].",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "supplier hotel success rate",
+    "supplier hotel availability rate"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[% Hotel Requests KO]",
+   "label": "Supplier hotel failure rate",
+   "definition": "[Hotel Requests KO] / [Total Hotel Requests].",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "supplier hotel failure rate",
+    "supplier hotel ko rate"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[% Hotel Requests NR]",
+   "label": "Supplier hotel no-results rate",
+   "definition": "[Hotel Requests NR] / [Total Hotel Requests].",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "supplier hotel no-results rate",
+    "supplier hotel no availability rate"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": ""
+  },
+  {
+   "name": "[% Hotel Requests OTH]",
+   "label": "Supplier hotel error rate",
+   "definition": "[Hotel Requests OTH] / [Total Hotel Requests].",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "supplier hotel error rate"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": ""
+  },
+  {
+   "name": "[Hotels Cached]",
+   "label": "Hotel requests served from cache",
+   "definition": "Hotel requests answered from GTE's cache instead of a live supplier call (Cached OK + Cached NR).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "supplier hotel requests served from cache",
+    "cached supplier hotel requests"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Hotels Cached Ok]",
+   "label": "Cached hotel requests with availability",
+   "definition": "Cached hotel requests that returned availability.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "cached supplier hotel requests with availability"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Hotels Cached NR]",
+   "label": "Cached hotel requests with no results",
+   "definition": "Cached hotel requests that returned no availability.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "cached supplier hotel requests with no results"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[% Hotels Cached]",
+   "label": "Supplier hotel cache rate",
+   "definition": "[Hotels Cached] / [Total Hotel Requests].",
+   "unit": "percent",
+   "format": ".3%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "supplier hotel cache rate",
+    "share of supplier hotel requests served from cache"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Verified ratio; about 0.02%, hence 3 decimals."
+  },
+  {
+   "name": "[% Hotels Cached OK]",
+   "label": "Cached hotel requests with availability (%)",
+   "definition": "[Hotels Cached Ok] / [Hotels Cached].",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "cached supplier hotel availability rate"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[% Hotels Cached NR]",
+   "label": "Cached hotel requests with no results (%)",
+   "definition": "[Hotels Cached NR] / [Hotels Cached].",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "cached supplier hotel no-results rate"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Combinations]",
+   "label": "Room-rate combinations returned",
+   "definition": "Room/board/rate combinations (options) suppliers returned for the hotels requested.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "supplier room combinations",
+    "room-rate options returned by suppliers"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Not a request count: about 18 per hotel request. The schema's value counts are in this measure."
+  },
+  {
+   "name": "[Avg Combinations]",
+   "label": "Average combinations per hotel request",
+   "definition": "[Combinations] / [Total Hotel Requests] (all hotel requests, including those without availability).",
+   "unit": "count",
+   "format": ",.1f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [
+    "average room combinations per supplier hotel request"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Verified ratio. Per successful request it would be about 1.7 times higher."
+  },
+  {
+   "name": "[L2B]",
+   "label": "Hotel supplier look-to-book",
+   "definition": "Look-to-book ratio reported by this cube: hotel requests per booking. Exact inverse of [% L2B].",
+   "unit": "ratio",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "hotel supplier look-to-book",
+    "supplier hotel requests per booking"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "About 4 million hotel requests per booking. Its booking count is not exposed and differs from Statistics History Supplier's, so the two L2B values are not comparable. Blank or meaningless when grouped by 'Context' or 'Request Types'."
+  },
+  {
+   "name": "[% L2B]",
+   "label": "Hotel supplier booking conversion",
+   "definition": "Bookings per hotel request, the inverse of [L2B], as a fraction.",
+   "unit": "percent",
+   "format": ".6%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [
+    "hotel supplier booking conversion"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Tiny values (about 0.00003%); prefer [L2B]."
+  },
+  {
+   "name": "[Avg Days Travel Window]",
+   "label": "Average travel window (days)",
+   "definition": "Meant to be the average number of days between the request and check-in.",
+   "unit": "days",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "broken: returns about 0 and negative values (overall 0.02, last 12 months -0.008; -0.11 inside the '3 to 7 Days' band). Use [Total Hotel Requests] by 'Travel Window'[Description] instead.",
+   "confidence": "high",
+   "notes": ""
+  }
+ ],
+ "breakdowns": [
+  {
+   "column": "'Suppliers'[Supplier Code]",
+   "label": "Supplier code",
+   "entity": "supplier",
+   "kind": "code",
+   "meaning": "Supplier connection code: how supplier-side cubes identify a supplier.",
+   "needs_columns": [
+    "'Suppliers'[Supplier Code.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 95,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Suppliers'[Supplier]",
+   "label": "Supplier connection",
+   "entity": "supplier",
+   "kind": "name",
+   "meaning": "Name of the supplier connection (not the same naming as the Bookings cube).",
+   "needs_columns": [
+    "'Suppliers'[Supplier.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 95,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hotels'[Hotel]",
+   "label": "Hotel",
+   "entity": "hotel",
+   "kind": "name",
+   "meaning": "Hotel requested (3.4 million values: always filter or take a top N).",
+   "needs_columns": [
+    "'Hotels'[Hotel.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 3410649,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hotels'[JP Code]",
+   "label": "Hotel JP code",
+   "entity": "hotel",
+   "kind": "code",
+   "meaning": "GTE's own hotel code (JP code) shared by the same hotel across suppliers; best key to compare one hotel across suppliers.",
+   "needs_columns": [
+    "'Hotels'[JP Code.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 1305196,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hotels'[Country]",
+   "label": "Hotel country",
+   "entity": "hotel_country",
+   "kind": "name",
+   "meaning": "Country of the requested hotel (destination).",
+   "needs_columns": [
+    "'Hotels'[Country.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 232,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hotels'[Region]",
+   "label": "Hotel region",
+   "entity": "hotel_region",
+   "kind": "name",
+   "meaning": "Region/province of the requested hotel.",
+   "needs_columns": [
+    "'Hotels'[Region.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 2936,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hotels'[City]",
+   "label": "Hotel city",
+   "entity": "hotel_city",
+   "kind": "name",
+   "meaning": "City of the requested hotel.",
+   "needs_columns": [
+    "'Hotels'[City.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 79390,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Customer]",
+   "label": "Customer",
+   "entity": "customer",
+   "kind": "name",
+   "meaning": "Customer (agency or integrator) whose request was passed to the supplier.",
+   "needs_columns": [
+    "'Customers'[Customer.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 6772,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Customer Code]",
+   "label": "Customer code",
+   "entity": "customer",
+   "kind": "code",
+   "meaning": "Customer code; the safest key to match customers with other cubes.",
+   "needs_columns": [
+    "'Customers'[Customer Code.Key0]"
+   ],
+   "sort_by": "",
+   "distinct": 6851,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Market]",
+   "label": "Customer market",
+   "entity": "market",
+   "kind": "enum",
+   "meaning": "Commercial market of the customer. Most hotel requests come from ROW.",
+   "needs_columns": [
+    "'Customers'[Market.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 24,
+   "sample_values": [
+    "ROW",
+    "EUROPE",
+    "GCC - Except UAE and Local Residence",
+    "UAE",
+    "Turkish Market",
+    "Middle East",
+    "North Africa",
+    "B2C Middle East"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Category]",
+   "label": "Customer category",
+   "entity": "customer_category",
+   "kind": "enum",
+   "meaning": "Customer category.",
+   "needs_columns": [
+    "'Customers'[Category.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 5,
+   "sample_values": [
+    "Dubai Link Category",
+    "Final Client Category",
+    "DL Business Trip - No Markup"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Type of Payment]",
+   "label": "Customer payment type",
+   "entity": "payment_type",
+   "kind": "enum",
+   "meaning": "How the customer pays: credit, pre-payment or POS.",
+   "needs_columns": [
+    "'Customers'[Type of Payment.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 4,
+   "sample_values": [
+    "Credit",
+    "Pre-payment",
+    "POS"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Agency Group]",
+   "label": "Agency group",
+   "entity": "agency_group",
+   "kind": "name",
+   "meaning": "Customer's agency (pricing) group.",
+   "needs_columns": [
+    "'Customers'[Agency Group.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 130,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Master Agency]",
+   "label": "Master agency",
+   "entity": "master_agency",
+   "kind": "name",
+   "meaning": "Parent agency of the customer.",
+   "needs_columns": [
+    "'Customers'[Master Agency.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 143,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Integrator]",
+   "label": "Integrator",
+   "entity": "integrator",
+   "kind": "name",
+   "meaning": "Technology integrator the customer connects through.",
+   "needs_columns": [
+    "'Customers'[Integrator.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 69,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Default Country]",
+   "label": "Customer country",
+   "entity": "country",
+   "kind": "name",
+   "meaning": "Customer's default country.",
+   "needs_columns": [
+    "'Customers'[Default Country.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 96,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Account Manager]",
+   "label": "Account manager",
+   "entity": "account_manager",
+   "kind": "name",
+   "meaning": "Customer's account manager (person or a generic agency group).",
+   "needs_columns": [
+    "'Customers'[Account Manager.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 19,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Credentials'[Credential]",
+   "label": "Credential",
+   "entity": "credential",
+   "kind": "name",
+   "meaning": "Credential (connection account) used for the request.",
+   "needs_columns": [
+    "'Credentials'[Credential.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 206,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Request Types'[Request Type]",
+   "label": "Request type",
+   "entity": "request_type",
+   "kind": "enum",
+   "meaning": "Kind of call sent to the supplier. Almost all hotel requests are Availability.",
+   "needs_columns": [
+    "'Request Types'[Request Type.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 65,
+   "sample_values": [
+    "Availability",
+    "Cancellation Policy",
+    "Check Availability",
+    "Hotel information",
+    "Reservation/Booking",
+    "Blocked reservation",
+    "Read booking",
+    "Cancel"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Context'[Context]",
+   "label": "Booking-flow step",
+   "entity": "request_context",
+   "kind": "enum",
+   "meaning": "Step of the customer's booking flow during which the supplier was called.",
+   "needs_columns": [
+    "'Context'[Context.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 65,
+   "sample_values": [
+    "Availability",
+    "Cancellation Policy",
+    "Reservation/Booking",
+    "Modify Reservation/Booking",
+    "Cancel",
+    "Read booking",
+    "Another"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Availability Types'[Availability Type]",
+   "label": "Availability type",
+   "entity": "availability_type",
+   "kind": "enum",
+   "meaning": "Scope of the availability search: several hotels, one hotel or a zone.",
+   "needs_columns": [
+    "'Availability Types'[Availability Type.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 4,
+   "sample_values": [
+    "Multi-Hotel",
+    "One Hotel",
+    "Zone"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Interfaces'[Interface]",
+   "label": "Interface",
+   "entity": "interface",
+   "kind": "enum",
+   "meaning": "Customer channel that triggered the supplier request: XML (almost all), WEB or CLC.",
+   "needs_columns": [
+    "'Interfaces'[Interface.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 4,
+   "sample_values": [
+    "XML",
+    "WEB",
+    "CLC"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Travel Window'[Description]",
+   "label": "Travel window",
+   "entity": "travel_window",
+   "kind": "enum",
+   "meaning": "Days between the request and check-in, in bands.",
+   "needs_columns": [
+    "'Travel Window'[Description.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 11,
+   "sample_values": [
+    "0 to 2 Days",
+    "3 to 7 Days",
+    "8 to 14 Days",
+    "15 to 21 Days",
+    "22 to 30 Days",
+    "31 to 60 Days",
+    "61 to 90 Days",
+    "91 to 180 Days"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Travel Window'[Name]",
+   "label": "Travel window (name)",
+   "entity": "travel_window",
+   "kind": "enum",
+   "meaning": "Same bands as 'Travel Window'[Description] with names ('Last Minute' = 0 to 2 days ... 'Seven to Twelve Months').",
+   "needs_columns": [
+    "'Travel Window'[Name.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 11,
+   "sample_values": [
+    "Last Minute",
+    "Last Week",
+    "Two Weeks",
+    "Three Weeks",
+    "One Month",
+    "Two Months",
+    "Three Months",
+    "Four to Six Months"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Is Webservice Administrator'[Is Webservice Administrator]",
+   "label": "Via rate-optimisation tool",
+   "entity": "webservice_administrator_flag",
+   "kind": "enum",
+   "meaning": "Yes when the request came through a third-party webservice administrator (rate re-checking tool).",
+   "needs_columns": [
+    "'Is Webservice Administrator'[Is Webservice Administrator.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 3,
+   "sample_values": [
+    "Yes",
+    "No"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Webservice Administrator'[Webservice Administrator]",
+   "label": "Webservice administrator",
+   "entity": "webservice_administrator",
+   "kind": "name",
+   "meaning": "Third-party webservice administrator that made the request; 'Unknown' = none.",
+   "needs_columns": [
+    "'Webservice Administrator'[Webservice Administrator.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 5,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Request Calendar'[Week Day]",
+   "label": "Weekday",
+   "entity": "weekday",
+   "kind": "date_part",
+   "meaning": "Day of week of the request ('Monday' ... 'Sunday').",
+   "needs_columns": [
+    "'Request Calendar'[Week Day.UniqueName]"
+   ],
+   "sort_by": "'Request Calendar'[Week Day.Fecha ISO DESC WeekDay]",
+   "distinct": 8,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Request Calendar'[Month]",
+   "label": "Month",
+   "entity": "month",
+   "kind": "date_part",
+   "meaning": "Month of the request, e.g. 'September 2026'.",
+   "needs_columns": [
+    "'Request Calendar'[Month.UniqueName]"
+   ],
+   "sort_by": "'Request Calendar'[Month.Fecha ISO DESC Month]",
+   "distinct": 4,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Request Calendar'[Year Week]",
+   "label": "Week",
+   "entity": "week",
+   "kind": "date_part",
+   "meaning": "Week of the request, e.g. '38 (2026)'.",
+   "needs_columns": [
+    "'Request Calendar'[Year Week.UniqueName]"
+   ],
+   "sort_by": "'Request Calendar'[Year Week.Fecha ISO DESC YearWeek]",
+   "distinct": 11,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Request Calendar'[Quarter]",
+   "label": "Quarter",
+   "entity": "quarter",
+   "kind": "date_part",
+   "meaning": "Quarter of the request, e.g. 'Quarter 3, 2026'.",
+   "needs_columns": [
+    "'Request Calendar'[Quarter.UniqueName]"
+   ],
+   "sort_by": "'Request Calendar'[Quarter.Fecha ISO DESC Quarter]",
+   "distinct": 3,
+   "sample_values": [],
+   "status": "active"
+  }
+ ],
+ "named_filters": [
+  {
+   "name": "supplier hotel availability requests",
+   "meaning": "Availability calls for hotels.",
+   "column": "'Request Types'[Request Type]",
+   "values": [
+    "Availability"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "supplier hotel booking requests",
+   "meaning": "Booking calls sent to hotel suppliers (calls, not confirmed bookings).",
+   "column": "'Request Types'[Request Type]",
+   "values": [
+    "Reservation/Booking"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "last-minute hotel requests",
+   "meaning": "Requests for check-in within 2 days.",
+   "column": "'Travel Window'[Description]",
+   "values": [
+    "0 to 2 Days"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "multi-hotel searches",
+   "meaning": "Availability searches over several hotels.",
+   "column": "'Availability Types'[Availability Type]",
+   "values": [
+    "Multi-Hotel"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "xml client traffic to suppliers",
+   "meaning": "Supplier hotel requests triggered by customers' XML API.",
+   "column": "'Interfaces'[Interface]",
+   "values": [
+    "XML"
+   ],
+   "confidence": "high"
+  }
+ ],
+ "rules": [
+  "This is supplier-side traffic (GTE -> hotel suppliers) counted per hotel. Requests clients send to GTE are in Statistics Hotel Client; searches are in Statistics Zone.",
+  "Data exists only from 2026-08-17. For a period that starts earlier, say so and use Statistics History Supplier instead (its [Hotels Request] is the closest measure, about 8% higher in the same month because its scope is wider).",
+  "Data ends yesterday; for today use Statistics Real Time Supplier.",
+  "[Total Hotel Requests] = [Hotel Requests OK] + [Hotel Requests KO], and KO = NR + OTH. The % measures are shares of [Total Hotel Requests]; the cached % measures are shares of [Hotels Cached].",
+  "Only the count measures add up. Percentages, averages, [L2B] and [% L2B] must never be summed or averaged across rows, days or suppliers.",
+  "[L2B] / [% L2B] are only meaningful by date, supplier, customer or hotel attributes; grouped by 'Context' or 'Request Types' they are blank or meaningless. Do not compare them with Statistics History Supplier's L2B (different basis).",
+  "[Avg Days Travel Window] is broken and hidden: answer lead-time questions with [Total Hotel Requests] by 'Travel Window'[Description].",
+  "Suppliers are identified by their connection code 'Suppliers'[Supplier Code] (always with 'Suppliers'[Supplier Code.UniqueName]); 'Suppliers'[Supplier] is the connection's name. The Bookings cube names suppliers differently: joining to Bookings is by name only and may not match well, so say so whenever you combine them.",
+  "'Hotels'[Hotel] has 3.4 million values and 'Hotels'[City] 79 thousand: always filter them or take a top N. Use 'Hotels'[JP Code] to follow one hotel across suppliers.",
+  "Use the cube's measures only; never SUM a column."
+ ],
+ "examples": [
+  {
+   "question": "Supplier hotel success rate by supplier last week",
+   "measures": [
+    "[% Hotel Requests OK]",
+    "[Total Hotel Requests]"
+   ],
+   "breakdowns": [
+    "'Suppliers'[Supplier Code]",
+    "'Suppliers'[Supplier]"
+   ],
+   "date_role": "request_date"
+  },
+  {
+   "question": "Supplier hotel requests by travel window in September",
+   "measures": [
+    "[Total Hotel Requests]"
+   ],
+   "breakdowns": [
+    "'Travel Window'[Description]"
+   ],
+   "date_role": "request_date"
+  },
+  {
+   "question": "Top 10 hotel countries requested from suppliers this month",
+   "measures": [
+    "[Total Hotel Requests]"
+   ],
+   "breakdowns": [
+    "'Hotels'[Country]"
+   ],
+   "date_role": "request_date"
+  },
+  {
+   "question": "No-results rate by customer market yesterday",
+   "measures": [
+    "[% Hotel Requests NR]",
+    "[Hotel Requests NR]"
+   ],
+   "breakdowns": [
+    "'Customers'[Market]"
+   ],
+   "date_role": "request_date"
+  },
+  {
+   "question": "Room combinations returned per hotel request by supplier this month",
+   "measures": [
+    "[Avg Combinations]"
+   ],
+   "breakdowns": [
+    "'Suppliers'[Supplier Code]",
+    "'Suppliers'[Supplier]"
+   ],
+   "date_role": "request_date"
+  }
+ ],
+ "review": [
+  {
+   "id": "hotel_supplier.failed_requests",
+   "question": "Does \"failed supplier hotel requests\" mean all KO (no results + other failures) or only OTH (errors)?",
+   "options": [
+    "[Hotel Requests KO]",
+    "[Hotel Requests OTH]"
+   ],
+   "proposed": "[Hotel Requests KO]",
+   "why": "KO is the cube's own opposite of OK; 'supplier hotel error rate' is kept for OTH and 'no-results rate' for NR, so each word has one measure."
+  },
+  {
+   "id": "hotel_supplier.look_to_book_owner",
+   "question": "For supplier look-to-book in periods both cubes cover (from 2026-08-17), which cube answers: Statistics History Supplier (requests per booking) or this cube (hotel requests per booking)?",
+   "options": [
+    "Statistics History Supplier [L2B]",
+    "Statistics Hotel Supplier [L2B]"
+   ],
+   "proposed": "Statistics History Supplier [L2B]",
+   "why": "History has a year of data and a request-level basis; the two cubes count bookings differently (about 1.5 million vs 4 million per booking in September), so one definition must be used everywhere."
+  },
+  {
+   "id": "hotel_supplier.travel_window_measure",
+   "question": "[Avg Days Travel Window] returns about 0 and negative values. Keep it hidden until the cube is fixed?",
+   "options": [
+    "keep hidden",
+    "show it"
+   ],
+   "proposed": "keep hidden",
+   "why": "Its values contradict the travel-window bands (nearly half of the hotel requests are 1 to 6 months ahead); showing it would give wrong lead times."
+  }
+ ]
+}

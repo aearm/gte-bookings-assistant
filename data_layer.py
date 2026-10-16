@@ -548,7 +548,10 @@ def cube_details(cube: str) -> str:
     if not text:
         return f"The cube {cube} has not been read yet."
     notes = glossary.notes_for_claude(cube)
-    return text + ("\n## Business notes and glossary\n" + notes if notes.strip() else "")
+    import semantic
+    meaning = semantic.details_text(cube)
+    return (text + ("\n## Business notes and glossary\n" + notes if notes.strip() else "")
+            + ("\n\n" + meaning if meaning else ""))
 
 
 # ---------------------------------------------------------------- building --

@@ -1,0 +1,747 @@
+{
+ "cube": "GlobalTravelEngine - Statistics Supplier API Service",
+ "label": "Activity supplier API requests",
+ "purpose": "API requests GTE sends to activity, excursion and ticket ('service') suppliers: availability, cancellation-policy and booking calls, with results and passengers requested, outcome and response-time band. Very low volume (about 2,200 requests a year).",
+ "grain": "Supplier API requests aggregated per request day and hour (UAE time and CET), customer, supplier connection, request type, outcome, destination zone, service date, passenger mix, response-time band and interface.",
+ "use_for": [
+  "number of API requests sent to activity suppliers by day, month, supplier or customer",
+  "results returned per availability request by activity suppliers",
+  "passengers requested from activity suppliers",
+  "outcomes (correct / no results) and response-time bands",
+  "demand by destination and requested activity date"
+ ],
+ "not_for": [
+  "hotel supplier traffic (Statistics History Supplier, Statistics Hotel Supplier)",
+  "transfer supplier traffic (Statistics Supplier API Transfer)",
+  "requests customers send to GTE (Statistics Client API Service)",
+  "bookings, sales or revenue (Bookings)",
+  "average response time in seconds (the measure is broken; use response-time bands)",
+  "today's traffic (no real-time cube for these suppliers)"
+ ],
+ "coverage": {
+  "main_date": "'Calendar'[Date]",
+  "first": "2025-10",
+  "last": "2026-10",
+  "note": "Rolling window of about one year ending yesterday (2025-10-17 to 2026-10-15 when read on 2026-10-16); 2025-10 and the current month are partial. Sparse: about 2,200 requests in the whole year, so monthly figures are small. Service dates run into 2027-01."
+ },
+ "dates": [
+  {
+   "column": "'Calendar'[Date]",
+   "role": "request_date",
+   "label": "Request date (UAE time)",
+   "meaning": "Day the request was sent to the activity supplier, in UAE time (UTC+4). The cube's main date.",
+   "default": true,
+   "words": [
+    "request date",
+    "requested",
+    "sent",
+    "uae time",
+    "dubai time",
+    "local time"
+   ],
+   "first": "2025-10",
+   "last": "2026-10"
+  },
+  {
+   "column": "'Calendar CET'[Date]",
+   "role": "request_date_cet",
+   "label": "Request date (CET)",
+   "meaning": "request_date_cet = the request date in Central European time (2 hours behind UAE in summer, 3 in winter). Use only when CET is asked.",
+   "default": false,
+   "words": [
+    "cet",
+    "cest",
+    "central european time",
+    "european time",
+    "spain time"
+   ],
+   "first": "2025-10",
+   "last": "2026-10"
+  },
+  {
+   "column": "'Service Dates'[Service Date]",
+   "role": "travel_date",
+   "label": "Activity date",
+   "meaning": "Date of the activity/excursion asked for in the request; can be months in the future. Some requests have no service date.",
+   "default": false,
+   "words": [
+    "service date",
+    "activity date",
+    "excursion date",
+    "travel date",
+    "for the date"
+   ],
+   "first": "2025-10",
+   "last": "2027-01"
+  }
+ ],
+ "measures": [
+  {
+   "name": "[Requests]",
+   "label": "Activity supplier API requests",
+   "definition": "Number of API requests GTE sent to activity suppliers (availability, booking, cancellation and similar calls).",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "activity supplier requests",
+    "activity supplier api requests",
+    "excursion supplier requests",
+    "ticket supplier requests"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "request_date_cet",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Main measure. Very low volume (a few requests a day)."
+  },
+  {
+   "name": "[Results]",
+   "label": "Results returned by activity suppliers",
+   "definition": "Options returned by the activity suppliers; only availability requests return results.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "activity supplier results",
+    "options returned by activity suppliers"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "request_date_cet",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Verified: booking and cancellation requests have 0 results."
+  },
+  {
+   "name": "[Avg Results]",
+   "label": "Average results per activity supplier request",
+   "definition": "[Results] / [Requests] over all request types.",
+   "unit": "count",
+   "format": ",.2f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [
+    "average results per activity supplier request"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "request_date_cet",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "high",
+   "notes": "Diluted by booking/cancellation calls (0 results): filter 'Request Types'[Request Type] = \"Availability\" for results per search."
+  },
+  {
+   "name": "[Total Pax Number]",
+   "label": "Passengers requested from activity suppliers",
+   "definition": "Passengers in the requests sent to activity suppliers; only availability requests carry passengers.",
+   "unit": "people",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [
+    "passengers requested from activity suppliers",
+    "activity supplier pax requested"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "request_date_cet",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "A passenger searched several times is counted each time."
+  },
+  {
+   "name": "[Avg Pax Number]",
+   "label": "Average passengers per activity supplier request",
+   "definition": "[Total Pax Number] / [Requests] over all request types.",
+   "unit": "people",
+   "format": ",.1f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "average",
+   "terms": [
+    "average passengers per activity supplier request"
+   ],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "request_date_cet",
+    "travel_date"
+   ],
+   "status": "active",
+   "hidden_reason": "",
+   "confidence": "medium",
+   "notes": "Diluted by booking/cancellation calls (0 pax): filter Request Type = \"Availability\" for passengers per search. The cube's own format shows 0 decimals."
+  },
+  {
+   "name": "[Avg Response Time Sec]",
+   "label": "Average supplier API response time",
+   "definition": "Meant to be the average supplier response time in seconds.",
+   "unit": "seconds",
+   "format": ",.2f",
+   "prefix": "",
+   "suffix": " s",
+   "aggregation": "average",
+   "terms": [],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "request_date_cet",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "broken scale: values are 1000 times too small (requests in the '1 - 2' second band average 0.001, the '9 - 10' band 0.009). Use [Requests] by 'Range Times'[Range Time] for response times.",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[Total Cached Requests]",
+   "label": "Cached activity supplier requests",
+   "definition": "Requests answered from cache instead of the supplier API.",
+   "unit": "count",
+   "format": ",.0f",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "sum",
+   "terms": [],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "request_date_cet",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "always 0: no cached request is recorded ('Cached'[Cached] is \"No\" for every request).",
+   "confidence": "high",
+   "notes": ""
+  },
+  {
+   "name": "[% Cached Requests]",
+   "label": "Activity supplier cache rate",
+   "definition": "[Total Cached Requests] / [Requests].",
+   "unit": "percent",
+   "format": ".1%",
+   "prefix": "",
+   "suffix": "",
+   "aggregation": "ratio",
+   "terms": [],
+   "default_date_role": "request_date",
+   "date_roles": [
+    "request_date",
+    "request_date_cet",
+    "travel_date"
+   ],
+   "status": "hidden",
+   "hidden_reason": "always 0: no cached request is recorded.",
+   "confidence": "high",
+   "notes": ""
+  }
+ ],
+ "breakdowns": [
+  {
+   "column": "'Suppliers'[Supplier Code]",
+   "label": "Supplier code",
+   "entity": "supplier",
+   "kind": "code",
+   "meaning": "Supplier connection code: how supplier-side cubes identify a supplier. Only two connections have data.",
+   "needs_columns": [
+    "'Suppliers'[Supplier Code.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 105,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Suppliers'[Supplier]",
+   "label": "Supplier connection",
+   "entity": "supplier",
+   "kind": "name",
+   "meaning": "Name of the supplier connection (not the same naming as the Bookings cube).",
+   "needs_columns": [
+    "'Suppliers'[Supplier.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 105,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Request Types'[Request Type]",
+   "label": "Request type",
+   "entity": "request_type",
+   "kind": "enum",
+   "meaning": "Kind of API call sent to the supplier; almost all are Availability.",
+   "needs_columns": [
+    "'Request Types'[Request Type.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 11,
+   "sample_values": [
+    "Availability",
+    "Cancellation Policy",
+    "Reservation/Booking",
+    "Cancel Booking"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Error Types'[Error Type]",
+   "label": "Outcome",
+   "entity": "request_outcome",
+   "kind": "enum",
+   "meaning": "Result of the request. Only 'Correct' and 'No results' occur in the data.",
+   "needs_columns": [
+    "'Error Types'[Error Type.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 255,
+   "sample_values": [
+    "Correct",
+    "No results"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Range Times'[Range Time]",
+   "label": "Response-time band",
+   "entity": "response_time_band",
+   "kind": "enum",
+   "meaning": "Supplier response time band in seconds ('0 - 1' ... '10 - 11', '> 10', 'Timeout'); sort by its order column. The reliable way to describe response times in this cube.",
+   "needs_columns": [
+    "'Range Times'[Range Time.UniqueName]"
+   ],
+   "sort_by": "'Range Times'[Range Time.Orden]",
+   "distinct": 14,
+   "sample_values": [
+    "0 - 1",
+    "1 - 2",
+    "2 - 3",
+    "3 - 4",
+    "5 - 6",
+    "10 - 11",
+    "> 10",
+    "Timeout"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Pax Requested'[Pax Requested]",
+   "label": "Passenger mix",
+   "entity": "pax_mix",
+   "kind": "enum",
+   "meaning": "Passenger mix of the request, probably adults - children ('2 - 0' = 2 adults; note '2 -1' is stored without a space); other mixes are 'Other'.",
+   "needs_columns": [
+    "'Pax Requested'[Pax Requested.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 9,
+   "sample_values": [
+    "2 - 0",
+    "1 - 0",
+    "3 - 0",
+    "2 - 2",
+    "2 -1",
+    "1 - 1",
+    "1 - 2",
+    "Other"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Destination Zones'[Zone Parent]",
+   "label": "Destination area",
+   "entity": "destination_zone",
+   "kind": "name",
+   "meaning": "Area (city/region/country) of the destination searched.",
+   "needs_columns": [
+    "'Destination Zones'[Zone Parent.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 8486,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Destination Zones'[Zone]",
+   "label": "Destination zone",
+   "entity": "destination_zone",
+   "kind": "name",
+   "meaning": "Destination zone searched (143 thousand values: filter or take a top N).",
+   "needs_columns": [
+    "'Destination Zones'[Zone.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 143452,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Customer]",
+   "label": "Customer",
+   "entity": "customer",
+   "kind": "name",
+   "meaning": "Customer (agency) whose search triggered the supplier request.",
+   "needs_columns": [
+    "'Customers'[Customer.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 6772,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Market]",
+   "label": "Customer market",
+   "entity": "market",
+   "kind": "enum",
+   "meaning": "Commercial market of the customer.",
+   "needs_columns": [
+    "'Customers'[Market.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 24,
+   "sample_values": [
+    "North Africa",
+    "UAE",
+    "GCC - Except UAE and Local Residence",
+    "Middle East",
+    "EUROPE",
+    "ROW",
+    "CIS"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Category]",
+   "label": "Customer category",
+   "entity": "customer_category",
+   "kind": "enum",
+   "meaning": "Customer category.",
+   "needs_columns": [
+    "'Customers'[Category.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 5,
+   "sample_values": [
+    "Dubai Link Category",
+    "Final Client Category"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Agency Group]",
+   "label": "Agency group",
+   "entity": "agency_group",
+   "kind": "name",
+   "meaning": "Customer's agency (pricing) group.",
+   "needs_columns": [
+    "'Customers'[Agency Group.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 130,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Master Agency]",
+   "label": "Master agency",
+   "entity": "master_agency",
+   "kind": "name",
+   "meaning": "Parent agency of the customer.",
+   "needs_columns": [
+    "'Customers'[Master Agency.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 143,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Integrator Name]",
+   "label": "Integrator",
+   "entity": "integrator",
+   "kind": "name",
+   "meaning": "Technology integrator the customer connects through ('n/a' for direct web customers).",
+   "needs_columns": [
+    "'Customers'[Integrator Name.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 69,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Customers'[Country]",
+   "label": "Customer country",
+   "entity": "country",
+   "kind": "name",
+   "meaning": "Country of the customer.",
+   "needs_columns": [
+    "'Customers'[Country.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 96,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Interfaces'[Interface]",
+   "label": "Interface",
+   "entity": "interface",
+   "kind": "enum",
+   "meaning": "Customer channel that triggered the request: WEB (almost all) or CLC; no XML traffic.",
+   "needs_columns": [
+    "'Interfaces'[Interface.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 4,
+   "sample_values": [
+    "WEB",
+    "CLC"
+   ],
+   "status": "active"
+  },
+  {
+   "column": "'Hours'[Hour]",
+   "label": "Hour (UAE time)",
+   "entity": "hour",
+   "kind": "date_part",
+   "meaning": "Hour of day of the request, UAE time ('00'-'23').",
+   "needs_columns": [
+    "'Hours'[Hour.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 25,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Hours CET'[Hour CET]",
+   "label": "Hour (CET)",
+   "entity": "hour",
+   "kind": "date_part",
+   "meaning": "Hour of day of the request, Central European time ('00'-'23').",
+   "needs_columns": [
+    "'Hours CET'[Hour CET.UniqueName]"
+   ],
+   "sort_by": "",
+   "distinct": 25,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Calendar'[Day Week]",
+   "label": "Weekday",
+   "entity": "weekday",
+   "kind": "date_part",
+   "meaning": "Day of week of the request ('Monday' ... 'Sunday').",
+   "needs_columns": [
+    "'Calendar'[Day Week.UniqueName]"
+   ],
+   "sort_by": "'Calendar'[Day Week.Day Week DESC]",
+   "distinct": 8,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Calendar'[Month]",
+   "label": "Month",
+   "entity": "month",
+   "kind": "date_part",
+   "meaning": "Month of the request, e.g. 'September 2026'.",
+   "needs_columns": [
+    "'Calendar'[Month.UniqueName]"
+   ],
+   "sort_by": "'Calendar'[Month.Month DESC]",
+   "distinct": 14,
+   "sample_values": [],
+   "status": "active"
+  },
+  {
+   "column": "'Calendar'[Quarter]",
+   "label": "Quarter",
+   "entity": "quarter",
+   "kind": "date_part",
+   "meaning": "Quarter of the request, e.g. 'Quarter 3, 2026'.",
+   "needs_columns": [
+    "'Calendar'[Quarter.UniqueName]"
+   ],
+   "sort_by": "'Calendar'[Quarter.Fecha ISO DESC Quarter]",
+   "distinct": 6,
+   "sample_values": [],
+   "status": "active"
+  }
+ ],
+ "named_filters": [
+  {
+   "name": "activity supplier availability requests",
+   "meaning": "Availability searches sent to the suppliers.",
+   "column": "'Request Types'[Request Type]",
+   "values": [
+    "Availability"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "activity supplier booking requests",
+   "meaning": "Booking calls (calls, not confirmed bookings).",
+   "column": "'Request Types'[Request Type]",
+   "values": [
+    "Reservation/Booking"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "activity supplier cancellation requests",
+   "meaning": "Cancellation calls sent to the suppliers.",
+   "column": "'Request Types'[Request Type]",
+   "values": [
+    "Cancel Booking"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "successful activity supplier requests",
+   "meaning": "Supplier answered correctly.",
+   "column": "'Error Types'[Error Type]",
+   "values": [
+    "Correct"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "activity supplier no results",
+   "meaning": "Supplier answered without availability.",
+   "column": "'Error Types'[Error Type]",
+   "values": [
+    "No results"
+   ],
+   "confidence": "high"
+  },
+  {
+   "name": "slow activity supplier responses",
+   "meaning": "Responses of 10 seconds or more, or time-outs.",
+   "column": "'Range Times'[Range Time]",
+   "values": [
+    "10 - 11",
+    "> 10",
+    "Timeout"
+   ],
+   "confidence": "medium"
+  }
+ ],
+ "rules": [
+  "This is supplier-side traffic (GTE -> activity, excursion and ticket ('service') suppliers). Requests customers send to GTE are in Statistics Client API Service; hotel supplier traffic is in Statistics History Supplier. Never mix them.",
+  "Very low volume (about 2,200 requests in a year from two supplier connections, often 0-10 a day): present figures as small counts and avoid strong conclusions from percentages on a few requests.",
+  "The cube keeps a rolling window of about one year that ends yesterday; there is no data for today or for periods older than about 365 days.",
+  "[Avg Response Time Sec] is hidden because its values are 1000 times too small. For response-time questions use [Requests] by 'Range Times'[Range Time] (sorted by its order column) and say the average is not reliable in this cube.",
+  "No request in this cube is cached ('Cached'[Cached] is always \"No\"); the cache measures are hidden. If asked about cache use, say none is recorded.",
+  "Results and passengers are only recorded on availability requests: for results or passengers per search, filter 'Request Types'[Request Type] = \"Availability\".",
+  "Only [Requests], [Results] and [Total Pax Number] add up; never sum or average [Avg Results] or [Avg Pax Number] across rows.",
+  "'Calendar' and 'Hours' are UAE time (UTC+4); 'Calendar CET' and 'Hours CET' are Central European time. Use the UAE pair unless CET is asked. 'Service Dates'[Service Date] is the requested service date (travel_date), not when the request was made.",
+  "Suppliers are identified by their connection code 'Suppliers'[Supplier Code] (always with 'Suppliers'[Supplier Code.UniqueName]); 'Suppliers'[Supplier] is the connection's name. The Bookings cube names suppliers differently: joining to Bookings is by name only and may not match well, so say so whenever you combine them.",
+  "Use the cube's measures only; never SUM a column."
+ ],
+ "examples": [
+  {
+   "question": "Activity supplier requests by month this year",
+   "measures": [
+    "[Requests]"
+   ],
+   "breakdowns": [
+    "'Calendar'[Month]"
+   ],
+   "date_role": "request_date"
+  },
+  {
+   "question": "Activity supplier response times last quarter",
+   "measures": [
+    "[Requests]"
+   ],
+   "breakdowns": [
+    "'Range Times'[Range Time]"
+   ],
+   "date_role": "request_date"
+  },
+  {
+   "question": "Requests and no-results by activity supplier last month",
+   "measures": [
+    "[Requests]"
+   ],
+   "breakdowns": [
+    "'Suppliers'[Supplier Code]",
+    "'Suppliers'[Supplier]",
+    "'Error Types'[Error Type]"
+   ],
+   "date_role": "request_date"
+  },
+  {
+   "question": "Activity supplier searches by destination for December activity dates",
+   "measures": [
+    "[Requests]",
+    "[Total Pax Number]"
+   ],
+   "breakdowns": [
+    "'Destination Zones'[Zone Parent]"
+   ],
+   "date_role": "travel_date"
+  },
+  {
+   "question": "Average results per availability request by activity supplier this year",
+   "measures": [
+    "[Avg Results]"
+   ],
+   "breakdowns": [
+    "'Suppliers'[Supplier Code]",
+    "'Suppliers'[Supplier]"
+   ],
+   "date_role": "request_date"
+  }
+ ],
+ "review": [
+  {
+   "id": "supplier_api_service.response_time",
+   "question": "[Avg Response Time Sec] in this cube is 1000 times too small (requests in the '1 - 2' second band average 0.001). Keep it hidden until the cube is fixed, or show it multiplied by 1000 as seconds?",
+   "options": [
+    "keep hidden",
+    "show x 1000 as seconds"
+   ],
+   "proposed": "keep hidden",
+   "why": "As stored it reads 0.0002 s; a silent x1000 correction would become wrong the day the BI team fixes the measure. The response-time bands give a reliable picture meanwhile."
+  },
+  {
+   "id": "supplier_api_service.scope",
+   "question": "This cube only holds activity/excursion/ticket supplier connections (no hotels). Should it be labelled and used as the 'activity supplier API' cube?",
+   "options": [
+    "activity supplier API",
+    "general service supplier API"
+   ],
+   "proposed": "activity supplier API",
+   "why": "The two connections with data are activity and excursion connections; hotel supplier traffic lives in Statistics History Supplier and Statistics Hotel Supplier."
+  }
+ ]
+}

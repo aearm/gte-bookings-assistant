@@ -1,0 +1,2823 @@
+{
+ "version": "1.0.0",
+ "terms": {
+  "% allotment available": {
+   "cube": "GlobalTravelEngine - Hotel Allotments",
+   "measure": "[% Avail Allotment]",
+   "label": "Allotment availability %"
+  },
+  "% allotment used": {
+   "cube": "GlobalTravelEngine - Hotel Allotments",
+   "measure": "[% Used Allotment]",
+   "label": "Allotment utilisation"
+  },
+  "% payments without errors": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[% Payments Without Errors]",
+   "label": "Error-free payment rate"
+  },
+  "% price changes": {
+   "cube": "GlobalTravelEngine - KPI Change Price",
+   "measure": "[% Changes]",
+   "label": "Price change rate"
+  },
+  "% successful payments": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[% Success Payments]",
+   "label": "Payment success rate"
+  },
+  "% transactions without errors": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[% Transactions Without Errors]",
+   "label": "Error-free transaction rate"
+  },
+  "abv": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Avg Sale]",
+   "label": "Average sale per booking"
+  },
+  "accommodation cost": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Total Costs]",
+   "label": "Hotel cost"
+  },
+  "accommodation profit": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Total Profit]",
+   "label": "Hotel profit"
+  },
+  "accommodation sales": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Total Sales]",
+   "label": "Hotel sales"
+  },
+  "activity supplier api requests": {
+   "cube": "GlobalTravelEngine - Statistics Supplier API Service",
+   "measure": "[Requests]",
+   "label": "Activity supplier API requests"
+  },
+  "activity supplier pax requested": {
+   "cube": "GlobalTravelEngine - Statistics Supplier API Service",
+   "measure": "[Total Pax Number]",
+   "label": "Passengers requested from activity suppliers"
+  },
+  "activity supplier requests": {
+   "cube": "GlobalTravelEngine - Statistics Supplier API Service",
+   "measure": "[Requests]",
+   "label": "Activity supplier API requests"
+  },
+  "activity supplier results": {
+   "cube": "GlobalTravelEngine - Statistics Supplier API Service",
+   "measure": "[Results]",
+   "label": "Results returned by activity suppliers"
+  },
+  "allotment": {
+   "cube": "GlobalTravelEngine - Hotel Allotments",
+   "measure": "[Total Allotment]",
+   "label": "Total allotment"
+  },
+  "allotment availability": {
+   "cube": "GlobalTravelEngine - Hotel Allotments",
+   "measure": "[Avail Allotment]",
+   "label": "Available allotment"
+  },
+  "allotment availability %": {
+   "cube": "GlobalTravelEngine - Hotel Allotments",
+   "measure": "[% Avail Allotment]",
+   "label": "Allotment availability %"
+  },
+  "allotment pickup": {
+   "cube": "GlobalTravelEngine - Hotel Allotments",
+   "measure": "[Used Allotment]",
+   "label": "Used allotment"
+  },
+  "allotment rooms": {
+   "cube": "GlobalTravelEngine - Hotel Allotments",
+   "measure": "[Total Allotment]",
+   "label": "Total allotment"
+  },
+  "allotment sold": {
+   "cube": "GlobalTravelEngine - Hotel Allotments",
+   "measure": "[Used Allotment]",
+   "label": "Used allotment"
+  },
+  "allotment usage rate": {
+   "cube": "GlobalTravelEngine - Hotel Allotments",
+   "measure": "[% Used Allotment]",
+   "label": "Allotment utilisation"
+  },
+  "allotment used": {
+   "cube": "GlobalTravelEngine - Hotel Allotments",
+   "measure": "[Used Allotment]",
+   "label": "Used allotment"
+  },
+  "allotment utilisation": {
+   "cube": "GlobalTravelEngine - Hotel Allotments",
+   "measure": "[% Used Allotment]",
+   "label": "Allotment utilisation"
+  },
+  "allotment utilization": {
+   "cube": "GlobalTravelEngine - Hotel Allotments",
+   "measure": "[% Used Allotment]",
+   "label": "Allotment utilisation"
+  },
+  "alos": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Avg Nights]",
+   "label": "Average nights per booking"
+  },
+  "amount collected": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Revenue Payments]",
+   "label": "Payment amount"
+  },
+  "amount paid": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Revenue Payments]",
+   "label": "Payment amount"
+  },
+  "ancillary cost": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Costs]",
+   "label": "Ticket & service cost"
+  },
+  "ancillary profit": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Profit]",
+   "label": "Ticket & service profit"
+  },
+  "ancillary sales": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Sales]",
+   "label": "Ticket & service sales"
+  },
+  "api calls": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[Requests]",
+   "label": "API requests"
+  },
+  "api data volume": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[Size Gb Response]",
+   "label": "API response data volume"
+  },
+  "api data volume today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Client",
+   "measure": "[Size Gb Response]",
+   "label": "API response data volume"
+  },
+  "api hotel result rate": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[% Hotel Results]",
+   "label": "API hotel result rate"
+  },
+  "api hotels requested": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[Hotels Request]",
+   "label": "API hotels requested"
+  },
+  "api hotels returned": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[Hotel Results]",
+   "label": "API hotels returned"
+  },
+  "api requests": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[Requests]",
+   "label": "API requests"
+  },
+  "api requests today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Client",
+   "measure": "[Requests]",
+   "label": "API requests"
+  },
+  "api response data": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[Size Gb Response]",
+   "label": "API response data volume"
+  },
+  "api response time": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[AVG Response Time Sec]",
+   "label": "API average response time"
+  },
+  "api response time today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Client",
+   "measure": "[AVG Response Time Sec]",
+   "label": "API average response time"
+  },
+  "api traffic": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[Requests]",
+   "label": "API requests"
+  },
+  "approval rate": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[% Success Transactions]",
+   "label": "Gateway success rate"
+  },
+  "approved transactions": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Success Transactions]",
+   "label": "Successful gateway transactions"
+  },
+  "availability searches": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[Total Requests]",
+   "label": "Searches"
+  },
+  "available allotment": {
+   "cube": "GlobalTravelEngine - Hotel Allotments",
+   "measure": "[Avail Allotment]",
+   "label": "Available allotment"
+  },
+  "average api response size": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[AVG Size Kb Response]",
+   "label": "API average response size"
+  },
+  "average api response size today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Client",
+   "measure": "[AVG Size Kb Response]",
+   "label": "API average response size"
+  },
+  "average api response time": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[AVG Response Time Sec]",
+   "label": "API average response time"
+  },
+  "average booking value": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Avg Sale]",
+   "label": "Average sale per booking"
+  },
+  "average client transfer response size": {
+   "cube": "GlobalTravelEngine - Statistics Client API Transfer",
+   "measure": "[Avg Bytes Response]",
+   "label": "Average response size"
+  },
+  "average combinations per hotel request": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Client",
+   "measure": "[Avg Combinations]",
+   "label": "Combinations per hotel request"
+  },
+  "average cost": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Avg Cost]",
+   "label": "Average cost per booking"
+  },
+  "average cost per booking": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Avg Cost]",
+   "label": "Average cost per booking"
+  },
+  "average cost per hotel booking": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Avg Costs]",
+   "label": "Average cost per hotel booking"
+  },
+  "average guests per hotel booking": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Avg Pax]",
+   "label": "Average guests per hotel booking"
+  },
+  "average hotel booking value": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Avg Sales]",
+   "label": "Average sale per hotel booking"
+  },
+  "average hotels per request": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[AVG Hotels Request]",
+   "label": "Hotels per API request"
+  },
+  "average hotels per supplier request": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[AVG Hotels Request]",
+   "label": "Average hotels per supplier request"
+  },
+  "average hotels per supplier request today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Supplier",
+   "measure": "[AVG Hotels Request]",
+   "label": "Average hotels per supplier request"
+  },
+  "average hotels returned per supplier request": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[AVG Hotel Results]",
+   "label": "Average hotels returned per supplier request"
+  },
+  "average hotels returned per supplier request today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Supplier",
+   "measure": "[AVG Hotel Results]",
+   "label": "Average hotels returned per supplier request"
+  },
+  "average length of stay": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Avg Nights]",
+   "label": "Average nights per booking"
+  },
+  "average nights": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Avg Nights]",
+   "label": "Average nights per booking"
+  },
+  "average nights per hotel booking": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Avg Nights]",
+   "label": "Average length of stay"
+  },
+  "average nights per room": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Avg Room Nights]",
+   "label": "Average nights per room"
+  },
+  "average passengers": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Avg Paxes]",
+   "label": "Average passengers per booking"
+  },
+  "average passengers per activity supplier request": {
+   "cube": "GlobalTravelEngine - Statistics Supplier API Service",
+   "measure": "[Avg Pax Number]",
+   "label": "Average passengers per activity supplier request"
+  },
+  "average passengers per client transfer request": {
+   "cube": "GlobalTravelEngine - Statistics Client API Transfer",
+   "measure": "[Avg Pax Number]",
+   "label": "Passengers per request"
+  },
+  "average passengers per transfer supplier request": {
+   "cube": "GlobalTravelEngine - Statistics Supplier API Transfer",
+   "measure": "[Avg Pax Number]",
+   "label": "Average passengers per transfer supplier request"
+  },
+  "average pax": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Avg Paxes]",
+   "label": "Average passengers per booking"
+  },
+  "average pax per hotel booking": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Avg Pax]",
+   "label": "Average guests per hotel booking"
+  },
+  "average payment processing time": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[AVG Diff Miliseconds]",
+   "label": "Average gateway transaction duration"
+  },
+  "average price change amount": {
+   "cube": "GlobalTravelEngine - KPI Change Price",
+   "measure": "[Avg Diff Price]",
+   "label": "Average price difference"
+  },
+  "average price difference": {
+   "cube": "GlobalTravelEngine - KPI Change Price",
+   "measure": "[Avg Diff Price]",
+   "label": "Average price difference"
+  },
+  "average profit": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Avg Profit]",
+   "label": "Average profit per booking"
+  },
+  "average profit per hotel booking": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Avg Profit]",
+   "label": "Average profit per hotel booking"
+  },
+  "average results per activity supplier request": {
+   "cube": "GlobalTravelEngine - Statistics Supplier API Service",
+   "measure": "[Avg Results]",
+   "label": "Average results per activity supplier request"
+  },
+  "average results per transfer supplier request": {
+   "cube": "GlobalTravelEngine - Statistics Supplier API Transfer",
+   "measure": "[Avg Results]",
+   "label": "Average results per transfer supplier request"
+  },
+  "average room combinations per supplier hotel request": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[Avg Combinations]",
+   "label": "Average combinations per hotel request"
+  },
+  "average room nights": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Avg Room Nights]",
+   "label": "Average nights per room"
+  },
+  "average sale": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Avg Sale]",
+   "label": "Average sale per booking"
+  },
+  "average sale per booking": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Avg Sale]",
+   "label": "Average sale per booking"
+  },
+  "average sale per hotel booking": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Avg Sales]",
+   "label": "Average sale per hotel booking"
+  },
+  "average search lead time": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[AVG Lead Time (Days)]",
+   "label": "Average search lead time"
+  },
+  "average supplier response time": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[AVG Response Time Sec]",
+   "label": "Average supplier response time"
+  },
+  "average transaction duration": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[AVG Diff Miliseconds]",
+   "label": "Average gateway transaction duration"
+  },
+  "average web response size": {
+   "cube": "GlobalTravelEngine - Statistics Client Web",
+   "measure": "[AVG Size Kb Response]",
+   "label": "Web average response size"
+  },
+  "average web results": {
+   "cube": "GlobalTravelEngine - Statistics Client Web",
+   "measure": "[AVG Results]",
+   "label": "Results per web request"
+  },
+  "b2b web traffic": {
+   "cube": "GlobalTravelEngine - Statistics Client Web",
+   "measure": "[Requests]",
+   "label": "Web requests"
+  },
+  "base cost": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Base Cost]",
+   "label": "Gross (base) cost"
+  },
+  "base margin": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[% Base Profit]",
+   "label": "Base profit %"
+  },
+  "base profit": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Base Profit]",
+   "label": "Base profit"
+  },
+  "base profit %": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[% Base Profit]",
+   "label": "Base profit %"
+  },
+  "base supplier commission": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Base Supplier Commission]",
+   "label": "Supplier commission (base)"
+  },
+  "blocked rooms": {
+   "cube": "GlobalTravelEngine - Hotel Allotments",
+   "measure": "[Total Allotment]",
+   "label": "Total allotment"
+  },
+  "booked value": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Amount]",
+   "label": "Gross booked amount"
+  },
+  "booking amount": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Amount]",
+   "label": "Gross booked amount"
+  },
+  "booking count": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Reservations Count]",
+   "label": "Bookings"
+  },
+  "booking errors": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Booking Error]",
+   "label": "Booking errors"
+  },
+  "booking lines": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Reservations Count]",
+   "label": "Bookings"
+  },
+  "booking lines with payments": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Booking Lines]",
+   "label": "Booking lines with payments"
+  },
+  "booking window of relocated bookings": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Booking Window Origin]",
+   "label": "Longest booking window"
+  },
+  "bookings": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Reservations Count]",
+   "label": "Bookings"
+  },
+  "bookings in channel manager requests": {
+   "cube": "GlobalTravelEngine - Statistics Channel Manager API",
+   "measure": "[Bookings]",
+   "label": "Bookings in requests"
+  },
+  "bookings per channel manager request": {
+   "cube": "GlobalTravelEngine - Statistics Channel Manager API",
+   "measure": "[AVG Bookings]",
+   "label": "Bookings per request"
+  },
+  "bookings with payments": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Distinct Bookings]",
+   "label": "Paid bookings"
+  },
+  "cached supplier hotel availability rate": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[% Hotels Cached OK]",
+   "label": "Cached hotel requests with availability (%)"
+  },
+  "cached supplier hotel no-results rate": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[% Hotels Cached NR]",
+   "label": "Cached hotel requests with no results (%)"
+  },
+  "cached supplier hotel requests": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[Hotels Cached]",
+   "label": "Hotel requests served from cache"
+  },
+  "cached supplier hotel requests with availability": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[Hotels Cached Ok]",
+   "label": "Cached hotel requests with availability"
+  },
+  "cached supplier hotel requests with no results": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[Hotels Cached NR]",
+   "label": "Cached hotel requests with no results"
+  },
+  "cancellation %": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[% Cancellations]",
+   "label": "Hotel cancellation rate"
+  },
+  "cancellation rate": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[% Cancellations]",
+   "label": "Hotel cancellation rate"
+  },
+  "cancelled hotel bookings": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Cancellations]",
+   "label": "Cancelled hotel bookings"
+  },
+  "card payment amount": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Revenue Transactions]",
+   "label": "Gateway transaction amount"
+  },
+  "card payment errors": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Transaction Error]",
+   "label": "Gateway transaction errors"
+  },
+  "card success rate": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[% Success Transactions]",
+   "label": "Gateway success rate"
+  },
+  "card transactions": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Transactions]",
+   "label": "Gateway transactions"
+  },
+  "cash collected": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Revenue Payments]",
+   "label": "Payment amount"
+  },
+  "channel manager api requests": {
+   "cube": "GlobalTravelEngine - Statistics Channel Manager API",
+   "measure": "[Requests]",
+   "label": "Channel manager requests"
+  },
+  "channel manager average response time": {
+   "cube": "GlobalTravelEngine - Statistics Channel Manager API",
+   "measure": "[AVG Time]",
+   "label": "Average response time"
+  },
+  "channel manager calls": {
+   "cube": "GlobalTravelEngine - Statistics Channel Manager API",
+   "measure": "[Requests]",
+   "label": "Channel manager requests"
+  },
+  "channel manager latency": {
+   "cube": "GlobalTravelEngine - Statistics Channel Manager API",
+   "measure": "[AVG Time]",
+   "label": "Average response time"
+  },
+  "channel manager rate changes": {
+   "cube": "GlobalTravelEngine - Statistics Rate Changes Channel Manager API",
+   "measure": "[Changes]",
+   "label": "Rate changes"
+  },
+  "channel manager requests": {
+   "cube": "GlobalTravelEngine - Statistics Channel Manager API",
+   "measure": "[Requests]",
+   "label": "Channel manager requests"
+  },
+  "channel manager response time": {
+   "cube": "GlobalTravelEngine - Statistics Channel Manager API",
+   "measure": "[AVG Time]",
+   "label": "Average response time"
+  },
+  "client api latency": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[AVG Response Time Sec]",
+   "label": "API average response time"
+  },
+  "client api requests": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[Requests]",
+   "label": "API requests"
+  },
+  "client api service requests": {
+   "cube": "GlobalTravelEngine - Statistics Client API Service",
+   "measure": "[Requests]",
+   "label": "Client requests"
+  },
+  "client api service response time": {
+   "cube": "GlobalTravelEngine - Statistics Client API Service",
+   "measure": "[Avg Response Time Sec]",
+   "label": "Average response time"
+  },
+  "client api service results": {
+   "cube": "GlobalTravelEngine - Statistics Client API Service",
+   "measure": "[Results]",
+   "label": "Results returned"
+  },
+  "client api transfer requests": {
+   "cube": "GlobalTravelEngine - Statistics Client API Transfer",
+   "measure": "[Requests]",
+   "label": "Client requests"
+  },
+  "client transfer api requests": {
+   "cube": "GlobalTravelEngine - Statistics Client API Transfer",
+   "measure": "[Requests]",
+   "label": "Client requests"
+  },
+  "client transfer api response time": {
+   "cube": "GlobalTravelEngine - Statistics Client API Transfer",
+   "measure": "[Avg Response Time Sec]",
+   "label": "Average response time"
+  },
+  "client transfer api traffic volume": {
+   "cube": "GlobalTravelEngine - Statistics Client API Transfer",
+   "measure": "[Size Bytes Response]",
+   "label": "Response size"
+  },
+  "client transfer passengers requested": {
+   "cube": "GlobalTravelEngine - Statistics Client API Transfer",
+   "measure": "[Total Pax Number]",
+   "label": "Passengers requested"
+  },
+  "client transfer requests": {
+   "cube": "GlobalTravelEngine - Statistics Client API Transfer",
+   "measure": "[Requests]",
+   "label": "Client requests"
+  },
+  "client transfer response size": {
+   "cube": "GlobalTravelEngine - Statistics Client API Transfer",
+   "measure": "[Size Bytes Response]",
+   "label": "Response size"
+  },
+  "client transfer response time": {
+   "cube": "GlobalTravelEngine - Statistics Client API Transfer",
+   "measure": "[Avg Response Time Sec]",
+   "label": "Average response time"
+  },
+  "client transfer results per request": {
+   "cube": "GlobalTravelEngine - Statistics Client API Transfer",
+   "measure": "[Avg Results]",
+   "label": "Results per request"
+  },
+  "client transfer search results": {
+   "cube": "GlobalTravelEngine - Statistics Client API Transfer",
+   "measure": "[Results]",
+   "label": "Results returned"
+  },
+  "collections": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Revenue Payments]",
+   "label": "Payment amount"
+  },
+  "combinations": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Client",
+   "measure": "[Combinations]",
+   "label": "Combinations returned"
+  },
+  "completed payments": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Success Payments]",
+   "label": "Successful payments"
+  },
+  "contracted allotment": {
+   "cube": "GlobalTravelEngine - Hotel Allotments",
+   "measure": "[Total Allotment]",
+   "label": "Total allotment"
+  },
+  "contracts in channel manager requests": {
+   "cube": "GlobalTravelEngine - Statistics Channel Manager API",
+   "measure": "[Contracts]",
+   "label": "Contracts in requests"
+  },
+  "contracts per channel manager request": {
+   "cube": "GlobalTravelEngine - Statistics Channel Manager API",
+   "measure": "[AVG Contracts]",
+   "label": "Contracts per request"
+  },
+  "cost": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Cost]",
+   "label": "Cost"
+  },
+  "cost before tax": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Cost w/o Tax]",
+   "label": "Cost without tax"
+  },
+  "cost excluding vat": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Cost w/o Tax]",
+   "label": "Cost without tax"
+  },
+  "cost of sales": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Cost]",
+   "label": "Cost"
+  },
+  "cost tax": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Cost Tax]",
+   "label": "Tax on cost"
+  },
+  "cost without tax": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Cost w/o Tax]",
+   "label": "Cost without tax"
+  },
+  "costs": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Cost]",
+   "label": "Cost"
+  },
+  "days in advance searched": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[AVG Lead Time (Days)]",
+   "label": "Average search lead time"
+  },
+  "destination cost": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Total Costs Dest]",
+   "label": "Replacement booking cost"
+  },
+  "destination pax": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Total Pax Dest]",
+   "label": "Guests on replacement bookings"
+  },
+  "destination profit": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Total Profit Dest]",
+   "label": "Replacement booking profit"
+  },
+  "destination sales": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Total Sales Dest]",
+   "label": "Replacement booking sales"
+  },
+  "distinct bookings": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Distinct Bookings]",
+   "label": "Paid bookings"
+  },
+  "distinct supplier locks": {
+   "cube": "GlobalTravelEngine - Supplier Lock API Hotel",
+   "measure": "[Locks]",
+   "label": "Distinct locks"
+  },
+  "earnings": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Profit]",
+   "label": "Profit"
+  },
+  "error-free payments": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Payments Without Errors]",
+   "label": "Payments without errors"
+  },
+  "error-free transactions": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Transactions Without Errors]",
+   "label": "Gateway transactions without errors"
+  },
+  "excursion supplier requests": {
+   "cube": "GlobalTravelEngine - Statistics Supplier API Service",
+   "measure": "[Requests]",
+   "label": "Activity supplier API requests"
+  },
+  "failed card payments": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Transaction Error]",
+   "label": "Gateway transaction errors"
+  },
+  "failed searches": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[Requests KO]",
+   "label": "Failed searches"
+  },
+  "failed searches %": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[% Requests KO]",
+   "label": "Search failure rate"
+  },
+  "failed supplier hotel requests": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[Hotel Requests KO]",
+   "label": "Supplier hotel requests KO"
+  },
+  "final cost": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Cost]",
+   "label": "Cost"
+  },
+  "final margin": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Final Profit %]",
+   "label": "Final profit %"
+  },
+  "final profit": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Final Profit]",
+   "label": "Final profit"
+  },
+  "final profit %": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Final Profit %]",
+   "label": "Final profit %"
+  },
+  "final profit margin": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Final Profit %]",
+   "label": "Final profit %"
+  },
+  "final sales": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Final Sales]",
+   "label": "Final sales"
+  },
+  "gateway amount": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Revenue Transactions]",
+   "label": "Gateway transaction amount"
+  },
+  "gateway errors": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Transaction Error]",
+   "label": "Gateway transaction errors"
+  },
+  "gateway success rate": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[% Success Transactions]",
+   "label": "Gateway success rate"
+  },
+  "gateway transactions": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Transactions]",
+   "label": "Gateway transactions"
+  },
+  "gross booked amount": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Amount]",
+   "label": "Gross booked amount"
+  },
+  "gross booking value": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Amount]",
+   "label": "Gross booked amount"
+  },
+  "gross cost": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Base Cost]",
+   "label": "Gross (base) cost"
+  },
+  "gross profit": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Profit]",
+   "label": "Profit"
+  },
+  "guest relocations": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Relocations]",
+   "label": "Relocations"
+  },
+  "guests": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Paxes]",
+   "label": "Passengers"
+  },
+  "guests per booking": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Avg Paxes]",
+   "label": "Average passengers per booking"
+  },
+  "handling fee": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Handling Fee Fix]",
+   "label": "Handling fees"
+  },
+  "handling fees": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Handling Fee Fix]",
+   "label": "Handling fees"
+  },
+  "hotel alos": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Avg Nights]",
+   "label": "Average length of stay"
+  },
+  "hotel availability rate": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Client",
+   "measure": "[% Hotel Requests OK]",
+   "label": "Hotel-level OK rate"
+  },
+  "hotel average length of stay": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Avg Nights]",
+   "label": "Average length of stay"
+  },
+  "hotel bookings": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Bookings]",
+   "label": "Hotel bookings (incl. cancelled)"
+  },
+  "hotel cancellation rate": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[% Cancellations]",
+   "label": "Hotel cancellation rate"
+  },
+  "hotel cancellations": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Cancellations]",
+   "label": "Cancelled hotel bookings"
+  },
+  "hotel cost": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Total Costs]",
+   "label": "Hotel cost"
+  },
+  "hotel costs": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Total Costs]",
+   "label": "Hotel cost"
+  },
+  "hotel guests": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Total Pax]",
+   "label": "Hotel guests (pax)"
+  },
+  "hotel lock events": {
+   "cube": "GlobalTravelEngine - History Hotel Locks",
+   "measure": "[Locks Number]",
+   "label": "Hotel locks"
+  },
+  "hotel locks": {
+   "cube": "GlobalTravelEngine - History Hotel Locks",
+   "measure": "[Locks Number]",
+   "label": "Hotel locks"
+  },
+  "hotel margin %": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Markup]",
+   "label": "Hotel margin % (profit / sales)"
+  },
+  "hotel markup %": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[% Total Profit]",
+   "label": "Hotel markup % (profit / cost)"
+  },
+  "hotel nights": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Total Nights]",
+   "label": "Hotel nights (length of stay)"
+  },
+  "hotel nights booked": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Total Nights]",
+   "label": "Hotel nights (length of stay)"
+  },
+  "hotel no-availability rate": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Client",
+   "measure": "[% Hotel Requests KO]",
+   "label": "Hotel-level KO rate"
+  },
+  "hotel pax": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Total Pax]",
+   "label": "Hotel guests (pax)"
+  },
+  "hotel profit": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Total Profit]",
+   "label": "Hotel profit"
+  },
+  "hotel profit % on cost": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[% Total Profit]",
+   "label": "Hotel markup % (profit / cost)"
+  },
+  "hotel profit margin": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Markup]",
+   "label": "Hotel margin % (profit / sales)"
+  },
+  "hotel request lines": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Client",
+   "measure": "[Total Hotel Requests]",
+   "label": "Hotel-level requests"
+  },
+  "hotel requests per booking": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Client",
+   "measure": "[L2B]",
+   "label": "Hotel-level look-to-book"
+  },
+  "hotel requests sent to suppliers": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[Total Hotel Requests]",
+   "label": "Supplier hotel requests"
+  },
+  "hotel requests with availability": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Client",
+   "measure": "[Hotel Requests OK]",
+   "label": "Hotel requests OK"
+  },
+  "hotel requests without availability": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Client",
+   "measure": "[Hotel Requests KO]",
+   "label": "Hotel requests KO"
+  },
+  "hotel reservations": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Bookings]",
+   "label": "Hotel bookings (incl. cancelled)"
+  },
+  "hotel result rate": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[% Hotels Results]",
+   "label": "Hotel result rate"
+  },
+  "hotel result rate today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Client",
+   "measure": "[% Hotel Results]",
+   "label": "API hotel result rate"
+  },
+  "hotel results": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[Hotels Results]",
+   "label": "Hotels returned"
+  },
+  "hotel results %": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[% Hotels Results]",
+   "label": "Hotel result rate"
+  },
+  "hotel results in api requests": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[Hotel Results]",
+   "label": "API hotels returned"
+  },
+  "hotel results per api request": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[AVG Hotel Results]",
+   "label": "Hotel results per API request"
+  },
+  "hotel results per api request today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Client",
+   "measure": "[AVG Hotel Results]",
+   "label": "Hotel results per API request"
+  },
+  "hotel revenue": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Total Sales]",
+   "label": "Hotel sales"
+  },
+  "hotel room nights": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Total Room Nights]",
+   "label": "Hotel room nights"
+  },
+  "hotel rooms booked": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Total Rooms]",
+   "label": "Hotel rooms booked"
+  },
+  "hotel sales": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Total Sales]",
+   "label": "Hotel sales"
+  },
+  "hotel searches": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[Total Requests]",
+   "label": "Searches"
+  },
+  "hotel supplier booking conversion": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[% L2B]",
+   "label": "Hotel supplier booking conversion"
+  },
+  "hotel supplier look-to-book": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[L2B]",
+   "label": "Hotel supplier look-to-book"
+  },
+  "hotel turnover": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Total Sales]",
+   "label": "Hotel sales"
+  },
+  "hotel-level ko rate": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Client",
+   "measure": "[% Hotel Requests KO]",
+   "label": "Hotel-level KO rate"
+  },
+  "hotel-level look-to-book": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Client",
+   "measure": "[L2B]",
+   "label": "Hotel-level look-to-book"
+  },
+  "hotel-level look-to-book %": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Client",
+   "measure": "[% L2B]",
+   "label": "Hotel-level look-to-book %"
+  },
+  "hotel-level ok rate": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Client",
+   "measure": "[% Hotel Requests OK]",
+   "label": "Hotel-level OK rate"
+  },
+  "hotel-level requests": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Client",
+   "measure": "[Total Hotel Requests]",
+   "label": "Hotel-level requests"
+  },
+  "hotel-level requests ko": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Client",
+   "measure": "[Hotel Requests KO]",
+   "label": "Hotel requests KO"
+  },
+  "hotel-level requests ok": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Client",
+   "measure": "[Hotel Requests OK]",
+   "label": "Hotel requests OK"
+  },
+  "hotel-level supplier requests": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[Total Hotel Requests]",
+   "label": "Supplier hotel requests"
+  },
+  "hotels asked for in searches": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[Hotels Requests]",
+   "label": "Hotels requested"
+  },
+  "hotels in channel manager requests": {
+   "cube": "GlobalTravelEngine - Statistics Channel Manager API",
+   "measure": "[Hotels]",
+   "label": "Hotels in requests"
+  },
+  "hotels per api request": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[AVG Hotels Request]",
+   "label": "Hotels per API request"
+  },
+  "hotels per api request today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Client",
+   "measure": "[AVG Hotels Request]",
+   "label": "Hotels per API request"
+  },
+  "hotels per channel manager request": {
+   "cube": "GlobalTravelEngine - Statistics Channel Manager API",
+   "measure": "[AVG Hotels]",
+   "label": "Hotels per request"
+  },
+  "hotels requested": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[Hotels Requests]",
+   "label": "Hotels requested"
+  },
+  "hotels requested from suppliers": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[Hotels Request]",
+   "label": "Hotels requested from suppliers"
+  },
+  "hotels requested from suppliers today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Supplier",
+   "measure": "[Hotels Request]",
+   "label": "Hotels requested from suppliers"
+  },
+  "hotels requested in api requests": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[Hotels Request]",
+   "label": "API hotels requested"
+  },
+  "hotels requested today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Client",
+   "measure": "[Hotels Request]",
+   "label": "API hotels requested"
+  },
+  "hotels returned": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[Hotels Results]",
+   "label": "Hotels returned"
+  },
+  "hotels returned by suppliers": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[Hotel Results]",
+   "label": "Hotels returned by suppliers"
+  },
+  "hotels returned by suppliers today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Supplier",
+   "measure": "[Hotel Results]",
+   "label": "Hotels returned by suppliers"
+  },
+  "hotels returned today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Client",
+   "measure": "[Hotel Results]",
+   "label": "API hotels returned"
+  },
+  "hotels with availability": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[Hotels Results]",
+   "label": "Hotels returned"
+  },
+  "how many bookings": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Reservations Count]",
+   "label": "Bookings"
+  },
+  "how many payments": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Payments]",
+   "label": "Payments"
+  },
+  "input vat": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Cost Tax]",
+   "label": "Tax on cost"
+  },
+  "l2b": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[L2B]",
+   "label": "Look-to-book ratio"
+  },
+  "l2b %": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[% L2B]",
+   "label": "Look-to-book %"
+  },
+  "largest price difference": {
+   "cube": "GlobalTravelEngine - KPI Change Price",
+   "measure": "[Max Diff Price]",
+   "label": "Largest price difference"
+  },
+  "lead time of relocated bookings": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Booking Window Origin]",
+   "label": "Longest booking window"
+  },
+  "length of stay": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Avg Nights]",
+   "label": "Average nights per booking"
+  },
+  "live api traffic": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Client",
+   "measure": "[Requests]",
+   "label": "API requests"
+  },
+  "live latency": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Client",
+   "measure": "[AVG Response Time Sec]",
+   "label": "API average response time"
+  },
+  "live supplier requests": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Supplier",
+   "measure": "[Requests]",
+   "label": "Supplier requests"
+  },
+  "live supplier response time": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Supplier",
+   "measure": "[AVG Response Time Sec]",
+   "label": "Average supplier response time"
+  },
+  "lock count": {
+   "cube": "GlobalTravelEngine - History Hotel Locks",
+   "measure": "[Locks Number]",
+   "label": "Hotel locks"
+  },
+  "lock occurrences": {
+   "cube": "GlobalTravelEngine - Supplier Lock API Hotel",
+   "measure": "[Locked Times]",
+   "label": "Lock occurrences"
+  },
+  "locks": {
+   "cube": "GlobalTravelEngine - History Hotel Locks",
+   "measure": "[Locks Number]",
+   "label": "Hotel locks"
+  },
+  "longest booking window": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Booking Window]",
+   "label": "Longest booking window (days)"
+  },
+  "longest transaction duration": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Max Diff Miliseconds]",
+   "label": "Longest gateway transaction duration"
+  },
+  "look to book": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[L2B]",
+   "label": "Look-to-book ratio"
+  },
+  "look to book percentage": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[% L2B]",
+   "label": "Look-to-book %"
+  },
+  "look-to-book": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[L2B]",
+   "label": "Look-to-book ratio"
+  },
+  "look-to-book %": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[% L2B]",
+   "label": "Look-to-book %"
+  },
+  "look-to-book % today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Client",
+   "measure": "[% L2B]",
+   "label": "Look-to-book %"
+  },
+  "look-to-book ratio": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[L2B]",
+   "label": "Look-to-book ratio"
+  },
+  "look-to-book today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Client",
+   "measure": "[L2B]",
+   "label": "Look-to-book ratio"
+  },
+  "margin": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Markup]",
+   "label": "Margin on sales (Markup)"
+  },
+  "margin %": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Markup]",
+   "label": "Margin on sales (Markup)"
+  },
+  "markup": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Markup]",
+   "label": "Margin on sales (Markup)"
+  },
+  "markup %": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Markup]",
+   "label": "Margin on sales (Markup)"
+  },
+  "maximum api response time": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[Max Response Time Sec]",
+   "label": "API maximum response time"
+  },
+  "maximum api response time today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Client",
+   "measure": "[Max Response Time Sec]",
+   "label": "API maximum response time"
+  },
+  "maximum lead time": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Booking Window]",
+   "label": "Longest booking window (days)"
+  },
+  "maximum price change": {
+   "cube": "GlobalTravelEngine - KPI Change Price",
+   "measure": "[Max Diff Price]",
+   "label": "Largest price difference"
+  },
+  "maximum supplier response time": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[Max Response Time Sec]",
+   "label": "Maximum supplier response time"
+  },
+  "maximum supplier response time today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Supplier",
+   "measure": "[Max Response Time Sec]",
+   "label": "Maximum supplier response time"
+  },
+  "money received": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Revenue Payments]",
+   "label": "Payment amount"
+  },
+  "net cost": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Cost w/o Tax]",
+   "label": "Cost without tax"
+  },
+  "net profit": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Final Profit]",
+   "label": "Final profit"
+  },
+  "net sales": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Sale w/o Tax]",
+   "label": "Sales without tax"
+  },
+  "nights": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Nights]",
+   "label": "Nights"
+  },
+  "nights per room": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Avg Room Nights]",
+   "label": "Average nights per room"
+  },
+  "no-results locks": {
+   "cube": "GlobalTravelEngine - History Hotel Locks",
+   "measure": "[Locks Number]",
+   "label": "Hotel locks"
+  },
+  "not mapped requests": {
+   "cube": "GlobalTravelEngine - Statistics Supplier Error API Hotel",
+   "measure": "[Requests]",
+   "label": "Supplier requests"
+  },
+  "number of bookings": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Reservations Count]",
+   "label": "Bookings"
+  },
+  "number of guests": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Paxes]",
+   "label": "Passengers"
+  },
+  "number of hotel bookings": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Bookings]",
+   "label": "Hotel bookings (incl. cancelled)"
+  },
+  "number of hotel cancellations": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Cancellations]",
+   "label": "Cancelled hotel bookings"
+  },
+  "number of hotel rooms booked": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Total Rooms]",
+   "label": "Hotel rooms booked"
+  },
+  "number of hotels requested": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[Hotels Requests]",
+   "label": "Hotels requested"
+  },
+  "number of locks": {
+   "cube": "GlobalTravelEngine - History Hotel Locks",
+   "measure": "[Locks Number]",
+   "label": "Hotel locks"
+  },
+  "number of nights": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Nights]",
+   "label": "Nights"
+  },
+  "number of paid bookings": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Distinct Bookings]",
+   "label": "Paid bookings"
+  },
+  "number of payments": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Payments]",
+   "label": "Payments"
+  },
+  "number of price changes": {
+   "cube": "GlobalTravelEngine - KPI Change Price",
+   "measure": "[Changes]",
+   "label": "Price changes"
+  },
+  "number of relocations": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Relocations]",
+   "label": "Relocations"
+  },
+  "number of rooms": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Rooms]",
+   "label": "Rooms"
+  },
+  "number of searches": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[Total Requests]",
+   "label": "Searches"
+  },
+  "online payment amount": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Revenue Transactions]",
+   "label": "Gateway transaction amount"
+  },
+  "online payment transactions": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Transactions]",
+   "label": "Gateway transactions"
+  },
+  "options returned by activity suppliers": {
+   "cube": "GlobalTravelEngine - Statistics Supplier API Service",
+   "measure": "[Results]",
+   "label": "Results returned by activity suppliers"
+  },
+  "options returned by transfer suppliers": {
+   "cube": "GlobalTravelEngine - Statistics Supplier API Transfer",
+   "measure": "[Results]",
+   "label": "Results returned by transfer suppliers"
+  },
+  "origin cost": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Total Costs Origin]",
+   "label": "Original booking cost"
+  },
+  "origin markup": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[% Total Profit Origin]",
+   "label": "Original booking markup"
+  },
+  "origin pax": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Total Pax Origin]",
+   "label": "Relocated guests"
+  },
+  "origin profit": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Total Profit Origin]",
+   "label": "Original booking profit"
+  },
+  "origin profit %": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[% Total Profit Origin]",
+   "label": "Original booking markup"
+  },
+  "origin sales": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Total Sales Origin]",
+   "label": "Original booking sales"
+  },
+  "original booking cost": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Total Costs Origin]",
+   "label": "Original booking cost"
+  },
+  "original booking profit": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Total Profit Origin]",
+   "label": "Original booking profit"
+  },
+  "original booking sales": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Total Sales Origin]",
+   "label": "Original booking sales"
+  },
+  "output vat": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Sale Tax]",
+   "label": "Tax on sales"
+  },
+  "owned hotel sales": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Total Sales]",
+   "label": "Hotel sales"
+  },
+  "owned-hotel average cost per booking": {
+   "cube": "GlobalTravelEngine - Sales Average Per Owned Hotels",
+   "measure": "[AVG Cost]",
+   "label": "Average gross cost per owned-hotel booking"
+  },
+  "owned-hotel average cost per day": {
+   "cube": "GlobalTravelEngine - Sales Average Per Owned Hotels",
+   "measure": "[AVG Cost per Day]",
+   "label": "Average cost per day (cube definition)"
+  },
+  "owned-hotel average sale per booking": {
+   "cube": "GlobalTravelEngine - Sales Average Per Owned Hotels",
+   "measure": "[AVG Sale]",
+   "label": "Average gross sale per owned-hotel booking"
+  },
+  "owned-hotel average sale per day": {
+   "cube": "GlobalTravelEngine - Sales Average Per Owned Hotels",
+   "measure": "[AVG Sale per Day]",
+   "label": "Average sale per day (cube definition)"
+  },
+  "owned-hotel bookings": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Bookings]",
+   "label": "Hotel bookings (incl. cancelled)"
+  },
+  "owned-hotel bookings by stay night": {
+   "cube": "GlobalTravelEngine - Sales Average Per Owned Hotels",
+   "measure": "[Bookings]",
+   "label": "Owned-hotel bookings (incl. cancelled)"
+  },
+  "owned-hotel cost": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Total Costs]",
+   "label": "Hotel cost"
+  },
+  "owned-hotel cost by stay night": {
+   "cube": "GlobalTravelEngine - Sales Average Per Owned Hotels",
+   "measure": "[Total Cost]",
+   "label": "Owned-hotel gross booked cost"
+  },
+  "owned-hotel gross booked cost": {
+   "cube": "GlobalTravelEngine - Sales Average Per Owned Hotels",
+   "measure": "[Total Cost]",
+   "label": "Owned-hotel gross booked cost"
+  },
+  "owned-hotel gross booked sales": {
+   "cube": "GlobalTravelEngine - Sales Average Per Owned Hotels",
+   "measure": "[Total Sale]",
+   "label": "Owned-hotel gross booked sales"
+  },
+  "owned-hotel margin %": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Markup]",
+   "label": "Hotel margin % (profit / sales)"
+  },
+  "owned-hotel profit": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Total Profit]",
+   "label": "Hotel profit"
+  },
+  "owned-hotel room nights": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Total Room Nights]",
+   "label": "Hotel room nights"
+  },
+  "owned-hotel sales": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Total Sales]",
+   "label": "Hotel sales"
+  },
+  "owned-hotel sales by stay night": {
+   "cube": "GlobalTravelEngine - Sales Average Per Owned Hotels",
+   "measure": "[Total Sale]",
+   "label": "Owned-hotel gross booked sales"
+  },
+  "paid booking lines": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Booking Lines]",
+   "label": "Booking lines with payments"
+  },
+  "paid bookings": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Distinct Bookings]",
+   "label": "Paid bookings"
+  },
+  "passengers": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Paxes]",
+   "label": "Passengers"
+  },
+  "passengers requested from activity suppliers": {
+   "cube": "GlobalTravelEngine - Statistics Supplier API Service",
+   "measure": "[Total Pax Number]",
+   "label": "Passengers requested from activity suppliers"
+  },
+  "passengers requested from transfer suppliers": {
+   "cube": "GlobalTravelEngine - Statistics Supplier API Transfer",
+   "measure": "[Total Pax Number]",
+   "label": "Passengers requested from transfer suppliers"
+  },
+  "pax": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Paxes]",
+   "label": "Passengers"
+  },
+  "pax per booking": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Avg Paxes]",
+   "label": "Average passengers per booking"
+  },
+  "payment amount": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Revenue Payments]",
+   "label": "Payment amount"
+  },
+  "payment attempts": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Transactions]",
+   "label": "Gateway transactions"
+  },
+  "payment booking errors": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Booking Error]",
+   "label": "Booking errors"
+  },
+  "payment count": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Payments]",
+   "label": "Payments"
+  },
+  "payment error-free rate": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[% Payments Without Errors]",
+   "label": "Error-free payment rate"
+  },
+  "payment success rate": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[% Success Payments]",
+   "label": "Payment success rate"
+  },
+  "payments": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Payments]",
+   "label": "Payments"
+  },
+  "payments collected": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Revenue Payments]",
+   "label": "Payment amount"
+  },
+  "payments received": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Revenue Payments]",
+   "label": "Payment amount"
+  },
+  "payments without errors": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Payments Without Errors]",
+   "label": "Payments without errors"
+  },
+  "price change count": {
+   "cube": "GlobalTravelEngine - KPI Change Price",
+   "measure": "[Changes]",
+   "label": "Price changes"
+  },
+  "price change percentage": {
+   "cube": "GlobalTravelEngine - KPI Change Price",
+   "measure": "[% Changes]",
+   "label": "Price change rate"
+  },
+  "price change rate": {
+   "cube": "GlobalTravelEngine - KPI Change Price",
+   "measure": "[% Changes]",
+   "label": "Price change rate"
+  },
+  "price change ratio": {
+   "cube": "GlobalTravelEngine - KPI Change Price",
+   "measure": "[% Changes]",
+   "label": "Price change rate"
+  },
+  "price changes": {
+   "cube": "GlobalTravelEngine - KPI Change Price",
+   "measure": "[Changes]",
+   "label": "Price changes"
+  },
+  "price check requests": {
+   "cube": "GlobalTravelEngine - KPI Change Price",
+   "measure": "[Requests]",
+   "label": "Price-check requests"
+  },
+  "price-change locks": {
+   "cube": "GlobalTravelEngine - History Hotel Locks",
+   "measure": "[Locks Number]",
+   "label": "Hotel locks"
+  },
+  "profit": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Profit]",
+   "label": "Profit"
+  },
+  "profit amount": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Profit]",
+   "label": "Profit"
+  },
+  "profit margin": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Markup]",
+   "label": "Margin on sales (Markup)"
+  },
+  "profit per booking": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Avg Profit]",
+   "label": "Average profit per booking"
+  },
+  "rate changes": {
+   "cube": "GlobalTravelEngine - Statistics Rate Changes Channel Manager API",
+   "measure": "[Changes]",
+   "label": "Rate changes"
+  },
+  "rate changes pushed by hotels": {
+   "cube": "GlobalTravelEngine - Statistics Rate Changes Channel Manager API",
+   "measure": "[Changes]",
+   "label": "Rate changes"
+  },
+  "rate combinations": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Client",
+   "measure": "[Combinations]",
+   "label": "Combinations returned"
+  },
+  "rate updates": {
+   "cube": "GlobalTravelEngine - Statistics Rate Changes Channel Manager API",
+   "measure": "[Changes]",
+   "label": "Rate changes"
+  },
+  "real-time api requests": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Client",
+   "measure": "[Requests]",
+   "label": "API requests"
+  },
+  "real-time look-to-book": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Client",
+   "measure": "[L2B]",
+   "label": "Look-to-book ratio"
+  },
+  "real-time response time": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Client",
+   "measure": "[AVG Response Time Sec]",
+   "label": "API average response time"
+  },
+  "real-time supplier look-to-book": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Supplier",
+   "measure": "[L2B]",
+   "label": "Supplier look-to-book"
+  },
+  "real-time supplier requests": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Supplier",
+   "measure": "[Requests]",
+   "label": "Supplier requests"
+  },
+  "relocated bookings": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Relocations]",
+   "label": "Relocations"
+  },
+  "relocated guests": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Total Pax Origin]",
+   "label": "Relocated guests"
+  },
+  "relocated passengers": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Total Pax Origin]",
+   "label": "Relocated guests"
+  },
+  "relocated pax": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Total Pax Origin]",
+   "label": "Relocated guests"
+  },
+  "relocations": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Relocations]",
+   "label": "Relocations"
+  },
+  "remaining allotment": {
+   "cube": "GlobalTravelEngine - Hotel Allotments",
+   "measure": "[Avail Allotment]",
+   "label": "Available allotment"
+  },
+  "replacement booking cost": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Total Costs Dest]",
+   "label": "Replacement booking cost"
+  },
+  "replacement booking passengers": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Total Pax Dest]",
+   "label": "Guests on replacement bookings"
+  },
+  "replacement booking profit": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Total Profit Dest]",
+   "label": "Replacement booking profit"
+  },
+  "replacement booking sales": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Total Sales Dest]",
+   "label": "Replacement booking sales"
+  },
+  "requests": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[Requests]",
+   "label": "API requests"
+  },
+  "requests by hotel": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Client",
+   "measure": "[Total Hotel Requests]",
+   "label": "Hotel-level requests"
+  },
+  "requests checked for price changes": {
+   "cube": "GlobalTravelEngine - KPI Change Price",
+   "measure": "[Requests]",
+   "label": "Price-check requests"
+  },
+  "requests sent to suppliers": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[Requests]",
+   "label": "Supplier requests"
+  },
+  "requests so far today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Client",
+   "measure": "[Requests]",
+   "label": "API requests"
+  },
+  "reservations": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Reservations Count]",
+   "label": "Bookings"
+  },
+  "response data volume": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[Size Gb Response]",
+   "label": "API response data volume"
+  },
+  "response time": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[AVG Response Time Sec]",
+   "label": "API average response time"
+  },
+  "results per web request": {
+   "cube": "GlobalTravelEngine - Statistics Client Web",
+   "measure": "[AVG Results]",
+   "label": "Results per web request"
+  },
+  "revenue": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Sale]",
+   "label": "Sales"
+  },
+  "rn": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Room Nights]",
+   "label": "Room nights"
+  },
+  "room combinations returned": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Client",
+   "measure": "[Combinations]",
+   "label": "Combinations returned"
+  },
+  "room nights": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Room Nights]",
+   "label": "Room nights"
+  },
+  "room-rate options returned by suppliers": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[Combinations]",
+   "label": "Room-rate combinations returned"
+  },
+  "roomnights": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Room Nights]",
+   "label": "Room nights"
+  },
+  "rooms": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Rooms]",
+   "label": "Rooms"
+  },
+  "rooms booked": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Rooms]",
+   "label": "Rooms"
+  },
+  "rooms sold from allotment": {
+   "cube": "GlobalTravelEngine - Hotel Allotments",
+   "measure": "[Used Allotment]",
+   "label": "Used allotment"
+  },
+  "sales": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Sale]",
+   "label": "Sales"
+  },
+  "sales amount": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Sale]",
+   "label": "Sales"
+  },
+  "sales before tax": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Sale w/o Tax]",
+   "label": "Sales without tax"
+  },
+  "sales ex vat": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Sale w/o Tax]",
+   "label": "Sales without tax"
+  },
+  "sales excluding vat": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Sale w/o Tax]",
+   "label": "Sales without tax"
+  },
+  "sales including vat": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Sale]",
+   "label": "Sales"
+  },
+  "sales tax": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Sale Tax]",
+   "label": "Tax on sales"
+  },
+  "sales without tax": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Sale w/o Tax]",
+   "label": "Sales without tax"
+  },
+  "search error rate": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[% Requests KO]",
+   "label": "Search failure rate"
+  },
+  "search errors": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[Requests KO]",
+   "label": "Failed searches"
+  },
+  "search failure rate": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[% Requests KO]",
+   "label": "Search failure rate"
+  },
+  "search lead time": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[AVG Lead Time (Days)]",
+   "label": "Average search lead time"
+  },
+  "search requests": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[Total Requests]",
+   "label": "Searches"
+  },
+  "search success rate": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[% Requests OK]",
+   "label": "Search success rate"
+  },
+  "search volume": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[Total Requests]",
+   "label": "Searches"
+  },
+  "searches": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[Total Requests]",
+   "label": "Searches"
+  },
+  "searches ko": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[Requests KO]",
+   "label": "Failed searches"
+  },
+  "searches ok": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[Requests OK]",
+   "label": "Successful searches"
+  },
+  "searches per booking": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[L2B]",
+   "label": "Look-to-book ratio"
+  },
+  "selling price": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Sale]",
+   "label": "Sales"
+  },
+  "service bookings": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Bookings]",
+   "label": "Ticket & service bookings"
+  },
+  "service cost": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Costs]",
+   "label": "Ticket & service cost"
+  },
+  "service markup": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[% Profit]",
+   "label": "Ticket markup on cost"
+  },
+  "service profit": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Profit]",
+   "label": "Ticket & service profit"
+  },
+  "service sales": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Sales]",
+   "label": "Ticket & service sales"
+  },
+  "share of hotels returned": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[% Hotels Results]",
+   "label": "Hotel result rate"
+  },
+  "share of requested hotels returned by suppliers": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[% Hotel Results]",
+   "label": "Supplier hotel result rate"
+  },
+  "share of supplier hotel requests served from cache": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[% Hotels Cached]",
+   "label": "Supplier hotel cache rate"
+  },
+  "slowest api response": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[Max Response Time Sec]",
+   "label": "API maximum response time"
+  },
+  "slowest payment": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Max Diff Miliseconds]",
+   "label": "Longest gateway transaction duration"
+  },
+  "slowest supplier response": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[Max Response Time Sec]",
+   "label": "Maximum supplier response time"
+  },
+  "smallest price difference": {
+   "cube": "GlobalTravelEngine - KPI Change Price",
+   "measure": "[Min Diff Price]",
+   "label": "Smallest price difference"
+  },
+  "successful card payments": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Success Transactions]",
+   "label": "Successful gateway transactions"
+  },
+  "successful payments": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Success Payments]",
+   "label": "Successful payments"
+  },
+  "successful searches": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[Requests OK]",
+   "label": "Successful searches"
+  },
+  "successful searches %": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[% Requests OK]",
+   "label": "Search success rate"
+  },
+  "successful supplier hotel requests": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[Hotel Requests OK]",
+   "label": "Supplier hotel requests OK"
+  },
+  "successful transactions": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Success Transactions]",
+   "label": "Successful gateway transactions"
+  },
+  "supplier % l2b": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[% L2B]",
+   "label": "Supplier booking conversion"
+  },
+  "supplier api errors": {
+   "cube": "GlobalTravelEngine - Statistics Supplier Error API Hotel",
+   "measure": "[Requests]",
+   "label": "Supplier requests"
+  },
+  "supplier api locks": {
+   "cube": "GlobalTravelEngine - Supplier Lock API Hotel",
+   "measure": "[Locked Times]",
+   "label": "Lock occurrences"
+  },
+  "supplier booking conversion": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[% L2B]",
+   "label": "Supplier booking conversion"
+  },
+  "supplier booking conversion today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Supplier",
+   "measure": "[% L2B]",
+   "label": "Supplier booking conversion"
+  },
+  "supplier cache hit rate": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[% Hotels Cached]",
+   "label": "Supplier cache hit rate"
+  },
+  "supplier cache hit rate today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Supplier",
+   "measure": "[% Hotels Cached]",
+   "label": "Supplier cache hit rate"
+  },
+  "supplier cache rate": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[% Hotels Cached]",
+   "label": "Supplier cache hit rate"
+  },
+  "supplier cached hotels": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[Hotels Cached]",
+   "label": "Hotels served from cache"
+  },
+  "supplier cached hotels today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Supplier",
+   "measure": "[Hotels Cached]",
+   "label": "Hotels served from cache"
+  },
+  "supplier calls": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[Requests]",
+   "label": "Supplier requests"
+  },
+  "supplier commission": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Base Supplier Commission]",
+   "label": "Supplier commission (base)"
+  },
+  "supplier connection locks": {
+   "cube": "GlobalTravelEngine - Supplier Lock API Hotel",
+   "measure": "[Locked Times]",
+   "label": "Lock occurrences"
+  },
+  "supplier cost": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Cost]",
+   "label": "Cost"
+  },
+  "supplier error codes": {
+   "cube": "GlobalTravelEngine - Statistics Supplier Error API Hotel",
+   "measure": "[Requests]",
+   "label": "Supplier requests"
+  },
+  "supplier errors": {
+   "cube": "GlobalTravelEngine - Statistics Supplier Error API Hotel",
+   "measure": "[Requests]",
+   "label": "Supplier requests"
+  },
+  "supplier hotel availability rate": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[% Hotel Requests OK]",
+   "label": "Supplier hotel success rate"
+  },
+  "supplier hotel cache rate": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[% Hotels Cached]",
+   "label": "Supplier hotel cache rate"
+  },
+  "supplier hotel error rate": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[% Hotel Requests OTH]",
+   "label": "Supplier hotel error rate"
+  },
+  "supplier hotel failure rate": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[% Hotel Requests KO]",
+   "label": "Supplier hotel failure rate"
+  },
+  "supplier hotel ko rate": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[% Hotel Requests KO]",
+   "label": "Supplier hotel failure rate"
+  },
+  "supplier hotel no availability": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[Hotel Requests NR]",
+   "label": "Supplier hotel requests with no results"
+  },
+  "supplier hotel no availability rate": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[% Hotel Requests NR]",
+   "label": "Supplier hotel no-results rate"
+  },
+  "supplier hotel no-results rate": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[% Hotel Requests NR]",
+   "label": "Supplier hotel no-results rate"
+  },
+  "supplier hotel request errors": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[Hotel Requests OTH]",
+   "label": "Supplier hotel requests failed (other)"
+  },
+  "supplier hotel requests": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[Total Hotel Requests]",
+   "label": "Supplier hotel requests"
+  },
+  "supplier hotel requests failed with errors": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[Hotel Requests OTH]",
+   "label": "Supplier hotel requests failed (other)"
+  },
+  "supplier hotel requests per booking": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[L2B]",
+   "label": "Hotel supplier look-to-book"
+  },
+  "supplier hotel requests served from cache": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[Hotels Cached]",
+   "label": "Hotel requests served from cache"
+  },
+  "supplier hotel requests with availability": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[Hotel Requests OK]",
+   "label": "Supplier hotel requests OK"
+  },
+  "supplier hotel requests with no results": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[Hotel Requests NR]",
+   "label": "Supplier hotel requests with no results"
+  },
+  "supplier hotel result rate": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[% Hotel Results]",
+   "label": "Supplier hotel result rate"
+  },
+  "supplier hotel result rate today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Supplier",
+   "measure": "[% Hotel Results]",
+   "label": "Supplier hotel result rate"
+  },
+  "supplier hotel results": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[Hotel Results]",
+   "label": "Hotels returned by suppliers"
+  },
+  "supplier hotel success rate": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[% Hotel Requests OK]",
+   "label": "Supplier hotel success rate"
+  },
+  "supplier hotels requested": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[Hotels Request]",
+   "label": "Hotels requested from suppliers"
+  },
+  "supplier hotels served from cache": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[Hotels Cached]",
+   "label": "Hotels served from cache"
+  },
+  "supplier l2b": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[L2B]",
+   "label": "Supplier look-to-book"
+  },
+  "supplier latency": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[AVG Response Time Sec]",
+   "label": "Average supplier response time"
+  },
+  "supplier locks": {
+   "cube": "GlobalTravelEngine - Supplier Lock API Hotel",
+   "measure": "[Locked Times]",
+   "label": "Lock occurrences"
+  },
+  "supplier look to book": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[L2B]",
+   "label": "Supplier look-to-book"
+  },
+  "supplier look-to-book": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[L2B]",
+   "label": "Supplier look-to-book"
+  },
+  "supplier look-to-book percentage": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[% L2B]",
+   "label": "Supplier booking conversion"
+  },
+  "supplier look-to-book today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Supplier",
+   "measure": "[L2B]",
+   "label": "Supplier look-to-book"
+  },
+  "supplier request volume": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[Requests]",
+   "label": "Supplier requests"
+  },
+  "supplier requests": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[Requests]",
+   "label": "Supplier requests"
+  },
+  "supplier requests by outcome": {
+   "cube": "GlobalTravelEngine - Statistics Supplier Error API Hotel",
+   "measure": "[Requests]",
+   "label": "Supplier requests"
+  },
+  "supplier requests per booking": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[L2B]",
+   "label": "Supplier look-to-book"
+  },
+  "supplier requests right now": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Supplier",
+   "measure": "[Requests]",
+   "label": "Supplier requests"
+  },
+  "supplier requests today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Supplier",
+   "measure": "[Requests]",
+   "label": "Supplier requests"
+  },
+  "supplier response time": {
+   "cube": "GlobalTravelEngine - Statistics History Supplier",
+   "measure": "[AVG Response Time Sec]",
+   "label": "Average supplier response time"
+  },
+  "supplier response time right now": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Supplier",
+   "measure": "[AVG Response Time Sec]",
+   "label": "Average supplier response time"
+  },
+  "supplier response time today": {
+   "cube": "GlobalTravelEngine - Statistics Real Time Supplier",
+   "measure": "[AVG Response Time Sec]",
+   "label": "Average supplier response time"
+  },
+  "supplier room combinations": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[Combinations]",
+   "label": "Room-rate combinations returned"
+  },
+  "supplier timeouts": {
+   "cube": "GlobalTravelEngine - Statistics Supplier Error API Hotel",
+   "measure": "[Requests]",
+   "label": "Supplier requests"
+  },
+  "third-party hotel sales": {
+   "cube": "GlobalTravelEngine - Sales Per Owned Hotels",
+   "measure": "[Total Sales]",
+   "label": "Hotel sales"
+  },
+  "ticket adults": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Adults]",
+   "label": "Adults"
+  },
+  "ticket bookings": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Bookings]",
+   "label": "Ticket & service bookings"
+  },
+  "ticket children": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Childrens]",
+   "label": "Children"
+  },
+  "ticket cost": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Costs]",
+   "label": "Ticket & service cost"
+  },
+  "ticket markup": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[% Profit]",
+   "label": "Ticket markup on cost"
+  },
+  "ticket passengers": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Total Pax]",
+   "label": "Passengers"
+  },
+  "ticket pax": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Total Pax]",
+   "label": "Passengers"
+  },
+  "ticket profit": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Profit]",
+   "label": "Ticket & service profit"
+  },
+  "ticket profit %": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[% Profit]",
+   "label": "Ticket markup on cost"
+  },
+  "ticket sales": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Sales]",
+   "label": "Ticket & service sales"
+  },
+  "ticket supplier requests": {
+   "cube": "GlobalTravelEngine - Statistics Supplier API Service",
+   "measure": "[Requests]",
+   "label": "Activity supplier API requests"
+  },
+  "tickets sold": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Bookings]",
+   "label": "Ticket & service bookings"
+  },
+  "times a hotel was requested": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Client",
+   "measure": "[Total Hotel Requests]",
+   "label": "Hotel-level requests"
+  },
+  "times locked": {
+   "cube": "GlobalTravelEngine - Supplier Lock API Hotel",
+   "measure": "[Locked Times]",
+   "label": "Lock occurrences"
+  },
+  "total allotment": {
+   "cube": "GlobalTravelEngine - Hotel Allotments",
+   "measure": "[Total Allotment]",
+   "label": "Total allotment"
+  },
+  "tour sales": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Sales]",
+   "label": "Ticket & service sales"
+  },
+  "transaction amount": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Revenue Transactions]",
+   "label": "Gateway transaction amount"
+  },
+  "transaction error-free rate": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[% Transactions Without Errors]",
+   "label": "Error-free transaction rate"
+  },
+  "transaction errors": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Transaction Error]",
+   "label": "Gateway transaction errors"
+  },
+  "transaction success rate": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[% Success Transactions]",
+   "label": "Gateway success rate"
+  },
+  "transactions without errors": {
+   "cube": "GlobalTravelEngine - Booking Payments",
+   "measure": "[Transactions Without Errors]",
+   "label": "Gateway transactions without errors"
+  },
+  "transfer pax requested by clients": {
+   "cube": "GlobalTravelEngine - Statistics Client API Transfer",
+   "measure": "[Total Pax Number]",
+   "label": "Passengers requested"
+  },
+  "transfer requests from clients": {
+   "cube": "GlobalTravelEngine - Statistics Client API Transfer",
+   "measure": "[Requests]",
+   "label": "Client requests"
+  },
+  "transfer results returned to clients": {
+   "cube": "GlobalTravelEngine - Statistics Client API Transfer",
+   "measure": "[Results]",
+   "label": "Results returned"
+  },
+  "transfer supplier api requests": {
+   "cube": "GlobalTravelEngine - Statistics Supplier API Transfer",
+   "measure": "[Requests]",
+   "label": "Transfer supplier API requests"
+  },
+  "transfer supplier calls": {
+   "cube": "GlobalTravelEngine - Statistics Supplier API Transfer",
+   "measure": "[Requests]",
+   "label": "Transfer supplier API requests"
+  },
+  "transfer supplier pax requested": {
+   "cube": "GlobalTravelEngine - Statistics Supplier API Transfer",
+   "measure": "[Total Pax Number]",
+   "label": "Passengers requested from transfer suppliers"
+  },
+  "transfer supplier requests": {
+   "cube": "GlobalTravelEngine - Statistics Supplier API Transfer",
+   "measure": "[Requests]",
+   "label": "Transfer supplier API requests"
+  },
+  "transfer supplier results": {
+   "cube": "GlobalTravelEngine - Statistics Supplier API Transfer",
+   "measure": "[Results]",
+   "label": "Results returned by transfer suppliers"
+  },
+  "travellers": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Paxes]",
+   "label": "Passengers"
+  },
+  "turnover": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Sale]",
+   "label": "Sales"
+  },
+  "unique supplier locks": {
+   "cube": "GlobalTravelEngine - Supplier Lock API Hotel",
+   "measure": "[Locks]",
+   "label": "Distinct locks"
+  },
+  "unsold allotment": {
+   "cube": "GlobalTravelEngine - Hotel Allotments",
+   "measure": "[Avail Allotment]",
+   "label": "Available allotment"
+  },
+  "unsuccessful searches": {
+   "cube": "GlobalTravelEngine - Statistics Zone",
+   "measure": "[Requests KO]",
+   "label": "Failed searches"
+  },
+  "unsuccessful supplier hotel requests": {
+   "cube": "GlobalTravelEngine - Statistics Hotel Supplier",
+   "measure": "[Hotel Requests KO]",
+   "label": "Supplier hotel requests KO"
+  },
+  "used allotment": {
+   "cube": "GlobalTravelEngine - Hotel Allotments",
+   "measure": "[Used Allotment]",
+   "label": "Used allotment"
+  },
+  "vat on cost": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Cost Tax]",
+   "label": "Tax on cost"
+  },
+  "vat on sales": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Sale Tax]",
+   "label": "Tax on sales"
+  },
+  "visa adults": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Adults]",
+   "label": "Adults"
+  },
+  "visa bookings": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Bookings]",
+   "label": "Ticket & service bookings"
+  },
+  "visa children": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Childrens]",
+   "label": "Children"
+  },
+  "visa cost": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Costs]",
+   "label": "Ticket & service cost"
+  },
+  "visa markup": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[% Profit]",
+   "label": "Ticket markup on cost"
+  },
+  "visa passengers": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Total Pax]",
+   "label": "Passengers"
+  },
+  "visa profit": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Profit]",
+   "label": "Ticket & service profit"
+  },
+  "visa sales": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Sales]",
+   "label": "Ticket & service sales"
+  },
+  "visas sold": {
+   "cube": "GlobalTravelEngine - Tickets",
+   "measure": "[Bookings]",
+   "label": "Ticket & service bookings"
+  },
+  "walked bookings": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Relocations]",
+   "label": "Relocations"
+  },
+  "walks": {
+   "cube": "GlobalTravelEngine - Relocations",
+   "measure": "[Relocations]",
+   "label": "Relocations"
+  },
+  "web data volume": {
+   "cube": "GlobalTravelEngine - Statistics Client Web",
+   "measure": "[Size Gb Response]",
+   "label": "Web response data volume"
+  },
+  "web filtered results": {
+   "cube": "GlobalTravelEngine - Statistics Client Web",
+   "measure": "[Filter Results]",
+   "label": "Web filtered results"
+  },
+  "web portal requests": {
+   "cube": "GlobalTravelEngine - Statistics Client Web",
+   "measure": "[Requests]",
+   "label": "Web requests"
+  },
+  "web portal response time": {
+   "cube": "GlobalTravelEngine - Statistics Client Web",
+   "measure": "[AVG Response Time Sec]",
+   "label": "Web average response time"
+  },
+  "web requests": {
+   "cube": "GlobalTravelEngine - Statistics Client Web",
+   "measure": "[Requests]",
+   "label": "Web requests"
+  },
+  "web response data": {
+   "cube": "GlobalTravelEngine - Statistics Client Web",
+   "measure": "[Size Gb Response]",
+   "label": "Web response data volume"
+  },
+  "web response time": {
+   "cube": "GlobalTravelEngine - Statistics Client Web",
+   "measure": "[AVG Response Time Sec]",
+   "label": "Web average response time"
+  },
+  "web results": {
+   "cube": "GlobalTravelEngine - Statistics Client Web",
+   "measure": "[Results]",
+   "label": "Web results returned"
+  },
+  "web results returned": {
+   "cube": "GlobalTravelEngine - Statistics Client Web",
+   "measure": "[Results]",
+   "label": "Web results returned"
+  },
+  "web traffic": {
+   "cube": "GlobalTravelEngine - Statistics Client Web",
+   "measure": "[Requests]",
+   "label": "Web requests"
+  },
+  "website requests": {
+   "cube": "GlobalTravelEngine - Statistics Client Web",
+   "measure": "[Requests]",
+   "label": "Web requests"
+  },
+  "website response time": {
+   "cube": "GlobalTravelEngine - Statistics Client Web",
+   "measure": "[AVG Response Time Sec]",
+   "label": "Web average response time"
+  },
+  "xml requests": {
+   "cube": "GlobalTravelEngine - Statistics History Client",
+   "measure": "[Requests]",
+   "label": "API requests"
+  },
+  "cancellations": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Reservations Count]",
+   "filter": "cancelled bookings",
+   "label": "Bookings"
+  },
+  "cancelled bookings": {
+   "cube": "GlobalTravelEngine - Bookings",
+   "measure": "[Reservations Count]",
+   "filter": "cancelled bookings",
+   "label": "Bookings"
+  }
+ },
+ "ambiguous": {
+  "errors": [
+   "Statistics Zone [Requests KO] - failed client searches",
+   "Statistics Supplier Error API Hotel [Requests] with the supplier api errors filter - errors from suppliers"
+  ]
+ }
+}
