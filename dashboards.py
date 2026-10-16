@@ -246,7 +246,7 @@ def run_all(charts: list[dict], start: date, end: date, compare: tuple[date, dat
 
 MAX_AGE_HOURS = 24
 _background = ThreadPoolExecutor(max_workers=2)
-_running: dict[str, object] = {}   # saved-result key -> Future of its background run
+_running: dict[str, object] = {}   # saved-result key -> its background run (a Future or a _Refresh)
 _failed: dict[str, float] = {}     # key -> when its last background run failed (not retried for 5 minutes)
 _saved_lock = threading.Lock()
 
@@ -292,6 +292,49 @@ def _run_and_save(chart: dict, start: date, end: date, compare, as_of: dict[str,
     return result
 
 
+class _Refresh:
+    """A chart being brought up to date in its own Python process (see _start_refresh)."""
+
+    def __init__(self, proc, key: str, started: str):
+        self.proc, self.key, self.started, self.checked = proc, key, started, False
+
+    def done(self) -> bool:
+        if self.proc.poll() is None:
+            return False
+        if not self.checked:  # ended without saving newer numbers: failed (not retried for 5 minutes)
+            self.checked = True
+            saved = _load_saved(self.key)
+            if not saved or saved["saved"] < self.started:
+                _failed[self.key] = datetime.now().timestamp()
+        return True
+
+    def result(self, timeout: float | None = None) -> None:
+        self.proc.wait(timeout)
+
+
+def _start_refresh(chart: dict, start: date, end: date, compare, as_of: dict[str, str]):
+    """Runs a chart again in the background. With the cubes on the server, in a process of its own:
+    reading thousands of rows through the .NET connector in a thread of the app slows every page of
+    the app many times over (each row hands Python's lock back and forth), and the pages slow it down."""
+    if config.resolve_source() != "ssas":
+        return _background.submit(_run_and_save, chart, start, end, compare, as_of)
+    import subprocess
+    import sys
+    from pathlib import Path
+    key = saved_key(chart, start, end, compare)
+    folder = _saved_dir()
+    folder.mkdir(parents=True, exist_ok=True)
+    job = folder / f"{key}.job.json"
+    job.write_text(json.dumps({"chart": chart, "start": start.isoformat(), "end": end.isoformat(),
+                               "compare": [d.isoformat() for d in compare] if compare else None,
+                               "as_of": as_of}), encoding="utf-8")
+    started = datetime.now().isoformat()
+    proc = subprocess.Popen([sys.executable, str(Path(__file__).resolve()), "refresh", str(job)],
+                            cwd=str(config.BASE_DIR), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    return _Refresh(proc, key, started)
+
+
 def results_for(charts_: list[dict], start: date, end: date, compare: tuple[date, date] | None,
                 as_of: dict[str, str], force: bool = False) -> tuple[dict[str, dict], list[str]]:
     """Every chart's numbers: saved ones at once, missing ones run now (in parallel). Returns (results by
@@ -317,10 +360,12 @@ def results_for(charts_: list[dict], start: date, end: date, compare: tuple[date
     with _saved_lock:
         for c in stale:
             key = saved_key(c, start, end, compare)
+            if key in _running and not _running[key].done():
+                updating.append(key)  # already on its way
+                continue
             if now.timestamp() - _failed.get(key, 0) < 300:
                 continue  # failed a moment ago: keep showing the saved numbers
-            if key not in _running or _running[key].done():
-                _running[key] = _background.submit(_run_and_save, c, start, end, compare, as_of)
+            _running[key] = _start_refresh(c, start, end, compare, as_of)
             updating.append(key)
     return results, updating
 
@@ -463,3 +508,15 @@ def create_starter(dashboard_id: str, cube: str, start: date, end: date, on_done
         if item["title"] in built:
             add_chart(dashboard_id, built[item["title"]])
     return failed
+
+
+if __name__ == "__main__":
+    import sys
+    from pathlib import Path
+    if sys.argv[1:2] == ["refresh"]:  # a background refresh in its own process (see _start_refresh)
+        job_file = Path(sys.argv[2])
+        job = json.loads(job_file.read_text(encoding="utf-8"))
+        period = (date.fromisoformat(job["start"]), date.fromisoformat(job["end"]))
+        versus = tuple(date.fromisoformat(d) for d in job["compare"]) if job["compare"] else None
+        _run_and_save(job["chart"], *period, versus, job["as_of"])
+        job_file.unlink(missing_ok=True)
