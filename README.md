@@ -142,10 +142,13 @@ How a question is answered, quickly and cheaply:
   asks to show the last answer differently ("as a pie") is redrawn without planning.
 - **Pick the cubes**: Claude Haiku (fast, cheap) reads the cards and picks the cube(s) the question needs;
   the words of the question are also looked up as exact values in every cube ("UAE" -> Market = "UAE").
-- **Plan**: Claude Sonnet gets the cards, the picked cubes' full details, how they join, the values found
-  and verified examples - so it rarely needs extra rounds. The rules, cards and each cube's details are
-  cached for an hour (the cubes always in the same order, so the next question about them reads them for
-  a twentieth of the price). Planning runs at medium effort (`CLAUDE_PLAN_EFFORT`).
+- **Plan**: Claude Sonnet gets every cube in one line, the picked cubes' details (the columns and measures
+  their meaning layer names - a third of the full structure, which it can still read with a tool), how
+  they join, the values found and verified examples - so it rarely needs extra rounds. The rules and the
+  cube list are cached for an hour; a cube's details for 5 minutes on a first question about it, and for
+  an hour once it is asked about again (the cubes always in the same order, so the next question reads
+  them for a twentieth of the price). A new question is prepared and its cubes picked at the same time.
+  Planning runs at medium effort (`CLAUDE_PLAN_EFFORT`).
 - **Checks in code before anything runs**: every table, column and measure must exist in its cube (a
   misspelt name goes back to Claude with the closest real one), hidden measures are refused, the dates
   filtered must be the question's dates, and filter values must be in the data. A plan that returns no
@@ -159,7 +162,11 @@ How a question is answered, quickly and cheaply:
 Each cube is a separate Analysis Services database, so a question that needs two cubes becomes one
 DAX query per cube, run in parallel and joined in memory on a shared dimension (aggregated to the same
 grain first, full outer join so nothing is dropped, ratios computed after the join). The query box
-under each answer shows every step and the joining SQL.
+under each answer shows every step and the joining SQL. For "the top 10 customers with their X from
+another cube", a small first step finds the 10 and the other cubes are asked only about them
+(`@KEYS(top, Code)` in a step is replaced with the codes that step returned): 10 customers read instead
+of all of them (a dashboard chart went from 31 s to 6 s). A step that is joined is never cut short:
+above `STEP_MAX_ROWS` rows (100,000) the plan fails and Claude aggregates it instead.
 
 Run it again after cubes change: the Cubes page says which cubes are new or changed, and **Update new
 and changed cubes** only asks Claude about those. The layer is built with `CLAUDE_LAYER_MODEL`
@@ -260,6 +267,11 @@ and every chart follows what you pick:
 - **A month** - click the month's name.
 Then **Apply**. Every chart always follows the dashboard's dates (never the dates of the question it
 came from).
+
+A dashboard opens with the numbers each chart had the last time it ran (saved in `data/dashboard_results/`),
+so it doesn't wait for the cubes. A chart is run again only when one of its cubes has new data since (the
+server's last update time, checked every 5 minutes) or its numbers are a day old - in the background,
+the page updating itself when the new numbers are in. **↻** next to the period runs every chart again now.
 
 **Compare** (next to the period, e.g. *vs 1 Jan – 15 Oct 2025*) sets one comparison for the whole
 dashboard: **previous period** (the same days of the previous week, month, quarter or year - "this month"

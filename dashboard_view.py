@@ -23,12 +23,16 @@ import charts
 from charts import build_figure, suggest, trim
 
 
-@st.cache_data(ttl=900, show_spinner=False)
-def run_cached(keys: tuple, start: date, end: date, compare: tuple[date, date] | None) -> dict:
-    return dashboards.run_all([dashboards.chart_from_key(k) for k in keys], start, end, compare)
+@st.fragment(run_every=3)
+def wait_for_update(keys: list[str]) -> None:
+    """While charts are brought up to date in the background: a note, then the page again with the new numbers."""
+    if dashboards.still_updating(keys):
+        st.caption(":material/sync: Showing the last numbers while the latest load...")
+    else:
+        st.rerun()
 
 
-@st.cache_data(ttl=900, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def data_as_of(cube: str) -> str:
     try:
         return get_backend(cube).data_as_of()
@@ -380,9 +384,9 @@ def render(dashboard_id: str) -> None:
     with st.container(horizontal=True, vertical_alignment="center", key="dash_filters"):
         start, end, _ = period_picker.picker()
         versus = period_picker.compare_picker()
-        if st.button("", icon=":material/refresh:", type="tertiary", key="dash_refresh",
-                     help="Get the latest numbers from the server"):
-            run_cached.clear()
+        force = st.button("", icon=":material/refresh:", type="tertiary", key="dash_refresh",
+                          help="Get the latest numbers from the server")
+        if force:
             data_as_of.clear()
         updated, per_cube = updated_text(board_cubes)
         if updated:
@@ -410,8 +414,10 @@ def render(dashboard_id: str) -> None:
         return
 
     with st.spinner("Loading the latest numbers..."):
-        results = run_cached(tuple(dashboards.run_key(c) for c in charts), start, end,
-                             (versus.start, versus.end) if versus else None)
+        results, updating = dashboards.results_for(charts, start, end, (versus.start, versus.end) if versus else None,
+                                                   {cb: data_as_of(cb) for cb in board_cubes}, force=force)
+    if updating:
+        wait_for_update(updating)
 
     kpis = [c for c in charts if c["chart_type"] == "kpi"]
     for i in range(0, len(kpis), 4):

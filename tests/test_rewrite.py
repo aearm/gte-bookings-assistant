@@ -94,3 +94,16 @@ def test_steps_that_filter_by_month_names_are_not_checked():
     plans.check_periods(exclusive_end, [period])
     with pytest.raises(ValueError, match="Q3 2026"):
         plans.check_periods(plans.Plan([plans.Step("s", "C", "... >= DATE(2026,6,1) && ... < DATE(2026,9,1)")]), [period])
+
+
+def test_a_comparison_must_keep_every_period():
+    this, last = rewrite.Period("Jan-Sep 2026", date(2026, 1, 1), date(2026, 10, 1)), \
+        rewrite.Period("Jan-Sep 2025", date(2025, 1, 1), date(2025, 10, 1))
+    only_2025 = plans.Plan([plans.Step("s", "C", "... >= DATE(2025,1,1) && ... <= DATE(2025,9,30)")])
+    with pytest.raises(ValueError, match="filters no dates of \"Jan-Sep 2026\""):
+        plans.check_periods(only_2025, [this, last])
+    one_range = plans.Plan([plans.Step("s", "C", "... >= DATE(2025,1,1) && ... <= DATE(2026,9,30)")])
+    plans.check_periods(one_range, [this, last])  # one range over both, grouped by year: fine
+    both = plans.Plan([plans.Step("a", "C", "DATE(2026,1,1) DATE(2026,9,30)"), plans.Step("b", "C", "DATE(2025,1,1) DATE(2025,9,30)")])
+    plans.check_periods(both, [this, last])
+    plans.check_periods(plans.Plan([plans.Step("s", "C", "DATE(2026,2,30)")]), [])  # no periods: nothing checked

@@ -21,7 +21,7 @@ import llm
 import semantic
 import value_index
 
-MAX_CUBES = 3
+MAX_CUBES = 5  # as many as a plan may join (plans.MAX_STEPS), so none has to be read in an extra round
 _STOP = set("""a an and are as at be between both by can compare compared did do does each for from had has have
 how i in into is it its last many me month months much my next no not of on or our per show shown sort than that
 the their them then there these this those to top total totals up versus vs was we week weeks were what when where
@@ -98,6 +98,23 @@ def _state() -> dict:
 def cards_text() -> str:
     """All the cubes' index cards and shared dimensions: what Claude always reads (a few thousand tokens)."""
     return _state()["cards"]
+
+
+def planner_cards() -> str:
+    """The cards for the planner, who gets the picked cubes in full anyway: every cube in one line (what
+    it is), with which cube for what and the shared dimensions - about a fifth of the full cards."""
+    text = cards_text()
+    head, _, rest = text.partition("\n## Cubes\n")
+    if not rest:
+        return text
+    body, _, shared = rest.partition("\n## Shared dimensions")
+    lines = []
+    for card in re.split(r"^### ", body, flags=re.MULTILINE)[1:]:
+        title, _, desc = card.partition("\n")
+        first = desc.strip().split("\n")[0]
+        lines.append(f"- {title.strip()}: {first[:220]}")
+    return (head + "\n## Cubes (one line each; read a cube's details with get_cube_details)\n" + "\n".join(lines)
+            + ("\n\n## Shared dimensions" + shared if shared else ""))
 
 
 def join_path(chosen: list[str]) -> str:

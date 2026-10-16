@@ -490,6 +490,22 @@ def _filters_with_helpers(query: str, needs: dict[str, list[str]]) -> str:
     return "".join(out) + query[pos:]
 
 
+def compact_structure(schema_text: str, meaning: str) -> str:
+    """The cube's structure cut to what its meaning layer refers to: the columns it names (with their helper
+    columns and values), not the measures it hides or the dozens of date attributes no question needs. A
+    third of the size; get_cube_details still gives everything."""
+    keep = []
+    for line in schema_text.splitlines():
+        if line.startswith("# Model"):
+            keep.append(line)
+        elif m := re.match(r"- (" + _COL + r") \(", line):
+            if m.group(1) in meaning:
+                keep.append(line if len(line) <= 400 else line[:400] + " ...")
+    return (keep[0] + "\n" if keep and keep[0].startswith("# Model") else "") + (
+        "## Columns the meaning layer names (exact names, helper columns and values; get_cube_details gives "
+        "every column and measure of the cube)\n" + "\n".join(k for k in keep if not k.startswith("# Model")))
+
+
 def composite_key_hint(cube: str, error: str) -> str:
     """For the server's 'Column [X] is part of composite key' error: which helper columns go with X, and
     how to filter it, so Claude's retry fixes it."""

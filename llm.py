@@ -90,7 +90,8 @@ DAX_RULES = """Rules for DAX queries (Analysis Services cubes):
   for long periods. Never return raw transaction-level rows unless asked.
 - When a breakdown has many values (hotels, customers, destinations, suppliers...) and the question
   doesn't ask for all of them, return the top 25 by the main number with TOPN, and say so in the
-  understanding (e.g. "top 25 hotels by sales")."""
+  understanding (e.g. "top 25 hotels by sales"). Countries are always returned in full (a map shows
+  them all, and they must add up to the total)."""
 
 SQL_RULES = """Rules for SQL queries (DuckDB dialect, local data files):
 - One read-only SELECT statement (WITH ... SELECT is fine). No other statements.
@@ -105,7 +106,8 @@ SQL_RULES = """Rules for SQL queries (DuckDB dialect, local data files):
 - Keep results small (well under MAX_ROWS rows): pick a sensible grain, e.g. months not days
   for long periods. Never return raw row-level data unless asked.
 - When a breakdown has many values and the question doesn't ask for all of them, return the top 25
-  by the main number (ORDER BY ... DESC LIMIT 25), and say so in the understanding.
+  by the main number (ORDER BY ... DESC LIMIT 25), and say so in the understanding. Countries are always
+  returned in full (a map shows them all).
 - Dates: use DATE 'YYYY-MM-DD' literals, not current_date.
 - Use the listed example values to match filters exactly (e.g. country or status spellings)."""
 
@@ -117,7 +119,9 @@ TODAY_DATE; use it for "this year", "last month" and so on.
 
 How to answer:
 1. Use the cube(s) given in full with the question when they hold the numbers asked for. Prefer ONE
-   cube; use several only when the numbers asked for live in different cubes.
+   cube; use several only when the numbers asked for live in different cubes. When the business words
+   found in the question name a measure of a cube, use exactly that measure from that cube, even if
+   another cube you use has a measure with a similar name (it means something else).
 2. Write queries only against cubes whose full details you have. If another cube fits better, read its
    details first with get_cube_details.
 3. Write the plan:
@@ -135,6 +139,13 @@ Joining cubes (several steps):
   columns), on the date each cube's question means (bookings by booking date, payments by payment date...).
 - Use FULL OUTER JOIN and COALESCE the keys when comparing numbers from different cubes, so members
   found in one cube only are kept; use an INNER JOIN only when the question asks for members in both.
+- Top N members across steps (e.g. the top 10 customers by bookings, with their searches from another
+  cube, or by day): add a small first step that only finds the top N (TOPN over the ranking measure,
+  grouped by the member's key and name), and in every other step keep only those members with
+  @KEYS(<that step's name>, <its key column>), which the app replaces with the values that step
+  returned, e.g. KEEPFILTERS(FILTER(ALL('Cliente'[Customer Code]), 'Cliente'[Customer Code] IN
+  @KEYS(top, Code))). The other steps then read 10 members instead of all of them (much faster). Steps
+  using @KEYS run after the step they name.
 - Never add up averages or percentages; compute ratios in combine_sql from summable numbers, e.g.
   SUM(p."Payments") / NULLIF(SUM(b."Sales"), 0).
 - In combine_sql, quote column names in double quotes. A step's result columns are named like this:
@@ -170,8 +181,10 @@ CHECK_RULES = """Check the data with your tools only where needed (at most MAX_R
   country), or matches only a value with no data, ask: set needs_clarification and give the real values
   as options, e.g. "Market = UAE". Don't ask if an Agreed glossary entry or the business notes settle
   it; a Draft glossary entry does not settle which values to filter on.
-- If you are unsure a query returns data (or which columns it returns, before joining it), check it
-  with preview_query.
+- If you are unsure a query returns data, check it with preview_query. Don't preview a query only to
+  learn its result columns: they are named as the joining rules say.
+- Make every check you need in the same turn (several tool calls together), then write the plan: each
+  extra turn makes the answer slower and dearer.
 - Filter only on exact values you found."""
 
 _STEP = {
@@ -376,6 +389,19 @@ def _structured_call(system: list, tool: dict, user_text: str | list, tools: lis
     raise RuntimeError("Claude did not finish checking the data. Try a simpler question.")
 
 
+_details_used: dict[str, float] = {}  # cube -> when a question last read its details (this process)
+
+
+def details_ttl(cube: str) -> str:
+    """How long to cache a cube's details. Writing them for an hour costs 2x the input price, for five
+    minutes 1.25x; reading them back costs a twentieth. A cube already asked about in the last hour is
+    likely asked about again, so it is kept for an hour; a first question pays the cheaper write."""
+    now = time.time()
+    recent = now - _details_used.get(cube, 0) < 3600
+    _details_used[cube] = now
+    return "1h" if recent else "5m"
+
+
 def plan_rules(language: str, today: str) -> str:
     rules = PLAN_RULES.replace("LANGUAGE_RULES", DAX_RULES if language == "DAX" else SQL_RULES)
     return rules.replace("MAX_ROWS", str(config.MAX_ROWS)).replace("TODAY_DATE", today)
@@ -405,7 +431,7 @@ def question_to_plan(question: str, cards: str, details: list[tuple[str, str]], 
     for i, (cube, text) in enumerate(details):
         block = {"type": "text", "text": f"# Full details of the cube \"{cube}\"\n{text}"}
         if i < 2:  # at most 4 cache points per request: system, two cubes, and the conversation
-            block["cache_control"] = {"type": "ephemeral", "ttl": "1h"}
+            block["cache_control"] = {"type": "ephemeral", "ttl": details_ttl(cube)}
         blocks.append(block)
 
     parts = []

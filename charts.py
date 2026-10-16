@@ -164,6 +164,12 @@ def fit(df: pd.DataFrame, spec: dict) -> dict:
         return {**spec, "chart_type": "table"}
     if not x and kind != "scatter":
         return {**suggest(df), "title": spec.get("title", ""), "summary": spec.get("summary", "")}
+    if (color and kind in ("bar", "horizontal_bar", "line", "area") and is_time_column(df[color])
+            and not is_time_column(df[x]) and df[color].nunique() > MANY_PERIODS):
+        # e.g. a "2 days side by side" chart on a dashboard showing the whole year: hundreds of days as
+        # colours can't be read, so the days go along the axis, one line per member
+        x, color, kind = color, x, "line"
+        spec = {**spec, "style": {**(spec.get("style") or {}), "measures": "auto"}}  # "shades per day" no longer applies
     ok = {
         "map": x and is_country_column(df[x]),
         "donut": 2 <= len(df) <= 7 and len(ys) >= 1 and (df[ys[0]].fillna(0) >= 0).all(),
@@ -181,6 +187,7 @@ def fit(df: pd.DataFrame, spec: dict) -> dict:
 
 
 SHOW_LIMIT = {"bar": 25, "horizontal_bar": 25, "stacked_bar": 25, "treemap": 100}
+MANY_PERIODS = 12  # more days or months than this as colours can't be told apart
 
 
 def trim(df: pd.DataFrame, spec: dict) -> tuple[pd.DataFrame, str]:
@@ -517,8 +524,9 @@ ONE_CHART_MAX = 3
 
 def wants_one_chart(df: pd.DataFrame, spec: dict) -> bool:
     ys = [y for y in spec.get("y") or [] if y in df.columns]
+    color = spec.get("color") or ""
     return ((spec.get("style") or {}).get("measures") == "one_chart" and spec.get("chart_type") in PANEL_KINDS
-            and 2 <= len(ys) <= ONE_CHART_MAX)
+            and 2 <= len(ys) <= ONE_CHART_MAX and (not color or color not in df.columns or df[color].nunique() <= 4))
 
 
 def _shade(color: str, toward: str, amount: float) -> str:
@@ -545,10 +553,16 @@ def _one_chart(df: pd.DataFrame, spec: dict, dark: bool, height: int | None, sho
         order = sorted(order)
     data = df.assign(_label=labels)
     if color:
-        names = [str(v) for v in data[color].drop_duplicates()]
-        if is_time_column(data[color]):
-            names = [names[i] for i in time_order(names)]
-        groups = [(n, data[data[color].astype(str) == n]) for n in names]
+        key = data[color]
+        if pd.api.types.is_datetime64_any_dtype(key):  # dates as "14 Oct 2026", in time order
+            key = key.dt.normalize()
+            key = key.map(lambda d: f"{d.day} {d:%b %Y}" if pd.notna(d) else "")
+            in_time = data[color].sort_values(kind="stable").index
+        else:
+            key = key.astype(str)
+            in_time = key.index[time_order(key.tolist())] if is_time_column(data[color]) else key.index
+        names = list(dict.fromkeys(key[in_time]))
+        groups = [(n, data[key == n]) for n in names]
     else:
         groups = [("", data)]
 
@@ -592,7 +606,8 @@ def _one_chart(df: pd.DataFrame, spec: dict, dark: bool, height: int | None, sho
     title = spec.get("title", "") if show_title else ""
     _style(fig, dark, max(height or 0, 440), title)
     fig.update_layout(margin=dict(t=44 if title else 8),  # the legend below: each measure, then its days
-                      legend=dict(y=-0.12, yanchor="top", groupclick="toggleitem", tracegroupgap=24))
+                      # at the foot of the figure, so slanted category names above it never run into it
+                      legend=dict(yref="container", y=0, yanchor="bottom", groupclick="toggleitem", tracegroupgap=24))
     for i, y in enumerate(ys):  # _style greys the axes: each measure's axis keeps its bars' colour
         key = "yaxis" if i == 0 else f"yaxis{i + 1}"
         fig.layout[key].tickfont.color = fig.layout[key].title.font.color = colors[i % len(colors)]

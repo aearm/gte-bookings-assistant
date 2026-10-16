@@ -133,3 +133,25 @@ def test_names_a_cube_does_not_have_are_caught_with_the_closest_real_one(monkeyp
     assert check(good.replace("ORDER BY [Bookings]", "ORDER BY [Booking]")) == ["[Booking] (did you mean [Bookings]?)"]
     with pytest.raises(ValueError, match="not in the cube"):
         plans.validate(plans.Plan([plans.Step("s", "Cube", good.replace("[Sale]", "[Sales]"))]))
+
+
+def test_a_step_keeps_only_the_members_another_step_picked(two_cubes):
+    plan = plans.Plan.from_dict({"steps": [
+        {"name": "top", "cube": "Bookings", "query": "EVALUATE TOPN(2, ...)"},
+        {"name": "paid", "cube": "Payments", "query": "EVALUATE ... 'C'[Code] IN @KEYS(top, code) ..."}],
+        "combine_sql": 'SELECT t."Code", p."Paid" FROM top t JOIN paid p ON upper(trim(p."Code")) = upper(trim(t."Code"))'})
+    plans.validate(plan)
+    assert plans.waits_for(plan.steps[1]) == {"top"}
+    plans.run(plan)
+    assert two_cubes["Payments"].queries == ['EVALUATE ... \'C\'[Code] IN {"A1", "b2", "C3"} ...']  # after "top" ran
+    assert plans._keys_literal([3, 1, 3], "DAX") == "{3, 1}" and plans._keys_literal([], "SQL") == "('@none@')"
+    assert plans._keys_literal(['O\'Hara', 'x"y'], "SQL") == "('O''Hara', 'x\"y')"
+    with pytest.raises(ValueError, match="not another step"):
+        plans.validate(plans.Plan.from_dict({**plan.to_dict(), "steps": [
+            plan.steps[0].__dict__, {**plan.steps[1].__dict__, "query": "... IN @KEYS(nowhere, Code)"}]}))
+
+
+def test_a_step_too_big_to_join_fails_instead_of_being_cut_short(two_cubes, monkeypatch):
+    monkeypatch.setattr(plans.config, "STEP_MAX_ROWS", 2)  # Bookings returns 3 rows
+    with pytest.raises(plans.StepError, match="more than 2 rows, so it was not joined"):
+        plans.run(plans.Plan.from_dict(PLAN).with_dates(date(2026, 1, 1), date(2026, 2, 1)))

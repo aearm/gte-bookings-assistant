@@ -198,3 +198,29 @@ def test_measures_together_in_one_chart_get_an_axis_each():
     four = {**spec, "y": ["Requests", "Bookings", "Sales", "Margin"]}
     assert not charts.wants_one_chart(df.assign(Margin=0.1), four)  # more than 3 axes can't be read: panels
     assert charts.needs_panels(df.assign(Margin=0.1), four)
+
+
+def test_one_chart_with_real_dates_as_the_breakdown():
+    days = pd.to_datetime(["2026-10-15", "2026-10-14", "2026-10-15", "2026-10-14"])
+    df = pd.DataFrame({"Date": days, "Customer": ["A", "A", "B", "B"], "Requests": [4e7, 3e7, 2e6, 1e6],
+                       "Bookings": [79, 62, 20, 14], "Sales": [1.7e5, 1.4e5, 5e4, 6e4]})
+    spec = {"chart_type": "bar", "x": "Customer", "y": ["Requests", "Bookings", "Sales"], "color": "Date",
+            "style": {"measures": "one_chart"}}
+    fig = charts.build_figure(df, spec)
+    assert [t.name for t in fig.data[:2]] == ["14 Oct 2026", "15 Oct 2026"]  # earliest first, no midnight time
+    assert all(len([v for v in t.y if v == v]) == 2 for t in fig.data)  # every bar has its value: none empty
+    assert list(fig.data[1].y) == [4e7, 2e6]  # 15 Oct requests of A and B
+
+
+def test_a_two_day_chart_over_a_whole_year_is_drawn_over_time():
+    # made for "yesterday vs the day before", then shown on a dashboard for the whole year
+    days = pd.date_range("2026-01-01", periods=30)
+    df = pd.DataFrame([{"Day": d, "Customer": c, "Requests": 1e6 * (i + 1), "Bookings": 10.0 + i, "Sales": 5e4}
+                       for d in days for i, c in enumerate(["A", "B", "C"])])
+    spec = {"chart_type": "bar", "x": "Customer", "y": ["Requests", "Bookings", "Sales"], "color": "Day",
+            "style": {"measures": "one_chart"}}
+    fitted = charts.fit(df, spec)
+    assert (fitted["chart_type"], fitted["x"], fitted["color"]) == ("line", "Day", "Customer")
+    assert not charts.wants_one_chart(df, fitted)  # 3 customers x 3 measures on 3 axes: one panel per measure instead
+    fig = charts.build_figure(df, spec)
+    assert len(fig.data) == 9  # a line per customer in each measure's panel, not 90 bar series

@@ -30,3 +30,4 @@ data/updates/
 data/update_status.json
 data/installed_files.json
 data/eval/
+data/dashboard_results/

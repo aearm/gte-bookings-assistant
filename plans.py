@@ -87,6 +87,43 @@ class Plan:
         return all("@START" in s.query and "@END" in s.query for s in self.steps)
 
 
+# A step can keep only the members another step returned: @KEYS(top, Code) becomes the list of that
+# step's "Code" values ({"1042", "2051"} in DAX, ('1042', '2051') in SQL) when that step has run. So a
+# "top 10 customers with their searches" plan asks the second cube about 10 customers, not all of them.
+_KEYS = re.compile(r"@KEYS\(\s*([A-Za-z_]\w*)\s*,\s*([^)]+?)\s*\)")
+
+
+def waits_for(step: Step) -> set[str]:
+    return {_table_name(name) for name, _ in _KEYS.findall(step.query)}
+
+
+def _keys_literal(values: list, language: str) -> str:
+    values = [v for v in dict.fromkeys(values) if v is not None and v == v]
+    if not values:
+        values = ["@none@"]  # matches nothing, keeps the query valid
+    numbers = all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in values)
+    if language == "DAX":
+        items = [str(v) if numbers else '"' + str(v).replace('"', '""') + '"' for v in values]
+        return "{" + ", ".join(items) + "}"
+    items = [str(v) if numbers else "'" + str(v).replace("'", "''") + "'" for v in values]
+    return "(" + ", ".join(items) + ")"
+
+
+def _with_keys(step: Step, frames: dict[str, pd.DataFrame]) -> Step:
+    """The step with every @KEYS(...) replaced by the values the step it names returned."""
+    language = get_backend(step.cube).language
+
+    def values(m):
+        name, column = _table_name(m.group(1)), m.group(2).strip().strip("\"'[]")
+        df = frames[name]
+        match = next((c for c in df.columns if str(c).lower() == column.lower()), None)
+        if match is None:
+            raise StepError(f"Step {step.name} uses @KEYS({m.group(1)}, {column}), but step {name} returned no "
+                            f"column {column!r}; its columns are: " + ", ".join(f'"{c}"' for c in df.columns))
+        return _keys_literal(df[match].tolist(), language)
+    return Step(step.name, step.cube, _KEYS.sub(values, step.query))
+
+
 def _table_name(text: str) -> str:
     name = re.sub(r"[^a-z0-9_]+", "_", str(text).lower()).strip("_") or "step"
     return name if not name[0].isdigit() else f"s_{name}"
@@ -112,6 +149,10 @@ def validate(plan: Plan, allowed_cubes: list[str] | None = None) -> None:
         if used:  # helpers, duplicates, broken or empty measures (the cube's meaning layer)
             raise ValueError(f"Step {s.name} uses {', '.join(used)}, which must not be used in \"{s.cube}\" ("
                              + "; ".join(f"{m}: {off[m]}" for m in used) + "). Use the measures its meaning layer lists.")
+        others = {o.name for o in plan.steps if o is not s}
+        if waits_for(s) - others:
+            raise ValueError(f"Step {s.name} uses @KEYS of {', '.join(sorted(waits_for(s) - others))}, which is not "
+                             "another step of the plan. Write @KEYS(<another step's name>, <its result column>).")
         unknown = unknown_names(s)
         if unknown:  # a misspelt or made-up name: Claude fixes it from the suggestion instead of the server failing
             raise ValueError(f"Step {s.name} uses names that are not in the cube \"{s.cube}\": " + "; ".join(unknown)
@@ -192,23 +233,37 @@ _DATE_LITERAL = re.compile(r"\bDATE\s*\(\s*(\d{4})\s*,\s*(\d{1,2})\s*,\s*(\d{1,2
                            re.IGNORECASE)
 
 
+def _dates_in(query: str) -> set:
+    """The dates a query filters on (DATE(2026,9,1) or DATE '2026-09-01'); None for an impossible one."""
+    found = set()
+    for m in _DATE_LITERAL.finditer(query):
+        y, mo, d = (g for g in m.groups() if g is not None)
+        try:
+            found.add(date(int(y), int(mo), int(d)))
+        except ValueError:
+            found.add(None)
+    return found
+
+
 def check_periods(plan: Plan, periods: list) -> None:
     """Raises when a step filters on dates and none of them is a first or last day of the question's
-    periods (worked out by code, see rewrite.py): the plan counted another period. Steps that filter by
-    month names or years instead of dates aren't checked."""
+    periods (worked out by code, see rewrite.py): the plan counted another period. In a comparison, each
+    period must be in the plan. Steps that filter by month names or years instead of dates aren't checked."""
     if not periods:
         return
     edges = set()
     for p in periods:
         edges |= {p.start, p.end - timedelta(days=1), p.end}
+    every = {d for s in plan.steps for d in _dates_in(s.query) if d}
+    if every and len(periods) > 1:  # a comparison: each of its periods must be in the plan
+        for p in periods:
+            inside = any(p.start <= d <= p.end for d in every)
+            spanned = min(every) <= p.start and max(every) >= p.end - timedelta(days=1)
+            if not inside and not spanned:
+                raise ValueError(f"The plan filters no dates of {p.text()}, one of the periods the question compares "
+                                 "(worked out from today's date). Include every period.")
     for s in plan.steps:
-        found = set()
-        for m in _DATE_LITERAL.finditer(s.query):
-            y, mo, d = (g for g in m.groups() if g is not None)
-            try:
-                found.add(date(int(y), int(mo), int(d)))
-            except ValueError:
-                found.add(None)
+        found = _dates_in(s.query)
         if found and not found & edges:
             shown = ", ".join(sorted(d.isoformat() for d in found if d)) or "an impossible date"
             raise ValueError(f"Step {s.name} filters on {shown}, but the question's period"
@@ -249,14 +304,25 @@ def run(plan: Plan, max_rows: int | None = None) -> pd.DataFrame:
 
     def one(s: Step) -> pd.DataFrame:
         try:
-            return _run_step(s, max_rows)
+            df = _run_step(s, config.STEP_MAX_ROWS + 1)
         except StepError:
             raise
         except Exception as exc:
             raise StepError(f"Step {s.name} (cube \"{s.cube}\") failed: {exc}") from exc
+        if len(df) > config.STEP_MAX_ROWS:  # never join part of a step: the totals would be wrong
+            raise StepError(f"Step {s.name} (cube \"{s.cube}\") returned more than {config.STEP_MAX_ROWS:,} rows, "
+                            "so it was not joined. Aggregate it to the grain of the answer, or keep only the "
+                            "members another step picked with @KEYS.")
+        return df
     workers = min(4, len(plan.steps)) if config.resolve_source() == "ssas" else 1
-    with ThreadPoolExecutor(max_workers=workers) as pool:
-        frames = dict(zip([s.name for s in plan.steps], pool.map(one, plan.steps)))
+    frames, waiting = {}, list(plan.steps)
+    while waiting:  # in rounds: the steps whose @KEYS steps have run, in parallel
+        ready = [s for s in waiting if waits_for(s) <= set(frames)]
+        if not ready:
+            raise StepError("These steps wait for each other's @KEYS: " + ", ".join(s.name for s in waiting))
+        with ThreadPoolExecutor(max_workers=min(workers, len(ready))) as pool:
+            frames.update(zip([s.name for s in ready], pool.map(one, [_with_keys(s, frames) for s in ready])))
+        waiting = [s for s in waiting if s not in ready]
     return combine(frames, plan.combine_sql, max_rows)
 
 

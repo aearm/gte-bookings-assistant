@@ -92,7 +92,7 @@ def run(allowed: list[str], name: str, args: dict) -> str:
     if cube and cube not in allowed:
         return f"Unknown cube \"{cube}\". Use one of: " + ", ".join(f'"{c}"' for c in allowed)
     if name == "get_cube_details":
-        return data_layer.cube_details(cube)
+        return data_layer.cube_details(cube, full=True)  # everything, when the compact details given lack something
     if name == "find_values":
         return _find(allowed if not cube else [cube], str(args.get("text", "")), str(args.get("column", "")))
     if name == "preview_query":

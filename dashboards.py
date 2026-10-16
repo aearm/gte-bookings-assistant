@@ -238,6 +238,97 @@ def run_all(charts: list[dict], start: date, end: date, compare: tuple[date, dat
     return {cid: f.result() for cid, f in futures.items()}
 
 
+# ---------------------------------------------------------------- saved results --
+# A dashboard opens with the numbers each chart had the last time it ran (data/dashboard_results/), so
+# it never waits for the cubes just to show them again. A chart is run again - in the background, the
+# page updating itself when it's done - only when one of its cubes has new data since (the server's last
+# update time) or its numbers are a day old. A chart never run for this period runs straight away.
+
+MAX_AGE_HOURS = 24
+_background = ThreadPoolExecutor(max_workers=2)
+_running: dict[str, object] = {}   # saved-result key -> Future of its background run
+_failed: dict[str, float] = {}     # key -> when its last background run failed (not retried for 5 minutes)
+_saved_lock = threading.Lock()
+
+
+def _saved_dir():
+    return config.DATA_DIR / "dashboard_results"
+
+
+def saved_key(chart: dict, start: date, end: date, compare: tuple[date, date] | None) -> str:
+    import hashlib
+    text = json.dumps([run_key(chart), str(start), str(end), [str(d) for d in compare] if compare else None])
+    return hashlib.sha256(text.encode()).hexdigest()[:24]
+
+
+def _load_saved(key: str) -> dict | None:
+    import pickle
+    path = _saved_dir() / f"{key}.pkl"
+    try:
+        with open(path, "rb") as f:
+            return pickle.load(f)
+    except (OSError, EOFError, pickle.UnpicklingError, AttributeError, ImportError):
+        return None
+
+
+def _save(key: str, result: dict, as_of: dict[str, str]) -> None:
+    import os
+    import pickle
+    folder = _saved_dir()
+    folder.mkdir(parents=True, exist_ok=True)
+    tmp = folder / f"{key}.{threading.get_ident()}.tmp"
+    with open(tmp, "wb") as f:
+        pickle.dump({"result": result, "as_of": as_of, "saved": datetime.now().isoformat()}, f)
+    os.replace(tmp, folder / f"{key}.pkl")
+
+
+def _run_and_save(chart: dict, start: date, end: date, compare, as_of: dict[str, str]) -> dict:
+    key = saved_key(chart, start, end, compare)
+    result = _run_one(chart, start, end, compare)
+    if result["error"]:
+        _failed[key] = datetime.now().timestamp()
+    else:
+        _save(key, result, {cb: as_of.get(cb, "") for cb in plans.Plan.from_chart(chart).cubes})
+    return result
+
+
+def results_for(charts_: list[dict], start: date, end: date, compare: tuple[date, date] | None,
+                as_of: dict[str, str], force: bool = False) -> tuple[dict[str, dict], list[str]]:
+    """Every chart's numbers: saved ones at once, missing ones run now (in parallel). Returns (results by
+    chart id, ids of charts being brought up to date in the background). force = run everything now."""
+    results, missing, stale = {}, [], []
+    now = datetime.now()
+    for c in charts_:
+        saved = None if force else _load_saved(saved_key(c, start, end, compare))
+        if saved is None:
+            missing.append(c)
+            continue
+        results[c["id"]] = saved["result"]
+        newer = any(as_of.get(cb) and saved["as_of"].get(cb) != as_of[cb] for cb in plans.Plan.from_chart(c).cubes)
+        old = (now - datetime.fromisoformat(saved["saved"])).total_seconds() > MAX_AGE_HOURS * 3600
+        if newer or old:
+            stale.append(c)
+    if missing:
+        workers = 4 if config.resolve_source() == "ssas" else 1
+        with ThreadPoolExecutor(max_workers=min(workers, len(missing))) as pool:
+            futures = {c["id"]: pool.submit(_run_and_save, c, start, end, compare, as_of) for c in missing}
+        results.update({cid: f.result() for cid, f in futures.items()})
+    updating = []
+    with _saved_lock:
+        for c in stale:
+            key = saved_key(c, start, end, compare)
+            if now.timestamp() - _failed.get(key, 0) < 300:
+                continue  # failed a moment ago: keep showing the saved numbers
+            if key not in _running or _running[key].done():
+                _running[key] = _background.submit(_run_and_save, c, start, end, compare, as_of)
+            updating.append(key)
+    return results, updating
+
+
+def still_updating(keys: list[str]) -> bool:
+    return any(k in _running and not _running[k].done() for k in keys)
+
+
 def run_key(chart: dict) -> tuple:
     """What a chart's numbers depend on (for caching the results)."""
     return (chart["id"], json.dumps(plans.Plan.from_chart(chart).to_dict(), sort_keys=True),

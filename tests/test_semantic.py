@@ -89,3 +89,16 @@ def test_filters_on_composite_key_columns_get_their_helpers_too(monkeypatch):
     hint = semantic.composite_key_hint("Zone", "Query (1, 39) Column [Channel] is part of composite key, but not all ...")
     assert "'Channels'[Channel] must always be used together with 'Channels'[Channel.UniqueName]" in hint
     assert semantic.composite_key_hint("Zone", "Some other error") == ""
+
+
+def test_the_planner_gets_only_the_structure_the_meaning_layer_names():
+    schema = ("# Model: Cube\nServer: x\n\n## Measures (use these for any numbers)\n- [Sale]  (in 'Bookings')\n"
+              "- [Hidden Helper]  (in 'Bookings')\n### 'Calendar'\n"
+              "- 'Calendar'[Date] (Date) | group with 'Calendar'[Date.UniqueName]\n"
+              "- 'Calendar'[Day Of Week Name] (Text) | 7 values\n"
+              "- 'Customers'[Market] (Text) | values: \"UAE\" (10), \"ROW\" (5)\n")
+    meaning = "## Meaning layer\n- 'Calendar'[Date]: Booking date (DEFAULT)\n- 'Customers'[Market]: Market\n- [Sale] = Sales"
+    compact = semantic.compact_structure(schema, meaning)
+    assert compact.startswith("# Model: Cube\n## Columns the meaning layer names")
+    assert "'Calendar'[Date] (Date) | group with 'Calendar'[Date.UniqueName]" in compact and '"UAE" (10)' in compact
+    assert "Day Of Week Name" not in compact and "Hidden Helper" not in compact and "[Sale]  (in" not in compact

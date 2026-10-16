@@ -62,6 +62,9 @@ CLAUDE_LAYER_MODEL = os.getenv("CLAUDE_LAYER_MODEL", "claude-opus-5-5")
 
 # Safety limit on rows pulled per question
 MAX_ROWS = int(os.getenv("MAX_ROWS", "5000"))
+# A step of a plan joined with other steps is never cut short (the join would add up part of the
+# data); above this many rows it fails instead, and Claude aggregates it or narrows it with @KEYS.
+STEP_MAX_ROWS = int(os.getenv("STEP_MAX_ROWS", "100000"))
 
 # Files. Each cube has its own folder in models/ (structure, value index, glossary, notes, setup);
 # see cubes.py. The single files below are from before several cubes were supported and are

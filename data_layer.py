@@ -540,9 +540,10 @@ def measure_notes(cube_names: list[str], query: str) -> str:
     return "\n".join(lines)
 
 
-def cube_details(cube: str) -> str:
+def cube_details(cube: str, full: bool = False) -> str:
     """Everything about one cube for writing its query: exact structure and values (physical layer),
-    the business notes and glossary."""
+    the business notes and glossary, and its meaning layer. Unless full, a cube with a meaning layer
+    gets only the structure the meaning layer refers to (Claude reads the full one with get_cube_details)."""
     backend = get_backend(cube)
     text = backend.schema_text()
     if not text:
@@ -550,6 +551,8 @@ def cube_details(cube: str) -> str:
     notes = glossary.notes_for_claude(cube)
     import semantic
     meaning = semantic.details_text(cube)
+    if meaning and not full:
+        text = semantic.compact_structure(text, meaning)
     return (text + ("\n## Business notes and glossary\n" + notes if notes.strip() else "")
             + ("\n\n" + meaning if meaning else ""))
 

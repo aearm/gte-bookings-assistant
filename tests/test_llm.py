@@ -17,6 +17,7 @@ def ask(fake, monkeypatch, **kwargs):
 
 
 def test_plan_after_checking_values(monkeypatch):
+    monkeypatch.setattr(llm, "_details_used", {})
     fake = FakeClaude([("find_values", {"text": "UAE", "cube": "", "column": ""})], plan([STEP]))
     ran = []
     result = ask(fake, monkeypatch, tools=[{"name": "find_values"}],
@@ -31,7 +32,7 @@ def test_plan_after_checking_values(monkeypatch):
     assert "Check the data with your tools" in system  # the same for every question: cached with the rules
     first = fake.requests[0]["messages"][0]["content"]
     assert first[0]["text"].startswith('# Full details of the cube "Bookings"')
-    assert first[0]["cache_control"] == {"type": "ephemeral", "ttl": "1h"}  # read again by the next questions
+    assert first[0]["cache_control"] == {"type": "ephemeral", "ttl": "5m"}  # a first question: the cheaper write
     assert fake.requests[0]["cache_control"] == {"type": "ephemeral"}  # this question's later rounds of checks
     user = fake.user_text()
     assert "Values of the question found in the data" in user and '"UAE"' in user
@@ -134,3 +135,10 @@ def test_requests_are_streamed_with_refusal_fallback(monkeypatch):
     monkeypatch.setattr(llm, "_fallbacks_ok", True)
     assert llm._create(model="claude-sonnet-5-5", max_tokens=10, messages=[]) == "message"
     assert sent["fallbacks"] == "default" and sent["betas"] == ["server-side-fallback-2026-07-01"]
+
+
+def test_a_cube_asked_about_again_is_cached_for_an_hour(monkeypatch):
+    monkeypatch.setattr(llm, "_details_used", {})
+    assert llm.details_ttl("Bookings") == "5m"  # one question may be all: 1.25x to write, not 2x
+    assert llm.details_ttl("Bookings") == "1h"  # asked about again: the next questions read it for 1/20
+    assert llm.details_ttl("Payments") == "5m"

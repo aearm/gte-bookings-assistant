@@ -26,7 +26,9 @@ Return:
   business words (never swap "bookings" or "sales" for another word), and every name, code and value
   exactly as written. Keep everything that changes which numbers are needed: measures, breakdowns and
   their grain (by day, by month), filters, top-N, ranking order, comparisons, and which date a number is
-  counted on (booking date, stay date...). Leave out how to draw it.
+  counted on (booking date, stay date...). Leave out how to draw it. A follow-up that adds something
+  ("and the sales", "the success rate for each", "X too", "as well", "also", "add X") keeps everything
+  the earlier question asked for and adds the new numbers; only "instead", "only X" or "just X" replace.
 - chart_request: only how to show it, in the user's words: chart type, one chart or one panel per
   measure, bars side by side, colours, labels, axes, "as a table". Empty when nothing was said. For a
   chart-only message, its instructions plus earlier ones that still apply.

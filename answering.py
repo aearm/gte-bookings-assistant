@@ -3,6 +3,7 @@ question -> standalone question with its periods' dates (rewrite.py) -> the cube
 the question found in the data and verified examples) -> values checked -> run (each cube, joined) ->
 one retry with the error if it fails. A scope of "" means all the data. Chat's ask() also reuses the
 plan of a question already answered today (answer_memory.py)."""
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import date
 
@@ -72,7 +73,7 @@ def _plan(question, names, scope, picked, context, clarification, instructions, 
           on_step=None, periods=""):
     language = get_backend(names[0]).language
     details = [(c, data_layer.cube_details(c)) for c in picked.cubes]
-    return llm.question_to_plan(question, routing.cards_text(), details, date.today().isoformat(), language,
+    return llm.question_to_plan(question, routing.planner_cards(), details, date.today().isoformat(), language,
                                 context, failed_plan=failed, error=error, clarification=clarification,
                                 instructions=instructions, hits=routing.hits_text(picked.hits, picked.cubes or None),
                                 join=routing.join_path(picked.cubes), examples=answer_memory.examples(question, scope),
@@ -89,8 +90,19 @@ def answer(question: str, scope: str = ALL, context: list[dict] | None = None,
     if not names:
         raise RuntimeError("No cube is set up yet. An admin builds the data layer on the Cubes page.")
     say("Understanding the question")
-    prepared = None
-    if not period and not instructions:  # a dashboard chart's question and period are set already
+    prepared, picked = None, None
+    if not period and not instructions and not context and not clarification and len(names) > 1:
+        # a new question needs nothing from earlier turns: prepare it and pick its cubes at the same time
+        say("Picking the cubes that answer it")
+
+        def prepare():
+            with usage.stage("rewrite"):
+                return rewrite.rewrite(question)
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            preparing = pool.submit(usage.in_thread(prepare))
+            picking = pool.submit(usage.in_thread(lambda: _pick(question, names, None, lambda text: None)))
+            prepared, picked = preparing.result(), picking.result()
+    elif not period and not instructions:  # a dashboard chart's question and period are set already
         with usage.stage("rewrite"):
             prepared = rewrite.rewrite(question, context, clarification)
     if prepared and prepared.kind == "chart_only":  # the same numbers shown differently: no planning
@@ -100,7 +112,7 @@ def answer(question: str, scope: str = ALL, context: list[dict] | None = None,
     if prepared:  # from here on the standalone question stands for the conversation
         question, context = prepared.question, None
     dates = prepared.periods_text() if prepared else ""
-    picked = _pick(question, names, context, say)
+    picked = picked or _pick(question, names, context, say)
     with usage.stage("plan"):
         result = _plan(question, names, scope, picked, context, clarification, instructions, on_step=say,
                        periods=dates)

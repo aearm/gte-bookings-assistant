@@ -48,7 +48,8 @@ def test_answer_joins_tables_and_fixes_capitals(layer, monkeypatch):
                                          {"Manager": "Lina", "Sales": 150.0}]
     assert "'Confirmed'" in out.plan.steps[0].query  # 'confirmed' corrected to the real value
     assert "Pulling the data" in steps
-    assert "### Bookings and agencies" in fake.system_text()  # Claude was given the data layer
+    assert "- Bookings and agencies - cube" in fake.system_text()  # every cube in one line
+    assert "Full details of the cube" in fake.user_text()  # and the picked one in full
 
 
 def test_a_value_that_is_not_in_the_data_becomes_a_question(layer, monkeypatch):
@@ -204,3 +205,26 @@ def test_only_charts_that_show_the_comparison_run_it(layer):
     assert dashboards.run_all(board, date(2026, 3, 1), date(2026, 6, 1))["kpi"]["prev"] is None  # no comparison
     assert dashboards.compares({"chart_type": "line", "date_column": "x", "y": ["Sales", "Cost"]}) is False
     assert dashboards.compares({"chart_type": "bar", "date_column": "", "y": ["Sales"]}) is False  # all dates
+
+
+def test_dashboards_open_with_saved_numbers_and_update_when_the_cube_has_new_data(layer, monkeypatch):
+    query = ('SELECT COUNT(*) AS "Bookings" FROM bookings '
+             'WHERE "Booking Date" >= @START AND "Booking Date" < @END')
+    kpi = {"id": "k1", "chart_type": "kpi", "date_column": '"Booking Date"',
+           "plan": {"steps": [step(query)], "combine_sql": ""}}
+    runs = []
+    real_run = dashboards.plans.run
+    monkeypatch.setattr(dashboards.plans, "run", lambda p, *a: runs.append(1) or real_run(p, *a))
+    period = (date(2026, 1, 1), date(2026, 6, 1))
+    first, updating = dashboards.results_for([kpi], *period, None, {cubes.LOCAL: "16 Oct 2026, 10:00"})
+    assert first["k1"]["df"]["Bookings"].iloc[0] == 12 and updating == [] and len(runs) == 1  # never run: run now
+    again, updating = dashboards.results_for([kpi], *period, None, {cubes.LOCAL: "16 Oct 2026, 10:00"})
+    assert again["k1"]["df"]["Bookings"].iloc[0] == 12 and updating == [] and len(runs) == 1  # saved: no query
+    newer, updating = dashboards.results_for([kpi], *period, None, {cubes.LOCAL: "16 Oct 2026, 11:00"})
+    assert newer["k1"]["df"]["Bookings"].iloc[0] == 12 and len(updating) == 1  # shown at once, updated behind
+    dashboards._running[updating[0]].result(timeout=30)
+    assert not dashboards.still_updating(updating) and len(runs) == 2
+    _, updating = dashboards.results_for([kpi], *period, None, {cubes.LOCAL: "16 Oct 2026, 11:00"})
+    assert updating == [] and len(runs) == 2  # up to date now
+    dashboards.results_for([kpi], *period, None, {}, force=True)
+    assert len(runs) == 3  # the refresh button runs it again
