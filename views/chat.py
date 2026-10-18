@@ -3,7 +3,7 @@ layer, and joins cubes when a question needs several) or about one cube, check C
 understanding of it, and get a chart, a short answer and the data. Describe any chart you want
 ("as a funnel", "sales as bars and profit % as a line on a second axis") and Claude draws it.
 Any chart can be sent to any dashboard, or a conversation's charts can become a dashboard."""
-from datetime import date
+from datetime import date, datetime
 
 import streamlit as st
 
@@ -19,6 +19,7 @@ import periods
 import routing
 import storage
 import ui
+import usage
 from backends import get_backend
 from charts import build_figure, trim
 from errors import details, friendly
@@ -61,11 +62,15 @@ def answer(question: str, context: list[dict], clarification: tuple[str, str] | 
             return turn
         if outcome.kind == "reuse":  # same data, shown differently
             previous = context[-1]
-            turn.update({k: previous[k] for k in ("query", "plan", "cubes", "explanation", "notes") if k in previous})
-        else:
+            turn.update({k: previous[k] for k in ("query", "plan", "cubes", "explanation", "notes", "periods",
+                                                  "standalone", "asked") if k in previous})
+        else:  # periods: the question's own, kept so the chart can go on a dashboard as it is
             turn.update(query=outcome.plan.text(), plan=outcome.plan.to_dict(), cubes=outcome.plan.cubes,
-                        explanation=outcome.result.get("explanation", ""), notes=outcome.notes)
+                        explanation=outcome.result.get("explanation", ""), notes=outcome.notes,
+                        periods=outcome.result.get("periods", []),
+                        standalone=outcome.result.get("standalone_question", ""))
         turn.update(df=outcome.df, spec=outcome.spec, answer_id=outcome.answer_id)
+        turn.setdefault("asked", datetime.now().isoformat(timespec="seconds"))  # when its numbers were read
         if outcome.kind == "data":
             turn["file"] = storage.save_result(turn["question"], turn["query"], outcome.df, turn["spec"])
         status.update(label="Done", state="complete")
@@ -112,6 +117,28 @@ def dashboard_job(turn: dict, d: dict) -> dict:
             "base_spec": turn["spec"], "chart_request": d["request"]}
 
 
+def as_seen(turn: dict, mode: str, d: dict) -> dict:
+    """The answer as a dashboard chart made in code, at once (dashboards.chart_from_answer): its query with
+    its dates as placeholders, its chart as drawn here. A chart newly described in words is drawn by Claude
+    from the same numbers (no query)."""
+    keep_type = d["chart_type"] != "custom" or turn["spec"].get("custom")
+    chart = dashboards.chart_from_answer(turn, mode, title=d["title"], chart_type=d["chart_type"] if keep_type else "",
+                                         width=d["width"], date_column=d["date_column"])
+    if d["chart_type"] == "custom" and d["request"] and d["request"] != turn["spec"].get("chart_request", ""):
+        with st.spinner("Claude is drawing the chart you described..."), usage.track("chart_restyle", chart["title"]):
+            chart = dashboards.restyled(chart, turn["df"], d["request"])
+    return chart
+
+
+def keep_numbers(chart: dict, turn: dict) -> None:
+    """The chat's numbers become the chart's first ones on the dashboard (when they are what it shows)."""
+    import dashboard_view
+    import period_picker
+    versus = period_picker.comparison()
+    dashboards.keep_answer_numbers(chart, turn, {cb: dashboard_view.data_as_of(cb) for cb in turn.get("cubes") or []},
+                                   ui.dashboard_period(), (versus.start, versus.end) if versus else None)
+
+
 @st.dialog("Add to a dashboard", width="large")
 def add_to_dashboard(i: int):
     turn = st.session_state.turns[i]
@@ -119,61 +146,88 @@ def add_to_dashboard(i: int):
         st.caption("Only admins can change the shared dashboards.")
         return
     d = dashboard_defaults(turn)
+    ways = {w["mode"]: w for w in dashboards.period_choices(turn)}
     target = ui.dashboard_picker(f"chat_add_board_{i}")
     name = st.text_input("Name of the new dashboard", key=f"chat_add_name_{i}") if target == "new" else ""
     d["title"] = st.text_input("Title", value=d["title"], key=f"chat_add_title_{i}")
-    d["date_column"] = ui.date_column_picker(d["cube"], d["date_column"], f"chat_add_date_{i}")
+    mode = st.radio("Dates", list(ways), format_func=lambda m: ways[m]["label"], key=f"chat_add_mode_{i}",
+                    help="Own period: the dates of your question, worked out again every day (yesterday stays "
+                         "yesterday). Fixed dates: never move. Follow the dashboard: the period picked there.")
+    quick = ways[mode]["instant"]
+    if not quick:
+        d["date_column"] = ui.date_column_picker(d["cube"], d["date_column"], f"chat_add_date_{i}")
     d["chart_type"] = ui.chart_type_picker(d["chart_type"], f"chat_add_type_{i}")
     d["request"] = (ui.chart_request_input(turn["spec"].get("chart_request", ""), f"chat_add_request_{i}").strip()
                     if d["chart_type"] == "custom" else "")
     d["width"] = ui.width_picker("full" if d["chart_type"] in ("map", "custom") else "half", f"chat_add_width_{i}")
-    st.caption("On the dashboard the chart follows the period picked there, not the dates in your question. "
-               "To compare periods, use **Compare** next to the period.")
+    if quick and mode == "dashboard" and d["chart_type"] == "kpi" and len(turn["df"]) != 1:
+        quick = False  # a headline number needs a query that returns one number
+    if not quick:
+        st.caption("Claude rewrites the query for the dashboard's period and tests it (about half a minute)."
+                   + ("" if turn.get("periods") else " Or pick **All dates, as in Chat** to add it at once."))
     if st.button("Add to dashboard", type="primary", key=f"chat_add_go_{i}",
                  disabled=target == "new" and not name.strip()):
-        start, end = ui.dashboard_period()
-        with st.spinner("Preparing the chart for the dashboard and testing it..."):
-            try:
-                chart = dashboards.build_chart(start=start, end=end, **dashboard_job(turn, d))
-            except Exception as exc:
-                ui.show_exception(exc)
-                return
+        try:
+            if quick:
+                chart = as_seen(turn, mode, d)
+            else:
+                start, end = ui.dashboard_period()
+                with st.spinner("Preparing the chart for the dashboard and testing it..."):
+                    chart = dashboards.build_chart(start=start, end=end, **dashboard_job(turn, d))
+        except Exception as exc:
+            ui.show_exception(exc)
+            return
         board_id = dashboards.create_dashboard(name) if target == "new" else target
         dashboards.add_chart(board_id, chart)
+        if quick:
+            keep_numbers(chart, turn)
         st.success(f"Added **{chart['title']}** to **{dashboards.get_dashboard(board_id)['name']}**.")
         ui.dashboard_link(board_id)
 
 
 @st.dialog("New dashboard from this conversation", width="large")
 def dashboard_from_conversation(indexes: list[int]):
-    """The conversation's charts on a dashboard of their own, in the conversation's order, following its
-    dates like every dashboard chart. Claude prepares them at the same time; one that can't be prepared
-    is reported and the others are still added. Then the new dashboard opens."""
+    """The conversation's charts on a dashboard of their own, in the conversation's order. A chart whose
+    question names its own dates keeps them and is added at once, as drawn here; the others follow the
+    dashboard's dates, and Claude prepares those at the same time. One that can't be prepared is
+    reported and the others are still added. Then the new dashboard opens."""
     if not admin.sign_in_form(scope="fragment"):
         st.caption("Only admins can change the shared dashboards.")
         return
     turns, today = st.session_state.turns, date.today()
     jobs = {i: dashboard_defaults(turns[i]) for i in indexes}
+    ways = {i: dashboards.period_choices(turns[i])[0] for i in indexes}  # each answer's suggested way
     name = st.text_input("Name", value=f"From chat · {today.day} {today:%b}", key="chat_board_name")
     st.markdown("**Charts**")
     chosen = [i for i in indexes if st.checkbox(jobs[i]["title"], value=True, key=f"chat_board_pick_{i}",
-                                                 help=turns[i]["question"])]
-    st.caption("Every chart follows the dashboard's dates. To compare periods, use **Compare** next to the period.")
+                                                 help=f"{turns[i]['question']}  \nDates: {ways[i]['label']}")]
+    st.caption("Charts whose questions name their dates keep them (*yesterday* stays yesterday) and are added at once. "
+               "The others follow the dashboard's dates: Claude prepares those. To compare periods on those, use "
+               "**Compare** next to the period.")
     if not st.button(f"Create dashboard with {len(chosen)} chart{'s' if len(chosen) != 1 else ''}", type="primary",
                      key="chat_board_go", disabled=not chosen or not name.strip()):
         return
     start, end = ui.dashboard_period()
     built, failed = {}, {}
-    with st.status(f"Preparing {len(chosen)} charts...", expanded=True) as status:
-        for i, chart, exc in dashboards.build_many({i: dashboard_job(turns[i], jobs[i]) for i in chosen}, start, end):
-            if chart:
-                built[i] = chart
-                status.write(f"✓ {chart['title']}")
-            else:
-                failed[i] = friendly(exc)
-                status.write(f"✗ {jobs[i]['title']}: {failed[i]}")
-        status.update(label=f"{len(built)} of {len(chosen)} charts ready",
-                      state="complete" if not failed else "error", expanded=bool(failed))
+    for i in [i for i in chosen if ways[i]["instant"]]:
+        try:
+            built[i] = dashboards.chart_from_answer(turns[i], ways[i]["mode"], title=jobs[i]["title"],
+                                                    width=jobs[i]["width"], date_column=jobs[i]["date_column"])
+        except Exception as exc:
+            failed[i] = friendly(exc)
+    slow = {i: dashboard_job(turns[i], jobs[i]) for i in chosen if not ways[i]["instant"]}
+    if slow:
+        with st.status(f"Preparing {len(slow)} chart{'s' if len(slow) != 1 else ''} for the dashboard's dates...",
+                       expanded=True) as status:
+            for i, chart, exc in dashboards.build_many(slow, start, end):
+                if chart:
+                    built[i] = chart
+                    status.write(f"✓ {chart['title']}")
+                else:
+                    failed[i] = friendly(exc)
+                    status.write(f"✗ {jobs[i]['title']}: {failed[i]}")
+            status.update(label=f"{len(built)} of {len(chosen)} charts ready",
+                          state="complete" if not failed else "error", expanded=bool(failed))
     if not built:
         st.error("None of the charts could be prepared, so no dashboard was made.")
         return
@@ -181,6 +235,8 @@ def dashboard_from_conversation(indexes: list[int]):
     for i in chosen:  # in the conversation's order
         if i in built:
             dashboards.add_chart(board_id, built[i])
+            if ways[i]["instant"]:
+                keep_numbers(built[i], turns[i])
     if not failed:
         st.session_state.go_to_dashboard = board_id  # open it (app.py)
         st.rerun()

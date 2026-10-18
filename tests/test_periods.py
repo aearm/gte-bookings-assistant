@@ -79,6 +79,17 @@ def test_titles_without_dates():
     assert periods.without_dates("Sales on 2026-10-13 by channel") == "Sales by channel"
     assert periods.without_dates("Hotels with 2026 rates") == "Hotels with 2026 rates"  # a year inside a phrase stays
     assert periods.without_dates("2026") == "2026"  # never an empty title
+    # ranges and comparisons go whole, not leaving "…, 14" behind
+    assert periods.without_dates("Sales by day for the top 10 customers by bookings, 14–15 Oct 2026") == \
+        "Sales by day for the top 10 customers by bookings"
+    assert periods.without_dates("Sales by month, 1 Jan – 30 Sep 2026") == "Sales by month"
+    assert periods.without_dates("Sales Oct 14–15, 2026 by channel") == "Sales by channel"
+    assert periods.without_dates("Bookings 14 Oct 2026 vs 15 Oct 2026") == "Bookings"
+    assert periods.without_dates("Bookings yesterday vs the day before by customer") == "Bookings by customer"
+    assert periods.without_dates("Sales by customer over the last 7 days") == "Sales by customer"
+    assert periods.without_dates("Top 10 customers 2026") == "Top 10 customers"  # not "Top": "customers" is no month
+    assert periods.without_dates("Sales by domain") == "Sales by domain"
+    assert periods.without_dates("Sales by month, Oct 2026") == "Sales by month"
 
 
 def test_previous_period_is_the_same_kind_of_period():

@@ -14,7 +14,7 @@ A developer copy (a git clone) is updated with git pull instead.
 Releasing a version: put the number in VERSION (e.g. 1.1.0), commit and push, then on GitHub
 Releases › Draft a new release, tag it v1.1.0 and describe what changed (admins see that text).
 
-Helper:  python updates.py apply <unpacked release folder> <version> <app process id>"""
+Helper:  python updates.py apply <unpacked release folder> <version> <app process id> [start_api.py]"""
 import ctypes
 import hashlib
 import json
@@ -35,6 +35,15 @@ from packaging.version import InvalidVersion, Version
 BASE = Path(__file__).resolve().parent
 REPO = os.getenv("UPDATE_REPO", "aearm/gte-bookings-assistant")  # owner/name on GitHub
 TASK = "Bookings Assistant"  # the Windows task that starts the app (install_autostart.ps1)
+
+
+def task_name() -> str:
+    """The Windows task that starts this copy of the app: install_autostart.ps1 notes it in
+    data/autostart.json (another copy on the same computer has a task of its own)."""
+    try:
+        return json.loads((BASE / "data" / "autostart.json").read_text(encoding="utf-8-sig"))["task"] or TASK
+    except (OSError, ValueError, KeyError, TypeError):
+        return TASK
 
 # What an update never replaces or removes. Release files under ADD_ONLY are added when missing
 # (e.g. a new sample file), never written over.
@@ -117,8 +126,12 @@ def latest_release() -> Release | None:
     except ValueError:
         pass
     tag = data.get("tag_name", "")
+    # the full app (with the built React app, web/dist) is attached to each release by GitHub Actions
+    # (.github/workflows/release.yml); GitHub's own source zip is the fallback for older releases
+    full = next((a.get("browser_download_url", "") for a in data.get("assets") or []
+                 if str(a.get("name", "")).startswith("bookings-assistant-") and str(a.get("name", "")).endswith(".zip")), "")
     return Release(version=tag.lstrip("vV"), tag=tag, published=published, notes=(data.get("body") or "").strip(),
-                   zip_url=data.get("zipball_url", ""), page=data.get("html_url", ""))
+                   zip_url=full or data.get("zipball_url", ""), page=data.get("html_url", ""))
 
 
 # ---------------------------------------------------------------- download --
@@ -149,6 +162,9 @@ def unpack(archive: Path, version: str) -> Path:
     root = tops[0] if len(tops) == 1 and tops[0].is_dir() else target
     if not (root / "app.py").exists() or not (root / "VERSION").exists():
         raise RuntimeError("The download doesn't look like this app (no app.py or VERSION); nothing was changed.")
+    if (root / "web" / "package.json").exists() and not (root / "web" / "dist" / "index.html").exists():
+        raise RuntimeError("This release's web app is still being built on GitHub; try again in a few minutes. "
+                           "Nothing was changed.")
     found = (root / "VERSION").read_text(encoding="utf-8").strip()
     if _version(found) != _version(version):
         raise RuntimeError(f"The release is tagged {version} but its VERSION file says {found}; nothing was changed.")
@@ -260,46 +276,86 @@ def _alive(pid: int) -> bool:
     return code.value == 259  # STILL_ACTIVE
 
 
+def _kill(pid: int) -> None:
+    """End a process at once. (On Windows signal 1 would be Ctrl+Break, sent to every process on the
+    console; any other number ends the process itself.)"""
+    try:
+        os.kill(pid, 9)
+    except OSError:
+        pass
+
+
 def _task_exists() -> bool:
-    return os.name == "nt" and subprocess.run(["schtasks", "/Query", "/TN", TASK], capture_output=True).returncode == 0
+    return os.name == "nt" and subprocess.run(["schtasks", "/Query", "/TN", task_name()], capture_output=True).returncode == 0
+
+
+def descendants(pid: int) -> list[int]:
+    """The processes a process started, and theirs (the web server's cube workers), so they can be stopped
+    with it: left running they would keep the app's files open."""
+    if os.name != "nt" or pid <= 0:
+        return []
+    listed = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command",
+                             "Get-CimInstance Win32_Process | ForEach-Object { \"$($_.ProcessId) $($_.ParentProcessId)\" }"],
+                            capture_output=True, text=True, timeout=60)
+    children: dict[int, list[int]] = {}
+    for line in listed.stdout.splitlines():
+        parts = line.split()
+        if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+            children.setdefault(int(parts[1]), []).append(int(parts[0]))
+    found, todo = [], [pid]
+    while todo:
+        for child in children.get(todo.pop(), []):
+            if child not in found and child != pid:
+                found.append(child)
+                todo.append(child)
+    return found
 
 
 def stop_app(pid: int) -> None:
-    """Stop the app (its Windows task, or the process) and wait until it is gone."""
+    """Stop the app (its Windows task, or the process) with the processes it started, and wait until it
+    is gone."""
+    helpers = descendants(pid)
     if _task_exists():
-        subprocess.run(["schtasks", "/End", "/TN", TASK], capture_output=True)
+        subprocess.run(["schtasks", "/End", "/TN", task_name()], capture_output=True)
     for second in range(30):
         if not _alive(pid):
-            return
+            break
         if second == 3:  # still running: end the process itself
-            try:
-                os.kill(pid, 9 if os.name != "nt" else 1)
-            except OSError:
-                pass
+            _kill(pid)
         time.sleep(1)
-    raise RuntimeError("The app didn't stop, so nothing was changed.")
+    else:
+        raise RuntimeError("The app didn't stop, so nothing was changed.")
+    for helper in helpers:
+        if _alive(helper):
+            _kill(helper)
 
 
-def start_app() -> None:
+SERVERS = ("start_api.py", "start_server.py")  # the web app, the previous (Streamlit) app
+
+
+def start_app(server: str = "start_server.py") -> None:
+    """Start the app again: its Windows task, or else `server` in the background."""
     if _task_exists():
-        subprocess.run(["schtasks", "/Run", "/TN", TASK], capture_output=True)
+        subprocess.run(["schtasks", "/Run", "/TN", task_name()], capture_output=True)
         return
     python = Path(sys.executable)
     background = python.with_name("pythonw.exe") if os.name == "nt" else python
     flags = 0x00000008 | 0x00000200 if os.name == "nt" else 0  # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
-    subprocess.Popen([str(background if background.exists() else python), str(BASE / "start_server.py")], cwd=BASE,
+    script = server if server in SERVERS else "start_server.py"
+    subprocess.Popen([str(background if background.exists() else python), str(BASE / script)], cwd=BASE,
                      creationflags=flags, start_new_session=os.name != "nt", close_fds=True)
 
 
-def launch(new_root: Path, version: str) -> None:
+def launch(new_root: Path, version: str, server: str = "start_server.py") -> None:
     """From the app: start the helper as a process of its own (outside the app's Windows task, so
-    stopping the app doesn't stop it), which then stops the app and updates it."""
+    stopping the app doesn't stop it), which then stops the app and updates it. server: the script that
+    runs this app, started again afterwards when there is no Windows task (start_api.py from the web app)."""
     lock_file().parent.mkdir(parents=True, exist_ok=True)
     lock_file().write_text(datetime.now().isoformat(timespec="seconds"), encoding="utf-8")
     python = Path(sys.executable)
     background = python.with_name("pythonw.exe") if os.name == "nt" else python
     args = [str(background if background.exists() else python), str(BASE / "updates.py"), "apply", str(new_root),
-            version, str(os.getpid())]
+            version, str(os.getpid()), server]
     if os.name == "nt":  # created by Windows (WMI), not as a child of the app
         line = subprocess.list2cmdline(args).replace("'", "''")
         script = (f"$r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments "
@@ -330,7 +386,8 @@ def last_status() -> dict | None:
         return None
 
 
-def run_update(new_root: Path, version: str, app_pid: int, restart: bool = True) -> dict:
+def run_update(new_root: Path, version: str, app_pid: int, restart: bool = True,
+               server: str = "start_server.py") -> dict:
     """The helper's work: stop the app, update it (undone if a step fails), start it again."""
     status = {"time": datetime.now().isoformat(timespec="seconds"), "from": current_version(), "to": version,
               "ok": False, "error": ""}
@@ -356,12 +413,12 @@ def run_update(new_root: Path, version: str, app_pid: int, restart: bool = True)
         status_file().write_text(json.dumps(status, indent=1), encoding="utf-8")
         lock_file().unlink(missing_ok=True)
         if restart:
-            start_app()
+            start_app(server)
     return status
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 5 and sys.argv[1] == "apply":
-        run_update(Path(sys.argv[2]), sys.argv[3], int(sys.argv[4]))
+    if len(sys.argv) in (5, 6) and sys.argv[1] == "apply":
+        run_update(Path(sys.argv[2]), sys.argv[3], int(sys.argv[4]), server=(sys.argv[5:] or ["start_server.py"])[0])
     else:
         print(__doc__)

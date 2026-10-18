@@ -70,7 +70,10 @@ STEP_MAX_ROWS = int(os.getenv("STEP_MAX_ROWS", "100000"))
 # see cubes.py. The single files below are from before several cubes were supported and are
 # moved into the cube's folder the first time the app starts.
 MODELS_DIR = BASE_DIR / "models"                # per cube folders, and data_layer/ (see data_layer.py)
-DASHBOARDS_FILE = BASE_DIR / "dashboards.json"  # all dashboards and their charts
+# all dashboards and their charts (APP_DASHBOARDS_FILE: another file, e.g. for the end-to-end tests)
+DASHBOARDS_FILE = Path(os.getenv("APP_DASHBOARDS_FILE") or BASE_DIR / "dashboards.json")
+# the dashboards the app ships with (builtin_dashboards.py); 0 leaves them out (e.g. for tests)
+BUILTIN_DASHBOARDS = os.getenv("APP_BUILTIN_DASHBOARDS", "1") != "0"
 NOTES_TEMPLATE = BASE_DIR / "business_notes.example.md"
 SCHEMA_FILE = BASE_DIR / "schema.md"            # (old) live model structure
 LOCAL_SCHEMA_FILE = BASE_DIR / "schema_local.md"  # (old) structure of the local data files
@@ -80,7 +83,9 @@ DASHBOARD_FILE = BASE_DIR / "dashboard.json"    # (old) the single dashboard
 VALUE_INDEX_FILE = BASE_DIR / "data" / "value_index.json"  # (old) every value in the data
 ENV_FILE = BASE_DIR / ".env"
 QUERIES_DIR = BASE_DIR / "queries"              # saved .dax files for scheduled pulls
-DATA_DIR = BASE_DIR / "data"
+# usage, answer memory, history, saved dashboard numbers, decisions (APP_DATA_DIR: another folder, e.g. for
+# the end-to-end tests, which must never change the real ones)
+DATA_DIR = Path(os.getenv("APP_DATA_DIR") or BASE_DIR / "data")
 RESULTS_DIR = DATA_DIR / "results"              # one CSV per question asked
 SNAPSHOTS_DIR = DATA_DIR / "snapshots"          # output of pull.py
 HISTORY_FILE = DATA_DIR / "history.jsonl"       # log of questions, DAX and result files

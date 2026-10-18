@@ -2,6 +2,7 @@
 several cubes), and results into a chart + short answer. What Claude knows about the data comes
 from the data layer (data_layer.py)."""
 import json
+import os
 import re
 import time
 
@@ -37,12 +38,76 @@ def check_connection() -> None:
 def _create(purpose: str = "", **kwargs):
     """One request (streamed, so long answers don't time out), recorded in usage (tokens, cache,
     seconds, cost) under its purpose. If the model declines on safety grounds, the API re-runs the
-    request on Anthropic's recommended fallback model."""
+    request on Anthropic's recommended fallback model. With a cassette (end-to-end tests, see
+    Cassette) the answer is recorded or replayed instead."""
+    if cassette.replaying:
+        return cassette.replay(purpose)
     started = time.perf_counter()
     response = _send(**kwargs)
     usage.record_call(purpose, getattr(response, "model", "") or kwargs["model"], getattr(response, "usage", None),
                       time.perf_counter() - started)
+    if cassette.recording:
+        cassette.record(purpose, response)
     return response
+
+
+class Cassette:
+    """Claude's answers recorded once and replayed in end-to-end tests, so a test run can ask the same
+    questions again and again without paying for them. CLAUDE_CASSETTE=<file.json> with
+    CLAUDE_CASSETTE_MODE=record (ask Claude, keep each answer) or replay (never call Claude: give the
+    answer kept for the same question, step and number of the call; a missing one is an error).
+    Answers are keyed by the question being answered (usage label), the step (rewrite, route, plan,
+    chart) and how many calls of that step came before in the same question, not by the prompt text,
+    so a recording stays valid while prompts change."""
+
+    def __init__(self, path: str, mode: str):
+        import threading
+        self.path, self.mode = path, mode
+        self.replaying, self.recording = bool(path) and mode == "replay", bool(path) and mode == "record"
+        self._lock = threading.Lock()
+        self.answers: dict[str, dict] = {}
+        if path and os.path.exists(path):
+            with open(path, encoding="utf-8") as f:
+                self.answers = json.load(f)
+
+    @staticmethod
+    def _key(purpose: str) -> str:
+        rec = usage._current.get()
+        label = rec.label if rec else ""
+        before = sum(1 for c in rec.calls if c["purpose"] == purpose) if rec else 0
+        return json.dumps([label, purpose, before], ensure_ascii=False)
+
+    def record(self, purpose: str, response) -> None:
+        def block(b):
+            out = {"type": b.type}
+            for name in ("text", "id", "name", "input", "thinking", "signature"):
+                if getattr(b, name, None) is not None:
+                    out[name] = getattr(b, name)
+            return out
+        rec = usage._current.get()
+        key = json.dumps([rec.label if rec else "", purpose, sum(1 for c in rec.calls if c["purpose"] == purpose) - 1
+                          if rec else 0], ensure_ascii=False)  # this call is already counted in usage
+        with self._lock:
+            self.answers[key] = {"stop_reason": response.stop_reason, "model": getattr(response, "model", ""),
+                                 "content": [block(b) for b in response.content]}
+            with open(self.path, "w", encoding="utf-8") as f:
+                json.dump(self.answers, f, ensure_ascii=False, indent=1)
+
+    def replay(self, purpose: str):
+        from types import SimpleNamespace
+        key = self._key(purpose)
+        kept = self.answers.get(key)
+        if kept is None:
+            raise RuntimeError(f"No recorded Claude answer for {key} (record the cassette again).")
+        response = SimpleNamespace(stop_reason=kept["stop_reason"], model=kept["model"],
+                                   content=[SimpleNamespace(**b) for b in kept["content"]],
+                                   usage=SimpleNamespace(input_tokens=0, output_tokens=0, cache_read_input_tokens=0,
+                                                         cache_creation_input_tokens=0, cache_creation=None))
+        usage.record_call(purpose, kept["model"] or "replay", response.usage, 0.0)
+        return response
+
+
+cassette = Cassette(os.getenv("CLAUDE_CASSETTE", ""), os.getenv("CLAUDE_CASSETTE_MODE", ""))
 
 
 def _send(**kwargs):

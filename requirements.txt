@@ -7,6 +7,10 @@ keyring>=24
 duckdb>=1.0
 openpyxl>=3.1
 pycountry>=24.6
+# The new web server (FastAPI + the React app in web/dist; start_api.py)
+fastapi>=0.115
+uvicorn>=0.30
+pyarrow>=17.0
 # Live Analysis Services connection - Windows only
 pyadomd; sys_platform == "win32"
 pythonnet>=3.0; sys_platform == "win32"

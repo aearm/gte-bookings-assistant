@@ -90,8 +90,8 @@ def period_label(at) -> str:
 
 def test_dashboard_period_button_and_calendar_choices(at):
     at.run()
-    start, end = periods.preset_range("This year")
-    assert period_label(at) == periods.label(start, end, "This year")  # e.g. This year · 1 Jan – 13 Oct 2026 · W1–42
+    start, end = periods.preset_range("Last 7 days")
+    assert period_label(at) == periods.label(start, end, "Last 7 days")  # e.g. Last 7 days · 10 Oct – 16 Oct 2026 · W41–42
 
     at.session_state["dash_period"] = {"start": "2026-10-05", "end": "2026-10-19"}  # weeks 41-42 on the calendar
     at.run()
@@ -109,8 +109,8 @@ def compare_label(at) -> str:
 
 def test_compare_button_next_to_the_period(at):
     at.run()
-    start, end = periods.preset_range("This year")
-    assert compare_label(at) == "vs " + periods.dates_text(*periods.same_period_last_year(start, end))  # the default
+    start, end = periods.preset_range("Last 7 days")
+    assert compare_label(at) == "vs " + periods.dates_text(*periods.previous_period(start, end, "Last 7 days"))  # the default
     at.session_state["dash_period"] = {"preset": "Last month"}
     at.session_state["dash_compare"] = {"mode": "previous"}
     at.run()

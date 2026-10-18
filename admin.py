@@ -21,7 +21,12 @@ export default function (component) {
     if (data.store) localStorage.setItem(KEY, data.store);
     if (data.clear) localStorage.removeItem(KEY);
     const token = localStorage.getItem(KEY) || "";
-    if (token && !data.signed_in && data.tried !== token) setStateValue("token", token);
+    // once per page load: sending it again on every redraw restarted the page before the server
+    // could check it, over and over (a page that never finished, the server at full CPU)
+    if (token && !data.signed_in && data.tried !== token && window.__adminTokenSent !== token) {
+      window.__adminTokenSent = token;
+      setStateValue("token", token);
+    }
   } catch (e) { /* storage blocked: just no "keep me signed in" */ }
 }
 """

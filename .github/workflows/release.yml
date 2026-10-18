@@ -1,0 +1,45 @@
+# When a release is published: build the React app (web/dist) and attach the full app as
+# bookings-assistant-<version>.zip to the release. The in-app updater (updates.py) installs that zip,
+# so installations never need Node.js.
+name: Release package
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Build the web app
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+      - name: Check the version
+        run: |
+          tag="${{ github.event.release.tag_name }}"
+          test "$(cat VERSION | tr -d '\r\n')" = "${tag#v}" || { echo "VERSION does not match the tag"; exit 1; }
+      - name: Zip the app
+        run: |
+          version="$(cat VERSION | tr -d '\r\n')"
+          mkdir -p "pkg/bookings-assistant-$version"
+          git archive HEAD | tar -x -C "pkg/bookings-assistant-$version"
+          cp -r web/dist "pkg/bookings-assistant-$version/web/dist"
+          (cd pkg && zip -qr "bookings-assistant-$version.zip" "bookings-assistant-$version")
+          echo "ZIP=pkg/bookings-assistant-$version.zip" >> "$GITHUB_ENV"
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" "$ZIP" install-bookings-assistant.cmd --clobber

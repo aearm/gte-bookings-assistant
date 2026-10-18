@@ -9,7 +9,7 @@
   "hotel bookings, room nights, nights, rooms and guests",
   "hotel cancellations and cancellation rate",
   "lead-time (booking window) mix",
-  "hotel sales by market, customer, supplier, hotel, chain, star category, destination, board and channel"
+  "hotel sales by market, customer, guest nationality, supplier, hotel, chain, star category, destination (hotel country and city), board and channel"
  ],
  "not_for": [
   "payments collected (Booking Payments)",
@@ -1806,10 +1806,10 @@
   },
   {
    "column": "'Countries'[Country]",
-   "label": "Country",
-   "entity": "country",
+   "label": "Guest nationality",
+   "entity": "nationality",
    "kind": "name",
-   "meaning": "Country attached to the booking (likely guest nationality / source country).",
+   "meaning": "Nationality of the guests, as the client sent it with the booking (one per booking; agencies send it for hotel pricing, so some send the country of residence). Not the destination and not the client's country. About 15% of bookings come from agencies that send the same value for every booking, usually their own country, so treat those as a default.",
    "needs_columns": [
     "'Countries'[Country.UniqueName]"
    ],
@@ -2306,7 +2306,8 @@
   "[Markup] is profit / sales and [% Total Profit] is profit / cost; percentages and Avg measures are ratios and must never be added across rows. [Booking Window] is a maximum.",
   "Ignore the LY / LYS measures: the app makes period comparisons itself.",
   "Always put a breakdown's needs_columns next to it when grouping or filtering by it.",
-  "Use the cube's measures only; never SUM a column."
+  "Use the cube's measures only; never SUM a column.",
+  "'Hotels'[Hotel Country] and 'Hotels'[Hotel City] are the destination; 'Countries'[Country] is the guests' nationality; 'Customers'[Default Country] is the agency's country and 'Customers'[Id Cli] its code ('GTE' + the Bookings cube's 'Customers'[Code])."
  ],
  "examples": [
   {

@@ -1,6 +1,8 @@
 """One dashboard page: its charts for the period you pick on the calendar (period_picker.py) - a
 quick choice, days, or week numbers - compared with another period if you like (previous period, the
-same period last year or other dates: the period in colour, the comparison in grey). Everyone can view dashboards; adding, editing, restyling,
+same period last year or other dates: the period in colour, the comparison in grey). A chart can also keep
+dates of its own (from the question it came from: "yesterday vs the day before", moving forward every day,
+or fixed dates), named on its card. Everyone can view dashboards; adding, editing, restyling,
 reordering, copying/moving and deleting charts and dashboards asks for the admin password (the +
 buttons are always there; the dialog asks to sign in first). Each dashboard is a page in the menu
 (app.py builds one with page_for)."""
@@ -141,9 +143,18 @@ def edit_dialog(dashboard_id: str, chart_id: str, start: date, end: date):
     chart_type = ui.chart_type_picker(c["chart_type"], f"edit_type_{chart_id}", allow_auto=False)
     request = (ui.chart_request_input(c.get("chart_request", ""), f"edit_request_{chart_id}")
                if chart_type == "custom" else "")
-    date_col = ui.date_column_picker(cube, c.get("date_column", ""), f"edit_date_{chart_id}")
+    mode_now, preset = dashboards.period_mode(c), period_picker.current()[2]
+    choices = dashboards.mode_choices(c, start, end, preset)
+    mode = st.radio("Dates", list(choices), index=list(choices).index(mode_now) if mode_now in choices else 0,
+                    format_func=choices.get, key=f"edit_mode_{chart_id}",
+                    help="Follow the dashboard: the period picked at the top. Own period: the chart's own dates, "
+                         "worked out again every day (yesterday stays yesterday). Fixed dates: never move.")
+    if mode == "dashboard":
+        date_col = ui.date_column_picker(cube, c.get("date_column", ""), f"edit_date_{chart_id}")
+    else:
+        date_col = c.get("date_column", "")
     show_compare = st.toggle("Show the comparison picked at the top of the dashboard", value=c.get("compare", True),
-                             key=f"edit_compare_{chart_id}", disabled=not date_col,
+                             key=f"edit_compare_{chart_id}", disabled=not date_col or mode != "dashboard",
                              help="Headline numbers show the change; columns, bars and lines of one measure show the "
                                   "other period in grey; tables get a change column. Needs dates that follow the "
                                   "dashboard.")
@@ -152,19 +163,22 @@ def edit_dialog(dashboard_id: str, chart_id: str, start: date, end: date):
     with st.expander("Query (advanced)"):
         if plan.single:
             query = st.text_area("Query", value=plan.steps[0].query, height=220, label_visibility="collapsed",
-                                 help="@START and @END are replaced with the dashboard's dates.")
+                                 help="@START and @END are replaced with the dashboard's dates; @P1_START, @P1_LAST "
+                                      "and @P1_END with the first day, last day and the day after the chart's own "
+                                      "first period (@P2_... its second).")
         else:
             st.caption("This chart combines several cubes. Change the question to change the queries.")
             st.code(plan.text(), language="sql")
 
     if st.button("Save changes", type="primary", disabled=chart_type == "custom" and not request.strip()):
         kpi_changed = (chart_type == "kpi") != (c["chart_type"] == "kpi")
+        date_changed = mode_now == "dashboard" and mode == "dashboard" and date_col != c.get("date_column", "")
         try:
-            if question.strip() != c["question"] or date_col != c.get("date_column", "") or kpi_changed:
+            if question.strip() != c["question"] or date_changed or kpi_changed:
                 with st.spinner("Claude is writing a new query and testing it..."):
                     new = dashboards.build_chart(cube, question.strip(), title, chart_type, width, date_col,
                                                  start, end, chart_request=request.strip())
-                c = {**new, "id": c["id"]}
+                c = {**new, "id": c["id"], "periods": c.get("periods", [])}  # follows the dashboard (see below)
             elif chart_type == "custom" and request.strip() != c.get("chart_request", ""):
                 with st.spinner("Claude is drawing the chart you described..."):
                     c = dashboards.restyle_chart(c, request.strip(), start, end)
@@ -176,13 +190,14 @@ def edit_dialog(dashboard_id: str, chart_id: str, start: date, end: date):
                     c.update(plan=plan.to_dict(), query=plan.text())
                 if plan.single and (query_changed or
                                     (chart_type not in ("kpi", "table", "custom") and not c.get("x"))):
-                    df = plans.run(plan.with_dates(start, end), config.MAX_ROWS)
+                    df = plans.run(dashboards.runnable(c, start, end), config.MAX_ROWS)
                     if c.get("x") not in df.columns:
                         c.update({k: v for k, v in suggest(df).items() if k in ("x", "y", "color")})
                 if chart_type != "custom":
                     c.pop("custom", None)
                     c.pop("chart_request", None)
                 c.update(title=title.strip() or c["title"], chart_type=chart_type, width=width)
+            c = with_mode(c, mode, cube, date_col, start, end, preset)
         except Exception as exc:
             ui.show_exception(exc)
             return
@@ -191,6 +206,24 @@ def edit_dialog(dashboard_id: str, chart_id: str, start: date, end: date):
             c["compare"] = False
         dashboards.update_chart(dashboard_id, c)
         st.rerun()
+
+
+def with_mode(c: dict, mode: str, cube: str, date_col: str, start: date, end: date, preset: str) -> dict:
+    """The chart switched to another way of choosing its dates: in code when its query allows it, else (to
+    follow the dashboard) Claude writes a query for the dashboard's period."""
+    if mode == dashboards.period_mode(c):
+        return c
+    try:
+        return dashboards.change_period_mode(c, mode, start, end, preset)
+    except dashboards.NeedsClaude:
+        if mode != "dashboard":
+            raise
+    date_col = date_col or dashboards.default_date_column(dashboards.date_columns(ui.schema_text(cube)), cube)
+    with st.spinner("Claude is writing a query for the dashboard's period and testing it..."):
+        new = dashboards.build_chart(cube, c.get("question", ""), c["title"], c["chart_type"], c.get("width", "half"),
+                                     date_col, start, end, base_query=c.get("query", ""), base_spec=c,
+                                     chart_request=c.get("chart_request", ""))
+    return {**new, "id": c["id"]}
 
 
 @st.dialog("Change how the chart looks", width="large")
@@ -298,11 +331,16 @@ def kpi_card(dashboard_id: str, c: dict, res: dict, start: date, end: date, is_a
                 ui.show_error(res["error"], res.get("details", ""))
                 return
             value, prev = first_number(res["df"]), first_number(res.get("prev"))
-            delta = f"{(value - prev) / abs(prev):+.1%} vs {versus.name}" if versus and value is not None and prev else None
+            change, text = dashboards.headline_change(c, value, prev) if versus else (None, "")
+            delta = f"{text} vs {versus.name}" if change is not None else None
             source = " + ".join(data_layer.cube_label(x) for x in chart_cubes(c))
             was = (f"  \n{versus.dates}: {headline(c, res['prev'])}"
                    if versus and res.get("prev") is not None and prev is not None else "")
-            st.metric(c["title"], headline(c, res["df"]), delta=delta, help=f"{c['question']} · {source}{was}")
+            st.metric(c["title"], headline(c, res["df"]), delta=delta, help=f"{c['question']} · {source}{was}",
+                      delta_color="inverse" if (c.get("style") or {}).get("lower_is_better") else "normal")
+            own = dashboards.period_text(c)
+            if own:
+                st.caption(own)
 
 
 def chart_card(dashboard_id: str, c: dict, res: dict, start: date, end: date, is_admin: bool,
@@ -313,19 +351,22 @@ def chart_card(dashboard_id: str, c: dict, res: dict, start: date, end: date, is
             st.markdown(f"**{c['title']}**")
             used = chart_cubes(c)
             source = (" + ".join(data_layer.cube_label(x) for x in used) + " · ") if several_cubes or len(used) > 1 else ""
-            st.caption(f"{source}Dates: {dashboards.date_label(c.get('date_column', ''))}", help=c["question"])
+            dates = dashboards.date_label(c.get("date_column", ""))
+            own = dashboards.period_text(c)  # "Own period: yesterday vs the day before (14–15 Oct)", "Fixed: ..."
+            shown = (own + (f" · {dates}" if c.get("date_column") else "")) if own else f"Dates: {dates}"
+            st.caption(f"{source}{shown}", help=c["question"])
         if menu:
             with menu:
                 chart_menu(dashboard_id, c, start, end)
         if res.get("error"):
             ui.show_error(res["error"], res.get("details", ""))
             return
-        df = res["df"]
+        df, grain = dashboards.display_grain(res["df"], c, start, end)  # by week or month over a long period
         if df is None or df.empty:
             st.info("No data for this period.")
             return
         height = 420 if c.get("chart_type") == "map" else 330
-        prev = res.get("prev") if versus else None
+        prev = dashboards.display_grain(res.get("prev"), c, start, end)[0] if versus else None
         compare = {"df": prev, "current": periods.dates_text(start, end), "name": versus.dates} if prev is not None else None
         fig = build_figure(df, c, dark=ui.is_dark(), height=height, show_title=False, compare=compare)
         if fig is not None:
@@ -333,6 +374,9 @@ def chart_card(dashboard_id: str, c: dict, res: dict, start: date, end: date, is
             note = trim(df, c)[1] if c.get("chart_type") != "custom" else ""
             if note:
                 st.caption(note.split(" (")[0] + ".")
+            if grain:
+                st.caption(f"By {grain} (each {'Monday' if grain == 'week' else 'first of the month'} stands for its "
+                           f"{grain}): the period is longer than {'a month' if grain == 'week' else 'six months'}.")
         else:
             shown, spec = charts.with_changes(df, prev, c) if prev is not None else (df, c)
             ui.table(shown, spec, height=min(330, 38 + 35 * len(df)))
@@ -384,6 +428,13 @@ def render(dashboard_id: str) -> None:
     with st.container(horizontal=True, vertical_alignment="center", key="dash_filters"):
         start, end, _ = period_picker.picker()
         versus = period_picker.compare_picker()
+        picked = {}
+        for f in dashboards.filter_options(board) if board.get("filters") else []:  # e.g. the client
+            if f["options"]:
+                labels = {o["value"]: o["label"] for o in f["options"]}
+                picked[f["key"]] = st.selectbox(f["label"], list(labels), format_func=labels.get, width=280,
+                                                key=f"dash_filter_{dashboard_id}_{f['key']}",
+                                                label_visibility="collapsed", placeholder=f["label"])
         force = st.button("", icon=":material/refresh:", type="tertiary", key="dash_refresh",
                           help="Get the latest numbers from the server")
         if force:
@@ -414,7 +465,8 @@ def render(dashboard_id: str) -> None:
         return
 
     with st.spinner("Loading the latest numbers..."):
-        results, updating = dashboards.results_for(charts, start, end, (versus.start, versus.end) if versus else None,
+        running = dashboards.apply_filters(board, charts, picked)
+        results, updating = dashboards.results_for(running, start, end, (versus.start, versus.end) if versus else None,
                                                    {cb: data_as_of(cb) for cb in board_cubes}, force=force)
     if updating:
         wait_for_update(updating)

@@ -1,0 +1,23 @@
+{
+  "about": "The charts of the end-to-end test dashboard: they follow the dashboard's period (@START/@END), so period and comparison changes run them again. Plain queries, no Claude.",
+  "charts": [
+    {"id": "e2e-kpi", "cube": "GlobalTravelEngine - Bookings", "title": "Bookings", "question": "Total bookings",
+     "plan": {"steps": [{"name": "result", "cube": "GlobalTravelEngine - Bookings",
+       "query": "EVALUATE SUMMARIZECOLUMNS(KEEPFILTERS(FILTER(ALL('Calendar'[Date]), 'Calendar'[Date] >= @START && 'Calendar'[Date] < @END)), \"Bookings\", [Reservations Count])"}],
+       "combine_sql": ""},
+     "date_column": "'Calendar'[Date]", "chart_type": "kpi", "x": "", "y": [], "color": "", "style": {}, "width": "",
+     "period_mode": "dashboard"},
+    {"id": "e2e-line", "cube": "GlobalTravelEngine - Bookings", "title": "Sales by day", "question": "Sales by day",
+     "plan": {"steps": [{"name": "result", "cube": "GlobalTravelEngine - Bookings",
+       "query": "EVALUATE SUMMARIZECOLUMNS('Calendar'[Date], KEEPFILTERS(FILTER(ALL('Calendar'[Date]), 'Calendar'[Date] >= @START && 'Calendar'[Date] < @END)), \"Sales\", [Sale]) ORDER BY 'Calendar'[Date]"}],
+       "combine_sql": ""},
+     "date_column": "'Calendar'[Date]", "chart_type": "line", "x": "Date", "y": ["Sales"], "color": "", "style": {}, "width": "",
+     "period_mode": "dashboard"},
+    {"id": "e2e-bar", "cube": "GlobalTravelEngine - Bookings", "title": "Top 10 customers by bookings", "question": "Top 10 customers by bookings",
+     "plan": {"steps": [{"name": "result", "cube": "GlobalTravelEngine - Bookings",
+       "query": "EVALUATE TOPN(10, SUMMARIZECOLUMNS('Customers'[Code], KEEPFILTERS(FILTER(ALL('Calendar'[Date]), 'Calendar'[Date] >= @START && 'Calendar'[Date] < @END)), \"Bookings\", [Reservations Count]), [Bookings], DESC) ORDER BY [Bookings] DESC"}],
+       "combine_sql": ""},
+     "date_column": "'Calendar'[Date]", "chart_type": "bar", "x": "Code", "y": ["Bookings"], "color": "", "style": {}, "width": "",
+     "period_mode": "dashboard"}
+  ]
+}

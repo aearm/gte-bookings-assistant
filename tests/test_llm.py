@@ -142,3 +142,20 @@ def test_a_cube_asked_about_again_is_cached_for_an_hour(monkeypatch):
     assert llm.details_ttl("Bookings") == "5m"  # one question may be all: 1.25x to write, not 2x
     assert llm.details_ttl("Bookings") == "1h"  # asked about again: the next questions read it for 1/20
     assert llm.details_ttl("Payments") == "5m"
+
+
+def test_claude_answers_can_be_recorded_and_replayed_without_calling_claude(monkeypatch, tmp_path):
+    import usage
+    path = str(tmp_path / "cassette.json")
+    fake = FakeClaude(plan([STEP]))
+    monkeypatch.setattr(llm, "_send", lambda **kw: fake(**kw))
+    monkeypatch.setattr(llm, "cassette", llm.Cassette(path, "record"))
+    with usage.track("question", "Sales by customer"):
+        recorded = llm.question_to_plan(question="Sales by customer", cards="C", details=[], today="2026-10-16")
+    monkeypatch.setattr(llm, "cassette", llm.Cassette(path, "replay"))
+    monkeypatch.setattr(llm, "_send", lambda **kw: (_ for _ in ()).throw(AssertionError("Claude was called")))
+    with usage.track("question", "Sales by customer"):
+        replayed = llm.question_to_plan(question="Sales by customer", cards="C", details=[], today="2027-01-01")
+    assert replayed["steps"] == recorded["steps"] == [STEP]  # same answer, a day later, no Claude call
+    with usage.track("question", "Another question"), pytest.raises(RuntimeError, match="No recorded Claude answer"):
+        llm.question_to_plan(question="Another question", cards="C", details=[], today="2027-01-01")

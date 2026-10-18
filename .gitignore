@@ -20,8 +20,11 @@ queries/*.dax
 data/value_index.json
 models/
 dashboards.json
+dashboards.*.json
 dashboard.json.bak
 data/app*.log
+data/api*.log
+data/autostart.json
 data/usage.jsonl
 data/answers.db
 data/bench/
@@ -31,3 +34,13 @@ data/update_status.json
 data/installed_files.json
 data/eval/
 data/dashboard_results/
+data/dump_stacks
+data/stacks.txt
+
+# React app (built in CI; installed with the release)
+web/node_modules/
+web/dist/
+web/test-results/
+web/playwright-report/
+web/e2e/.state.json
+web/e2e/cassette.json

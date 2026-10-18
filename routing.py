@@ -138,7 +138,7 @@ def join_path(chosen: list[str]) -> str:
 # ---------------------------------------------------------------- value hits --
 
 def _phrases(question: str) -> list[str]:
-    """Words and 2-3 word phrases of the question that could be values ("UAE", "RateHawk", "Abu Dhabi")."""
+    """Words and 2-3 word phrases of the question that could be values ("UAE", "Desert Pearl", "Abu Dhabi")."""
     words = re.findall(r"[^\W_][\w&'.-]*", question)
     out = []
     for n in (3, 2, 1):

@@ -6,7 +6,7 @@ from datetime import date, timedelta
 
 PRESETS = ["Today", "Yesterday", "This week", "Last week", "Last 7 days", "Last 30 days", "This month",
            "Last month", "This quarter", "Last quarter", "This year", "Last year", "Last 12 months"]
-DEFAULT_PRESET = "This year"
+DEFAULT_PRESET = "Last 7 days"  # what dashboards show before anyone picks a period
 
 
 def add_months(d: date, months: int) -> date:
@@ -128,13 +128,25 @@ def describe(start: date, end: date) -> str:
 
 # ---------------------------------------------------------------- comparisons --
 
-_DATE_WORDS = (r"(?:\b(?:on|for|in|during|since|from|as of)\s+)?(?:"
-               r"\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+)?[A-Za-z]{3,9}\.?\s+\d{4}"      # 13 Oct 2026, 12 of oct 2026
-               r"|[A-Za-z]{3,9}\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}"               # Oct 13, 2026
-               r"|\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}/\d{2,4}"                            # 2026-10-13, 13/10/2026
+_MONTH = (r"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?"
+          r"|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?")
+_DAY = r"\d{1,2}(?:st|nd|rd|th)?"
+_ONE_DATE = (rf"{_DAY}\s+(?:of\s+)?{_MONTH}\s+\d{{4}}"                    # 13 Oct 2026, 12 of oct 2026
+             rf"|{_MONTH}\s+{_DAY},?\s+\d{{4}}"                            # Oct 13, 2026
+             r"|\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}/\d{2,4}"                  # 2026-10-13, 13/10/2026
+             rf"|{_MONTH}\s+\d{{4}}")                                       # Oct 2026
+_RELATIVE = (r"(?:the\s+)?(?:this|last|previous|next)\s+(?:year|month|quarter|week)"
+             r"|(?:the\s+)?(?:last|past|previous|next)\s+\d+\s+(?:days|weeks|months)|(?:the\s+)?day\s+before(?:\s+yesterday)?|yesterday|today"
+             r"|(?:year|month)\s+to\s+date|YTD|MTD")
+_SEP = r"\s*(?:[-–—]|to|until|till|and|&|vs\.?|versus|compared\s+(?:with|to))\s*"
+_RANGE = (rf"(?:{_DAY}(?:\s+(?:of\s+)?{_MONTH}(?:\s+\d{{4}})?)?|{_MONTH}(?:\s+{_DAY})?(?:,?\s+\d{{4}})?"
+          r"|\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}/\d{2,4})"
+          rf"{_SEP}(?:{_ONE_DATE}|{_DAY},?\s+\d{{4}})"                     # 14–15 Oct 2026, 1 Jan – 30 Sep 2026, Oct 14–15, 2026
+          rf"|(?:{_RELATIVE}){_SEP}(?:{_RELATIVE})")                       # yesterday vs the day before
+_DATE_WORDS = (r"(?:\b(?:on|for|in|during|over|between|since|from|as of)\s+)?\b(?:"
+               rf"{_RANGE}|{_ONE_DATE}"
                r"|(?:Q[1-4]\s+)?(?:19|20)\d{2}(?:\s+(?:so far|to date|YTD))?(?=\s*(?:$|[,;)(]))"  # 2026 at a phrase end
-               r"|(?:this|last|previous|next)\s+(?:year|month|quarter|week)|yesterday|today"
-               r"|(?:year|month)\s+to\s+date|YTD|MTD)\b")
+               rf"|{_RELATIVE})\b")
 
 
 def without_dates(title: str) -> str:
@@ -145,7 +157,8 @@ def without_dates(title: str) -> str:
     text = re.sub(r"\(\s*[,;:]?\s*\)", "", text)                     # empty brackets left behind
     text = re.sub(r"[,;:]\s*\(", " (", text)                          # "customer, (top 25)" -> "customer (top 25)"
     text = re.sub(r"\s+([,;:)])", r"\1", re.sub(r"\s{2,}", " ", text))
-    text = re.sub(r"[\s,;:\-–—·|]+$", "", text).strip()
+    text = re.sub(r"(?:[\s,;:\-–—·|]+|\b(?:vs\.?|versus|and|to|over|between|for|on|in)\b)+$", "", text,
+                  flags=re.IGNORECASE).strip()
     return text or title
 
 
@@ -166,10 +179,10 @@ def is_weekly(start: date, end: date, preset: str = "") -> bool:
 
 
 # What every dashboard chart can be compared with (one choice for the whole dashboard, next to the
-# period). The default is what headline numbers have always shown: the same period last year.
+# period). The default compares the last 7 days with the 7 days before them.
 COMPARE_MODES = {"none": "No comparison", "previous": "Previous period", "last_year": "Same period last year",
                  "custom": "Other dates"}
-DEFAULT_COMPARE = "last_year"
+DEFAULT_COMPARE = "previous"
 # How far back "previous period" goes for each quick choice: the same days of the previous week,
 # month, quarter or year ("This month" 1-15 Oct is compared with 1-15 Sep), or the days just before.
 _PREVIOUS = {"Today": ("days", 1, "yesterday"), "Yesterday": ("days", 1, "the day before"),

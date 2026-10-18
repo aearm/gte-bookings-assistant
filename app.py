@@ -4,7 +4,10 @@ Run:  streamlit run app.py   (or run_app.bat on Windows, ./run_app.sh on Mac)
 Pages: dashboards (dashboard_view.py) and views/ (Chat, Glossary, Cubes, Settings). The menu is
 drawn here (not Streamlit's own) so "Dashboards" can have a + for a new dashboard.
 """
+import sys
+
 import streamlit as st
+import streamlit.delta_generator
 
 import admin
 import cubes
@@ -12,6 +15,15 @@ import dashboard_view
 import dashboards
 import ui
 import warm_up
+
+# The server's threads take turns on Python's lock every 5 ms by default; a thread that makes many small
+# calls (reading rows through the .NET connector, file system calls) waits that long after each one
+# while a page is being drawn, and crawls. 1 ms keeps them moving.
+sys.setswitchinterval(0.001)
+# Streamlit checks once per server start whether it runs in a Python prompt, by reading the source of
+# every frame (inspect.stack): on a busy server that took minutes and slowed every page meanwhile. The
+# app always runs with `streamlit run`, so the check is marked done.
+streamlit.delta_generator._use_warning_has_been_displayed = True
 
 st.set_page_config(page_title="Bookings Assistant", page_icon=":material/insights:", layout="wide")
 cubes.migrate()  # one-time move of files from the single-cube layout

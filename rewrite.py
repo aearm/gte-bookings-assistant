@@ -103,9 +103,22 @@ class Rewrite:
     kind: str = "new"
     chart_request: str = ""
     periods: list[Period] = field(default_factory=list)
+    items: list[dict] = field(default_factory=list)  # each period as Haiku described it (the grammar), in order
 
     def periods_text(self) -> str:
         return "\n".join(f"- {p.text()}" for p in self.periods)
+
+    def records(self) -> list[dict]:
+        """The periods as they are kept with an answer (see record)."""
+        return [record(item, p) for item, p in zip(self.items, self.periods)]
+
+
+def record(item: dict, period: Period) -> dict:
+    """A period as it is kept with an answer or a dashboard chart: the user's phrase, its first and last
+    point in the grammar (so it can be worked out again on another day: "yesterday" moves forward) and
+    the dates it meant when it was asked (end exclusive)."""
+    return {"phrase": period.phrase, "first": dict(item["first"]), "last": dict(item["last"]),
+            "to_date": bool(item.get("to_date")), "start": period.start.isoformat(), "end": period.end.isoformat()}
 
 
 # ---------------------------------------------------------------- dates, in code --
@@ -158,6 +171,31 @@ def span(point: dict, today: date) -> tuple[date, date]:
     return start, _next(unit, start)
 
 
+def _relative(unit: str, offset: int) -> dict:
+    return {"unit": unit, "way": "relative", "offset": offset, "year": 0, "number": 0, "date": ""}
+
+
+# The dashboard's quick choices (periods.PRESETS) in the grammar, so a chart can keep one as its own period.
+PRESET_ITEMS = {
+    "Today": ("day", 0, "day", 0, False), "Yesterday": ("day", -1, "day", -1, False),
+    "This week": ("week", 0, "week", 0, True), "Last week": ("week", -1, "week", -1, False),
+    "Last 7 days": ("day", -6, "day", 0, False), "Last 30 days": ("day", -29, "day", 0, False),
+    "This month": ("month", 0, "month", 0, True), "Last month": ("month", -1, "month", -1, False),
+    "This quarter": ("quarter", 0, "quarter", 0, True), "Last quarter": ("quarter", -1, "quarter", -1, False),
+    "This year": ("year", 0, "year", 0, True), "Last year": ("year", -1, "year", -1, False),
+    "Last 12 months": ("month", -11, "day", 0, False),
+}
+
+
+def preset_item(name: str) -> dict | None:
+    """A quick choice of the dashboards ("This month") as a period of the grammar, or None."""
+    if name not in PRESET_ITEMS:
+        return None
+    first_unit, first, last_unit, last, to_date = PRESET_ITEMS[name]
+    return {"phrase": name.lower(), "first": _relative(first_unit, first), "last": _relative(last_unit, last),
+            "to_date": to_date}
+
+
 def resolve(item: dict, today: date) -> Period:
     start, end = span(item["first"], today)[0], span(item["last"], today)[1]
     if item.get("to_date"):
@@ -193,12 +231,13 @@ def rewrite(question: str, context: list[dict] | None = None, clarification: tup
     standalone = (out.get("standalone_question") or "").strip()
     if not standalone:
         return None
-    resolved, failed = [], []
+    resolved, items, failed = [], [], []
     for item in out.get("periods", []):
         try:
             resolved.append(resolve(item, today))
+            items.append(item)
         except (ValueError, KeyError, TypeError) as exc:
             failed.append(f"{item.get('phrase', '?')}: {exc}")
     kind = out.get("kind", "new") if context else "new"  # nothing earlier to show again or follow
     usage.note(rewritten=standalone, periods=[p.text() for p in resolved], **({"period_errors": failed} if failed else {}))
-    return Rewrite(standalone, kind, (out.get("chart_request") or "").strip(), resolved)
+    return Rewrite(standalone, kind, (out.get("chart_request") or "").strip(), resolved, items)

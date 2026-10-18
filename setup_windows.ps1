@@ -1,8 +1,15 @@
-# Windows installer for Bookings Assistant. Double-click setup.bat to run it.
-# Installs Python 3.13 if needed (for this user only, no admin rights), the app's libraries and
-# ADOMD.NET, creates .env and a desktop shortcut, then starts the app.
+# Windows installer for Bookings Assistant. Double-click setup.bat to run it - nothing to answer.
+# Installs Python 3.13 if needed (for this user only, no admin rights), the app's libraries, ADOMD.NET and
+# the web app; creates .env and a desktop shortcut; then starts the app in the background whenever you sign
+# in to Windows, starts it now and opens it in the browser.
 # Safe to run again at any time: it repairs or updates what is already there.
-param([switch]$NoStart)  # -NoStart: don't offer to start the app at the end
+param(
+    [switch]$NoStart,      # don't start the app or open the browser at the end
+    [switch]$NoAutostart,  # don't start it with Windows (start it now in the background instead)
+    [switch]$Classic,      # the previous app (Streamlit, port 8501) instead of the new one
+    [string]$TaskName = "Bookings Assistant",  # another name and port: a second copy (e.g. to test an install)
+    [int]$Port = 0
+)
 
 $ErrorActionPreference = "Continue"
 $ProgressPreference = "SilentlyContinue"   # much faster downloads in Windows PowerShell
@@ -10,6 +17,8 @@ $ProgressPreference = "SilentlyContinue"   # much faster downloads in Windows Po
 Set-Location $PSScriptRoot
 
 $PythonVersion = "3.13.15"   # tested with this app; pythonnet needs 64-bit Python 3.12 or 3.13
+$NodeVersion = "22.23.3"     # only to build the web app in a copy without it (releases include it built)
+$NodeHome = Join-Path $env:LOCALAPPDATA "BookingsAssistant\node"
 
 function Step($text) { Write-Host "`n==> $text" -ForegroundColor Cyan }
 function Ok($text) { Write-Host "    $text" -ForegroundColor Green }
@@ -66,11 +75,63 @@ function Install-Python {
     return Find-Python
 }
 
+# node.exe of Node.js 20 or newer: on the PATH, installed, or the copy this setup downloaded before.
+function Find-Node {
+    $candidates = @()
+    foreach ($c in (Get-Command node -All -ErrorAction SilentlyContinue)) { $candidates += $c.Source }
+    $candidates += (Join-Path $NodeHome "node.exe"), "$env:ProgramFiles\nodejs\node.exe"
+    foreach ($c in $candidates) {
+        if ($c -and (Test-Path $c)) {
+            $v = & $c --version 2>$null
+            if ($v -match '^v(\d+)\.' -and [int]$Matches[1] -ge 20) { return $c }
+        }
+    }
+    return $null
+}
+
+# Node.js for this user only (no admin rights): the official zip from nodejs.org, checked against the
+# checksums nodejs.org publishes for it.
+function Install-Node {
+    $name = "node-v$NodeVersion-win-x64"
+    $base = "https://nodejs.org/dist/v$NodeVersion"
+    $zip = Join-Path $env:TEMP "$name.zip"
+    Write-Host "    Downloading Node.js $NodeVersion from nodejs.org (about 35 MB)..."
+    try {
+        Invoke-WebRequest "$base/$name.zip" -OutFile $zip -UseBasicParsing
+        $sums = [string](Invoke-WebRequest "$base/SHASUMS256.txt" -UseBasicParsing).Content
+    } catch { Fail "Could not download Node.js: $_" }
+    $expected = ($sums -split "`n" | Where-Object { $_ -match "\s$([regex]::Escape($name)).zip\s*$" } | Select-Object -First 1) -replace '\s.*$', ''
+    $actual = (Get-FileHash $zip -Algorithm SHA256).Hash
+    if (-not $expected -or $actual -ne $expected.Trim()) {
+        Remove-Item $zip -Force
+        Fail "The downloaded Node.js does not match the checksum published on nodejs.org."
+    }
+    $unpacked = Join-Path $env:TEMP "bookings-assistant-node"
+    Remove-Item $unpacked -Recurse -Force -ErrorAction SilentlyContinue
+    Expand-Archive $zip -DestinationPath $unpacked -Force
+    Remove-Item $NodeHome -Recurse -Force -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Force (Split-Path $NodeHome) | Out-Null
+    Move-Item (Join-Path $unpacked $name) $NodeHome
+    Remove-Item $zip, $unpacked -Recurse -Force -ErrorAction SilentlyContinue
+    return Find-Node
+}
+
+# The built web app is missing, or (in a developer copy) older than its sources.
+function Test-WebNeedsBuild {
+    $index = Join-Path $PSScriptRoot "web\dist\index.html"
+    if (-not (Test-Path $index)) { return $true }
+    if (-not (Test-Path (Join-Path $PSScriptRoot ".git"))) { return $false }  # a release: built with it
+    $built = (Get-Item $index).LastWriteTime
+    $sources = @(Get-ChildItem "web\src" -Recurse -File) + @(Get-Item "web\index.html", "web\package.json", "web\vite.config.ts")
+    return [bool]($sources | Where-Object { $_.LastWriteTime -gt $built } | Select-Object -First 1)
+}
+
 Write-Host "Bookings Assistant - Windows setup" -ForegroundColor White
 Write-Host "Folder: $PSScriptRoot"
+$steps = 6
 
 # ---------------------------------------------------------------- 1. Python --
-Step "1/5  Python"
+Step "1/$steps  Python"
 $python = Find-Python
 if ($python) {
     Ok "Found $(& $python --version) at $python"
@@ -82,8 +143,9 @@ if ($python) {
 }
 
 # ---------------------------------------------------------------- 2. libraries --
-Step "2/5  App libraries (pandas, Streamlit, Claude SDK, ...)"
+Step "2/$steps  App libraries (pandas, FastAPI, Claude SDK, ...)"
 $venvPython = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
+$venvPythonw = Join-Path $PSScriptRoot ".venv\Scripts\pythonw.exe"
 if ((Test-Path ".venv") -and -not (Test-GoodPython $venvPython)) {
     Write-Host "    The existing .venv is broken or uses another Python version; rebuilding it."
     Remove-Item ".venv" -Recurse -Force
@@ -98,10 +160,11 @@ if ($LASTEXITCODE -ne 0) { Fail "Installing the libraries failed. Check the inte
 Ok "Libraries installed"
 
 # ---------------------------------------------------------------- 3. settings files --
-Step "3/5  Settings files"
+Step "3/$steps  Settings files"
 if (-not (Test-Path ".env")) { Copy-Item ".env.example" ".env"; Ok "Created .env" } else { Ok ".env already exists (kept)" }
 if (-not (Test-Path "business_notes.md")) { Copy-Item "business_notes.example.md" "business_notes.md"; Ok "Created business_notes.md" }
-# Skip Streamlit's one-time "enter your email" prompt, which would stop the app from starting.
+New-Item -ItemType Directory -Force "data" | Out-Null
+# Skip Streamlit's one-time "enter your email" prompt, which would stop the previous app from starting.
 $streamlitDir = Join-Path $env:USERPROFILE ".streamlit"
 if (-not (Test-Path "$streamlitDir\credentials.toml")) {
     New-Item -ItemType Directory -Force $streamlitDir | Out-Null
@@ -109,7 +172,7 @@ if (-not (Test-Path "$streamlitDir\credentials.toml")) {
 }
 
 # ---------------------------------------------------------------- 4. ADOMD.NET --
-Step "4/5  ADOMD.NET (connector for the live bookings server)"
+Step "4/$steps  ADOMD.NET (connector for the live bookings server)"
 & $venvPython -c "import ssas; ssas._load_adomd()" 2>$null
 if ($LASTEXITCODE -ne 0) {
     & $venvPython get_adomd.py
@@ -118,29 +181,71 @@ if ($LASTEXITCODE -ne 0) {
 & $venvPython -c "import ssas; ssas._load_adomd(); import pyadomd" 2>$null
 if ($LASTEXITCODE -eq 0) { Ok "ADOMD.NET ready" } else { Write-Warning "ADOMD.NET is not working yet (needed only for the live server). See README > Troubleshooting." }
 
-# ---------------------------------------------------------------- 5. shortcut --
-Step "5/5  Desktop shortcut"
-$shortcutPath = Join-Path ([Environment]::GetFolderPath("Desktop")) "Bookings Assistant.lnk"
+# ---------------------------------------------------------------- 5. web app --
+Step "5/$steps  Web app"
+if ($Classic) {
+    Ok "Not needed for the previous app"
+} elseif (-not (Test-WebNeedsBuild)) {
+    Ok "Ready (web\dist)"
+} else {
+    $node = Find-Node
+    if ($node) { Ok "Found Node.js $(& $node --version) at $node" } else { $node = Install-Node; Ok "Installed Node.js $NodeVersion" }
+    if (-not $node) { Fail "Node.js could not be installed, so the web app can't be built." }
+    $env:Path = "$(Split-Path $node);$env:Path"
+    $npm = Join-Path (Split-Path $node) "npm.cmd"
+    Push-Location web
+    Write-Host "    Building (takes a minute)..."
+    & $npm ci --no-audit --no-fund --loglevel=error
+    if ($LASTEXITCODE -eq 0) {
+        $out = & $npm run build 2>&1
+        if ($LASTEXITCODE -ne 0) { $out | Select-Object -Last 30 | ForEach-Object { Write-Host "    $_" } }
+    }
+    $built = $LASTEXITCODE -eq 0
+    Pop-Location
+    if (-not $built -or -not (Test-Path "web\dist\index.html")) { Fail "Building the web app failed (see the messages above)." }
+    Ok "Built (web\dist)"
+}
+
+# ---------------------------------------------------------------- 6. shortcut --
+Step "6/$steps  Desktop shortcut"
+$portArg = if ($Port) { " --port $Port" } else { "" }
+$shortcutPath = Join-Path ([Environment]::GetFolderPath("Desktop")) "$TaskName.lnk"
 $shortcut = (New-Object -ComObject WScript.Shell).CreateShortcut($shortcutPath)
-$shortcut.TargetPath = Join-Path $PSScriptRoot "run_app.bat"
+if ($Classic) {
+    $shortcut.TargetPath = Join-Path $PSScriptRoot "run_app.bat"
+    $shortcut.Arguments = "classic"
+} else {  # opens the app in the browser, starting it first if it isn't running
+    $shortcut.TargetPath = $venvPythonw
+    $shortcut.Arguments = "`"$(Join-Path $PSScriptRoot 'start_api.py')`" --open --task `"$TaskName`"$portArg"
+}
 $shortcut.WorkingDirectory = $PSScriptRoot
 $shortcut.Description = "Ask questions about bookings data"
 $shortcut.Save()
-Ok "Created 'Bookings Assistant' on the desktop"
+Ok "Created '$TaskName' on the desktop"
 
-# ---------------------------------------------------------------- done --
-Write-Host "`nSetup complete." -ForegroundColor Green
-Write-Host "Next: start the app, open Settings (in the app's menu), create an admin password,"
-Write-Host "then enter the Claude API key and the bookings server details. Finally, on the Cubes page,"
-Write-Host "tick the cubes and click 'Build the data layer' (once; or run: python build_layer.py --all)."
-Write-Host "Later, start the app with the 'Bookings Assistant' shortcut on the desktop."
+# ---------------------------------------------------------------- start --
+$url = "http://localhost:" + $(if ($Port) { $Port } elseif ($Classic) { 8501 } else { 8600 })
+if (-not $Classic -and -not $Port -and (Test-Path ".env")) {
+    $line = Select-String -Path ".env" -Pattern '^\s*API_PORT\s*=\s*(\d+)' | Select-Object -First 1
+    if ($line) { $url = "http://localhost:" + $line.Matches[0].Groups[1].Value }
+}
 if (-not $NoStart) {
-    $auto = Read-Host "`nStart the app automatically (in the background) whenever you sign in to Windows? (Y/n)"
-    if ($auto -notmatch "^[nN]") {
-        & (Join-Path $PSScriptRoot "install_autostart.ps1")
-        Start-Process "http://localhost:8501"
+    if ($NoAutostart) {
+        Step "Starting the app"
+        if ($Classic) { Start-Process (Join-Path $PSScriptRoot "run_app.bat") -ArgumentList "classic" -WorkingDirectory $PSScriptRoot }
+        else { Start-Process $venvPythonw -ArgumentList "`"$(Join-Path $PSScriptRoot 'start_api.py')`" --open --task `"$TaskName`"$portArg" -WorkingDirectory $PSScriptRoot }
     } else {
-        $answer = Read-Host "Start the app now? (Y/n)"
-        if ($answer -notmatch "^[nN]") { Start-Process (Join-Path $PSScriptRoot "run_app.bat") -WorkingDirectory $PSScriptRoot }
+        Step "Starting the app with Windows (in the background)"
+        $auto = @{ TaskName = $TaskName; Port = $Port }
+        if ($Classic) { $auto.Classic = $true }
+        & (Join-Path $PSScriptRoot "install_autostart.ps1") @auto
+        if (-not $?) { Fail "The app could not be set to start with Windows." }
+        Start-Process $url
     }
 }
+
+Write-Host "`nSetup complete: $url" -ForegroundColor Green
+Write-Host "In the app: create the admin password, then under Settings enter the Claude API key and the bookings"
+Write-Host "server details. On the Cubes page, tick the cubes and build the data layer (once)."
+Write-Host "Later, open the app with the '$TaskName' shortcut on the desktop."
+exit 0

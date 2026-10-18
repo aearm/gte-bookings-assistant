@@ -90,6 +90,11 @@ def test_the_download_is_checked_before_anything_changes(tmp_path):
         updates.unpack(archive("bad.zip", {"../evil.py": "x"}), "1.1.0")
     with pytest.raises(RuntimeError, match="doesn't look like this app"):
         updates.unpack(archive("other.zip", {top + "README.md": "x"}), "1.1.0")
+    web = {top + "app.py": "x", top + "VERSION": "2.0.0", top + "web/package.json": "{}"}
+    with pytest.raises(RuntimeError, match="still being built"):  # GitHub's source zip: no built web app yet
+        updates.unpack(archive("v2.0.0-src.zip", web), "2.0.0")
+    full = updates.unpack(archive("v2.0.0.zip", {**web, top + "web/dist/index.html": "<html>"}), "2.0.0")
+    assert (full / "web" / "dist" / "index.html").exists()
 
 
 def test_latest_release_from_github(install, monkeypatch):
@@ -100,8 +105,65 @@ def test_latest_release_from_github(install, monkeypatch):
     assert (release.version, release.published, release.notes) == ("1.1.0", "20 Oct 2026", "Faster dashboards.")
     assert release.is_newer()
     assert not updates.Release("1.0.0", "v1.0.0", "", "", "", "").is_newer()
+    assert release.zip_url == "https://api.github.com/zip"  # no built package attached: the source zip
+    answer["assets"] = [{"name": "bookings-assistant-1.1.0.zip", "browser_download_url": "https://github.com/full.zip"}]
+    assert updates.latest_release().zip_url == "https://github.com/full.zip"  # the package with the web app
 
     def none_yet(url, timeout=20):
         raise urllib.error.HTTPError(url, 404, "Not Found", None, None)
     monkeypatch.setattr(updates, "_get", none_yet)
     assert updates.latest_release() is None
+
+
+def test_the_app_comes_back_as_the_server_that_was_running(monkeypatch):
+    """Without a Windows task, the updater starts again the script that ran the app: the web app
+    (start_api.py) or the previous one (start_server.py); never anything else."""
+    started = []
+    monkeypatch.setattr(updates, "_task_exists", lambda: False)
+    monkeypatch.setattr(updates.subprocess, "Popen", lambda args, **kw: started.append(args[-1]))
+    updates.start_app("start_api.py")
+    updates.start_app()
+    updates.start_app("rm -rf.py")
+    assert [name.rsplit("\\", 1)[-1].rsplit("/", 1)[-1] for name in started] == \
+        ["start_api.py", "start_server.py", "start_server.py"]
+
+
+@pytest.mark.skipif(updates.os.name != "nt", reason="Windows process list")
+def test_stopping_the_app_finds_the_processes_it_started():
+    """The web server's cube workers are its child processes; they are stopped with it, or they would keep
+    the app's files open while the update replaces them."""
+    import subprocess
+    import sys
+    import time
+    grandchild = "import time; time.sleep(60)"
+    child = subprocess.Popen([sys.executable, "-c", f"import subprocess, sys, time; "
+                              f"subprocess.Popen([sys.executable, '-c', {grandchild!r}]); time.sleep(60)"])
+    try:
+        found = []
+        for _ in range(40):  # the grandchild needs a moment to start
+            found = updates.descendants(child.pid)
+            if found:
+                break
+            time.sleep(0.25)
+        assert found and child.pid not in found
+        assert child.pid in updates.descendants(updates.os.getpid())
+        updates._kill(child.pid)  # ends that process only (never a Ctrl+Break to the whole console)
+        assert child.wait(10) == 9 and not updates._alive(child.pid)
+    finally:
+        for pid in found:
+            updates._kill(pid)
+        child.kill()
+
+
+def test_the_shortcut_starts_the_task_only_when_it_runs_the_web_app(tmp_path, monkeypatch):
+    """start_api.py --open starts the Windows task when it runs this copy's web app; a task set up for the
+    previous app (or none) would never answer on the web app's port, so the server starts there instead."""
+    import start_api
+    monkeypatch.setattr(start_api, "BASE", tmp_path)
+    assert start_api.task_from_settings() == ""  # no autostart.json: set up before, or not at all
+    (tmp_path / "data").mkdir()
+    saved = tmp_path / "data" / "autostart.json"
+    saved.write_text('{"task": "Bookings Assistant test", "port": 8640, "app": "web"}', encoding="utf-8-sig")
+    assert start_api.task_from_settings() == "Bookings Assistant test"
+    saved.write_text('{"task": "Bookings Assistant", "port": 8501, "app": "classic"}', encoding="utf-8")
+    assert start_api.task_from_settings() == ""

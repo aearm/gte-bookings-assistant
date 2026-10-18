@@ -170,14 +170,15 @@ def fit(df: pd.DataFrame, spec: dict) -> dict:
         # colours can't be read, so the days go along the axis, one line per member
         x, color, kind = color, x, "line"
         spec = {**spec, "style": {**(spec.get("style") or {}), "measures": "auto"}}  # "shades per day" no longer applies
-    ok = {
-        "map": x and is_country_column(df[x]),
-        "donut": 2 <= len(df) <= 7 and len(ys) >= 1 and (df[ys[0]].fillna(0) >= 0).all(),
-        "treemap": x and (df[ys[0]].fillna(0) >= 0).all(),
-        "heatmap": x and color,
-        "stacked_bar": x and (color or len(ys) > 1),
-        "scatter": len(nums) >= 2,
-    }.get(kind, bool(x))
+    checks = {  # only the chart's own check runs: the country check reads every value (slow on long data)
+        "map": lambda: x and is_country_column(df[x]),
+        "donut": lambda: 2 <= len(df) <= 7 and len(ys) >= 1 and (df[ys[0]].fillna(0) >= 0).all(),
+        "treemap": lambda: x and (df[ys[0]].fillna(0) >= 0).all(),
+        "heatmap": lambda: x and color,
+        "stacked_bar": lambda: x and (color or len(ys) > 1),
+        "scatter": lambda: len(nums) >= 2,
+    }
+    ok = checks[kind]() if kind in checks else bool(x)
     if not ok:
         better = suggest(df)
         if better["chart_type"] == kind or better["chart_type"] == "table":

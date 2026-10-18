@@ -145,6 +145,8 @@ def answer(question: str, scope: str = ALL, context: list[dict] | None = None,
             if df.empty and attempt == 1 and not period:  # usually a filter or join that matches nothing
                 raise EmptyResult(empty_result_error(plan))
             usage.note(outcome="data", cubes=plan.cubes, rows=len(df))
+            if prepared:  # kept with the answer, so it can go on a dashboard as it is (dashboards.chart_from_answer)
+                result.update(standalone_question=prepared.question, periods=prepared.records())
             return Outcome("data", result, plan=plan, df=df, notes=notes)
         except Exception as error:
             if attempt == 2:
@@ -205,6 +207,7 @@ def ask(question: str, scope: str = ALL, context: list[dict] | None = None,
             previous = (context or [{}])[-1]
             outcome.df = previous.get("df")
             outcome.plan = plans.Plan.from_dict(previous["plan"]) if previous.get("plan") else None
+            outcome.result["periods"] = previous.get("periods", [])
             request = request or question
         if outcome.df is not None and not outcome.df.empty:
             if on_data:
@@ -217,8 +220,10 @@ def ask(question: str, scope: str = ALL, context: list[dict] | None = None,
                             "summary": "The query ran but returned no rows. " + (
                                 " ".join(outcome.notes) or "Try widening the filters or dates.")}
         if outcome.kind == "data" and outcome.plan is not None and not context and not clarification:
+            # the question's periods ride with the saved chart (answer memory keeps only part of the result)
             outcome.answer_id = answer_memory.remember(question, scope, outcome.plan.to_dict(), outcome.result,
-                                                       outcome.spec, outcome.df)
+                                                       {**outcome.spec, "periods": outcome.result.get("periods", [])},
+                                                       outcome.df)
         return outcome
 
 
@@ -233,16 +238,18 @@ def _rerun(question: str, saved: dict, say) -> Outcome | None:
     except Exception:
         return None
     usage.note(outcome="data", cubes=plan.cubes, rows=len(df), memory="same_day")
-    outcome = Outcome("data", saved["result"], plan=plan, df=df, answer_id=saved["id"])
+    spec = dict(saved["spec"])
+    periods = spec.pop("periods", [])  # the same day, so the same dates (see ask)
+    outcome = Outcome("data", {**saved["result"], "periods": periods}, plan=plan, df=df, answer_id=saved["id"])
     if answer_memory.data_hash(df) == saved["data_hash"]:
-        outcome.spec = saved["spec"]
+        outcome.spec = spec
     elif df.empty:
         outcome.spec = {"chart_type": "table", "title": "No results",
                         "summary": "The query ran but returned no rows. Try widening the filters or dates."}
     else:
         with usage.stage("chart"):
             outcome.spec = describe(question, df, saved["result"].get("chart_request", ""), plan)
-        answer_memory.update_spec(saved["id"], outcome.spec, df)
+        answer_memory.update_spec(saved["id"], {**outcome.spec, "periods": periods}, df)
     return outcome
 
 

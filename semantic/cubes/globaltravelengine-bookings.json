@@ -9,7 +9,7 @@
   "room nights, nights, rooms and passengers",
   "margin and average booking value",
   "cancellations (by cancellation date or the cancelled flag)",
-  "breakdowns by customer, market, channel, supplier, destination, product type and hotel",
+  "breakdowns by customer, market, guest nationality, channel, supplier, destination (area), product type and hotel",
   "lead time and travel-date (check-in) patterns"
  ],
  "not_for": [
@@ -2634,10 +2634,10 @@
   },
   {
    "column": "'Countries'[Country]",
-   "label": "Destination country",
-   "entity": "country",
+   "label": "Guest nationality",
+   "entity": "nationality",
    "kind": "enum",
-   "meaning": "Country of the booked service (destination).",
+   "meaning": "Nationality of the guests, as the client sent it with the booking (one per booking; agencies send it for hotel pricing, so some send the country of residence). Not the destination and not the client's country. About 15% of bookings come from agencies that send the same value for every booking, usually their own country, so treat those as a default.",
    "needs_columns": [
     "'Countries'[Country.UniqueName]"
    ],
@@ -3178,7 +3178,7 @@
   "[Reservations Count], [Nights], [Room Nights], [Rooms], [Paxes], [Amount] and [Base Cost] include cancelled lines; [Sale], [Cost] and [Profit] are net of cancellations. Add 'Canceled'[Canceled] = \"No\" when the question asks for active, confirmed or net bookings.",
   "Ratios and averages ([Markup], [Final Profit %], [% Base Profit], the Avg measures) are never added or averaged across rows; ask the cube for them at the level needed.",
   "Never use the LY/LYS/Var/Opt measures or the 'Calendar'[Date LY] / [Date LY Slided] columns; compare periods by querying each period.",
-  "'Customers'[Market] and 'Customers'[Customer Country] describe the customer; 'Countries'[Country] and 'Areas' describe the destination.",
+  "'Customers'[Market] and 'Customers'[Customer Country] describe the customer (the agency); 'Countries'[Country] is the guests' nationality; 'Areas' describes the destination (a city, region or country depending on the place). For the destination country of hotel bookings use the Hotel Sales cube ('Hotels'[Hotel Country]).",
   "All amounts are in AED."
  ],
  "examples": [

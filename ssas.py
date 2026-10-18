@@ -1,8 +1,11 @@
 """Talks to the Analysis Services model. Windows only (needs Microsoft ADOMD.NET)."""
 import contextvars
 import ctypes
+import json
+import os
 import re
 import sys
+import threading
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -141,14 +144,19 @@ def run_query(query: str, max_rows: int | None = None, conn_str: str | None = No
     _load_adomd()
     from pyadomd import Pyadomd  # imported here because it needs the DLL path first
 
-    with _network_login(), Pyadomd(conn_str or connection_string(database)) as conn:
-        with conn.cursor().execute(query) as cur:
-            columns = [c.name for c in cur.description]
-            rows = []
-            for row in cur.fetchone():  # pyadomd's fetchone() yields rows one by one
-                rows.append(row)
+    def read(bulk) -> tuple[list[str], list[tuple]]:
+        with _network_login(), Pyadomd(conn_str or connection_string(database)) as conn:
+            with conn.cursor().execute(query) as cur:
+                rows = _read_rows(cur, max_rows, bulk)
                 if max_rows and len(rows) >= max_rows:
-                    break
+                    _skip_the_rest(cur)
+                return [c.name for c in cur.description], rows
+
+    try:
+        columns, rows = read(_bulk_reader())
+    except BulkFormatError as exc:  # the fast reader gave something unreadable: switch it off, read again
+        _switch_off_bulk_reader(f"its result could not be read ({exc})")
+        columns, rows = read(None)
     df = pd.DataFrame(rows, columns=columns)
     for col in df.columns:  # .NET decimals etc. come back as objects; make them numbers
         if df[col].dtype == object:
@@ -157,6 +165,139 @@ def run_query(query: str, max_rows: int | None = None, conn_str: str | None = No
             except (ValueError, TypeError):
                 pass
     return df
+
+
+# ---------------------------------------------------------------- reading results --
+# ADOMD.NET hands over a result one value at a time. Asked from Python, every value is a separate
+# trip into .NET (67,500 rows x 4 columns took 26 s), and each trip lets other threads of the app
+# take over Python, so a big read and the pages slow each other down. The bulk reader
+# (adomd_bulk/AdomdBulk.dll, built from AdomdBulk.cs) reads the whole result inside .NET in one
+# call and hands it over as one text, which Python turns into the very same rows.
+
+BULK_DLL = Path(__file__).resolve().parent / "adomd_bulk" / "AdomdBulk.dll"
+BULK_FORMAT = 1  # the layout this code reads; must match BulkReader.FormatVersion in AdomdBulk.cs
+_bulk = {"tried": False, "reader": None}
+_bulk_lock = threading.Lock()
+
+
+class BulkFormatError(ValueError):
+    """The bulk reader's text could not be read (e.g. a helper built for another version of the app)."""
+
+
+def bulk_reader_enabled() -> bool:
+    """The bulk reader is on unless SSAS_BULK_READER is 0, off, false or no (in .env or the environment)."""
+    return os.getenv("SSAS_BULK_READER", "1").strip().lower() not in ("0", "off", "false", "no")
+
+
+def _bulk_reader():
+    """The bulk reader, or None when it is switched off or can't be loaded (results are then read
+    row by row, as before). It is loaded once per process."""
+    if not bulk_reader_enabled():
+        return None
+    with _bulk_lock:
+        if not _bulk["tried"]:
+            _bulk["tried"] = True
+            try:
+                _bulk["reader"] = _load_bulk_reader()
+            except Exception as exc:
+                _switch_off_bulk_reader(f"it could not be loaded ({exc})")
+        return _bulk["reader"]
+
+
+def _load_bulk_reader():
+    if not BULK_DLL.exists():
+        raise FileNotFoundError(f"{BULK_DLL} is missing; build it with adomd_bulk/build.ps1")
+    import clr  # pythonnet (already started by pyadomd)
+    clr.AddReference("System")
+    from System.IO import File
+    from System.Reflection import Assembly
+    Assembly.Load(File.ReadAllBytes(str(BULK_DLL)))  # loaded from memory: the file stays free to update
+    from AdomdBulk import BulkReader
+    if BulkReader.FormatVersion != BULK_FORMAT:
+        raise RuntimeError(f"{BULK_DLL.name} writes format {BulkReader.FormatVersion}, this app reads {BULK_FORMAT}")
+    return BulkReader
+
+
+def _switch_off_bulk_reader(reason: str) -> None:
+    _bulk.update(tried=True, reader=None)
+    print(f"Cube results are read row by row (slower): the bulk reader is off because {reason}.",
+          file=sys.stderr, flush=True)
+
+
+def _read_rows(cur, max_rows: int | None, bulk) -> list[tuple]:
+    """Every row of an executed query (up to max_rows), as tuples of Python values: all at once with
+    the bulk reader, else one by one."""
+    reader = getattr(cur, "_reader", None)  # the open AdomdDataReader inside pyadomd's cursor
+    if bulk is None or reader is None:
+        return _rows_one_by_one(cur, max_rows, [])
+    rows, complete = decode_bulk(bulk.Read(reader, min(max_rows or 0, 2**31 - 1)), max_rows)
+    if not complete:  # it stopped on a row holding a value only the row reader converts
+        rows.append(_current_row(cur))
+        _rows_one_by_one(cur, max_rows, rows)
+    return rows
+
+
+def _rows_one_by_one(cur, max_rows: int | None, rows: list) -> list:
+    """The row reader: adds the remaining rows (up to max_rows in all) one .NET call per value."""
+    if max_rows and len(rows) >= max_rows:
+        return rows
+    for row in cur.fetchone():  # pyadomd's fetchone() yields rows one by one
+        rows.append(row)
+        if max_rows and len(rows) >= max_rows:
+            break
+    return rows
+
+
+def _skip_the_rest(cur) -> None:
+    """After max_rows rows, ask the server to stop sending: closing the reader would otherwise wait
+    for every remaining row (22 s for a 130,000-row list cut at 5,000). If anything goes wrong here,
+    pyadomd closes the reader the usual (slow) way."""
+    reader, command = getattr(cur, "_reader", None), getattr(cur, "_cmd", None)
+    if reader is None or command is None:
+        return
+    try:
+        if reader.Read():  # more rows are on their way
+            command.Cancel()
+        reader.Close()
+    except Exception:
+        pass
+
+
+def _current_row(cur) -> tuple:
+    """The row the reader stands on, converted exactly as pyadomd's fetchone() converts a row."""
+    from pyadomd._type_code import adomd_type_map, convert
+    reader = cur._reader
+    return tuple(convert(reader.GetFieldType(i).ToString(), reader[i], adomd_type_map)
+                 for i in range(reader.FieldCount))
+
+
+def decode_bulk(payload: str, max_rows: int | None = None) -> tuple[list[tuple], bool]:
+    """The bulk reader's text -> (rows, complete). Rows hold the same Python values pyadomd gives:
+    text, whole numbers, floats, True/False, None and dates (to the second). complete is False when
+    the reader stopped early on a row it could not write; the caller reads that row and the rest."""
+    try:
+        doc = json.loads(payload)
+    except (TypeError, ValueError) as exc:
+        raise BulkFormatError(f"not JSON: {exc}") from None
+    if not isinstance(doc, dict) or doc.get("format") != BULK_FORMAT:
+        raise BulkFormatError(f"format {doc.get('format') if isinstance(doc, dict) else '?'}, expected {BULK_FORMAT}")
+    try:
+        types, data, count = doc["types"], doc["data"], int(doc["rows"])
+        lined_up = len(types) == len(data) == len(doc["columns"]) and all(len(c) == count for c in data)
+        data = [_dates(col) if kind == "System.DateTime" else col for kind, col in zip(types, data)]
+    except (KeyError, TypeError, ValueError) as exc:
+        raise BulkFormatError(f"unexpected content ({exc})") from None
+    if not lined_up:
+        raise BulkFormatError("its columns don't line up")
+    rows = list(zip(*data)) if data else [()] * count
+    if max_rows and len(rows) >= max_rows:
+        return rows[:max_rows], True
+    return rows, bool(doc.get("complete", True))
+
+
+def _dates(values: list) -> list:
+    """'2026-01-02T03:04:05' -> datetime(2026, 1, 2, 3, 4, 5); empty cells stay None."""
+    return [None if v is None else datetime.fromisoformat(v) for v in values]
 
 
 def clean_column_names(df: pd.DataFrame) -> pd.DataFrame:

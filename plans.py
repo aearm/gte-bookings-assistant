@@ -75,16 +75,45 @@ class Plan:
         return "\n\n".join(parts)
 
     def with_dates(self, start: date, end: date) -> "Plan":
-        """@START / @END replaced with the period (each step in its own query language)."""
-        steps = []
-        for s in self.steps:
-            backend = get_backend(s.cube)
-            steps.append(Step(s.name, s.cube, s.query.replace("@START", backend.date_literal(start))
-                                                     .replace("@END", backend.date_literal(end))))
-        return Plan(steps, self.combine_sql)
+        """@START / @END replaced with the period (each step in its own query language); @LAST (the
+        period's last day, for a plan that filters "<= last day") too."""
+        def fill(query: str, literal) -> str:
+            return (query.replace("@START", literal(start)).replace("@END", literal(end))
+                    .replace("@LAST", literal(end - timedelta(days=1))))
+        steps = [Step(s.name, s.cube, fill(s.query, get_backend(s.cube).date_literal)) for s in self.steps]
+        return Plan(steps, fill(self.combine_sql, _sql_date) if self.combine_sql else "")
 
     def uses_dates(self) -> bool:
         return all("@START" in s.query and "@END" in s.query for s in self.steps)
+
+    def with_periods(self, spans: list[tuple[date, date]]) -> "Plan":
+        """A chart's own periods filled in: @P1_START, @P1_LAST and @P1_END become the first period's
+        first day, last day and the day after it; @P2_... the second period's (spans = (start, end
+        exclusive) per period)."""
+        def fill(query: str, literal) -> str:
+            def one(m):
+                n, edge = int(m.group(1)), m.group(2)
+                if not 1 <= n <= len(spans):
+                    raise ValueError(f"The query uses {m.group(0)}, but the chart has {len(spans)} period(s).")
+                start, end = spans[n - 1]
+                return literal({"START": start, "LAST": end - timedelta(days=1), "END": end}[edge])
+            return OWN_PLACEHOLDER.sub(one, query)
+        steps = [Step(s.name, s.cube, fill(s.query, get_backend(s.cube).date_literal)) for s in self.steps]
+        return Plan(steps, fill(self.combine_sql, _sql_date) if self.combine_sql else "")
+
+    def own_periods(self) -> int:
+        """How many periods of its own the plan has placeholders for (@P1_..., @P2_...)."""
+        found = [int(n) for s in self.steps for n, _ in OWN_PLACEHOLDER.findall(s.query)]
+        found += [int(n) for n, _ in OWN_PLACEHOLDER.findall(self.combine_sql)]
+        return max(found, default=0)
+
+
+def _sql_date(d: date) -> str:
+    """A date in the SQL that joins the steps (DuckDB)."""
+    return f"DATE '{d.isoformat()}'"
+
+
+OWN_PLACEHOLDER = re.compile(r"@P(\d+)_(START|LAST|END)\b")
 
 
 # A step can keep only the members another step returned: @KEYS(top, Code) becomes the list of that
@@ -270,6 +299,136 @@ def check_periods(plan: Plan, periods: list) -> None:
                              f"{'s are' if len(periods) > 1 else ' is'} "
                              + "; ".join(p.text() for p in periods)
                              + " (worked out from today's date). Filter exactly from the first to the last day given.")
+
+
+# ---------------------------------------------------------------- periods as placeholders --
+# A chat answer goes on a dashboard without asking Claude again: each of its periods' dates in the plan
+# becomes a placeholder that is filled in whenever the chart runs. How a date is used tells which edge
+# of a period it is: ">= d" a first day, "<= d" a last day, "< d" the day after the last, "= d" or a
+# date in a list a single day; BETWEEN d1 AND d2 and DATESBETWEEN(col, d1, d2) a first and a last day.
+
+class CannotParametrize(ValueError):
+    """A plan whose periods can't be found or told apart in its dates (Claude has to rewrite it)."""
+
+
+def _date_of(m) -> date | None:
+    y, mo, d = (int(g) for g in m.groups() if g is not None)
+    try:
+        return date(y, mo, d)
+    except ValueError:
+        return None
+
+
+_LITERAL_TEXT = (r"(?:\bDATE\s*\(\s*\d{4}\s*,\s*\d{1,2}\s*,\s*\d{1,2}\s*\)|\bDATE\s*'\d{4}-\d{2}-\d{2}'"
+                 r"|@(?:P\d+_)?(?:START|LAST|END)\b)")  # a date, or a placeholder for one
+_BETWEEN_SECOND = re.compile(rf"\bBETWEEN\s*{_LITERAL_TEXT}\s*AND$", re.IGNORECASE)
+_DATESBETWEEN_FIRST = re.compile(r"\bDATESBETWEEN\s*\(\s*[^,()]+,$", re.IGNORECASE)
+_DATESBETWEEN_SECOND = re.compile(rf"\bDATESBETWEEN\s*\(\s*[^,()]+,\s*{_LITERAL_TEXT}\s*,$", re.IGNORECASE)
+
+
+def _edge_role(text: str, m) -> str:
+    """How the date literal m is used in text: "start", "last", "end" (the day after the last), "day"
+    (a single day, or not said) or "after" (> d: no placeholder means that)."""
+    before, after = text[:m.start()].rstrip()[-400:], text[m.end():].lstrip()
+    for ending, role in ((">=", "start"), ("<=", "last"), ("<>", "day"), ("!=", "day"), ("<", "end"),
+                         (">", "after")):
+        if before.endswith(ending):
+            return role
+    if re.search(r"\bBETWEEN$", before, re.IGNORECASE) or _DATESBETWEEN_FIRST.search(before):
+        return "start"
+    if _BETWEEN_SECOND.search(before) or _DATESBETWEEN_SECOND.search(before):
+        return "last"
+    for starting, role in (("<=", "start"), (">=", "last"), ("<>", "day"), ("<", "after"), (">", "end")):
+        if after.startswith(starting):
+            return role
+    return "day"
+
+
+def _edge_for(d: date, role: str, spans: list[tuple[date, date]]) -> tuple[int, str] | None:
+    """(period number, "START" / "LAST" / "END") that the date d used as role is, or None. A date whose use
+    doesn't say (= d, a list, VAR x = d) is a first or last day, else the day after a period."""
+    for i, (start, end) in enumerate(spans, start=1):
+        if role in ("start", "day") and d == start:
+            return i, "START"
+        if role in ("last", "day") and d == end - timedelta(days=1):
+            return i, "LAST"
+        if role == "end" and d == end:
+            return i, "END"
+    if role == "day":
+        return next(((i, "END") for i, (_, end) in enumerate(spans, start=1) if d == end), None)
+    return None
+
+
+def parametrize(plan: Plan, spans: list[tuple[date, date]], stems: list[str]) -> Plan:
+    """The plan with its periods' dates replaced by placeholders: for period i, stems[i] + START (first
+    day), LAST (last day) or END (the day after the last), e.g. "@P1_" -> @P1_START, or "@" -> the
+    dashboard's @START / @LAST / @END. Dates that aren't in any period stay as they are. Raises
+    CannotParametrize when a period has no date in the plan, a date inside a period isn't one of its
+    edges, or a period's date is written as text (then only Claude can rewrite it)."""
+    found: set[int] = set()
+
+    def near(d: date) -> bool:  # in a period, or the day just before or after it
+        return any(start - timedelta(days=1) <= d <= end for start, end in spans)
+
+    def replace(text: str) -> str:
+        def one(m):
+            d = _date_of(m)
+            if d is None:
+                return m.group(0)
+            role = _edge_role(m.string, m)
+            edge = _edge_for(d, role, spans) if role != "after" else None
+            if edge is None:
+                if near(d):
+                    raise CannotParametrize(f"The query uses {d.isoformat()} in a way that can't be moved with its period.")
+                return m.group(0)
+            found.add(edge[0])
+            return stems[edge[0] - 1] + edge[1]
+        for text_date in re.findall(r"['\"][^'\"\n]*?(\d{4}-\d{2}-\d{2})", _DATE_LITERAL.sub("", text)):
+            try:
+                d = date.fromisoformat(text_date)
+            except ValueError:
+                continue
+            if near(d):
+                raise CannotParametrize(f"The query writes the date {text_date} as text, so it can't be moved with its period.")
+        return _DATE_LITERAL.sub(one, text)
+
+    steps = [Step(s.name, s.cube, replace(s.query)) for s in plan.steps]
+    combine = replace(plan.combine_sql) if plan.combine_sql else ""
+    missing = [i for i in range(1, len(spans) + 1) if i not in found]
+    if missing:
+        raise CannotParametrize("The query has no dates of period " + ", ".join(map(str, missing))
+                                + " (it may filter by month names or years instead).")
+    return Plan(steps, combine)
+
+
+_ANY_PLACEHOLDER = re.compile(r"@(?:P(\d+)_)?(START|LAST|END)\b")
+
+
+def filters_a_range(plan: Plan, period: int = 0) -> bool:
+    """Whether the plan filters a period (0 = the dashboard's @START...; 1 = @P1_...) as a range from its
+    first day (>= START) to its last (<= LAST or < END) and never as single days (= START): only then can
+    it show a period of another length, like the dashboard's."""
+    starts = ends = 0
+    for text in [s.query for s in plan.steps] + [plan.combine_sql]:
+        for m in _ANY_PLACEHOLDER.finditer(text):
+            if int(m.group(1) or 0) != period:
+                continue
+            role, edge = _edge_role(text, m), m.group(2)
+            if role != {"START": "start", "LAST": "last", "END": "end"}[edge]:
+                return False
+            starts += edge == "START"
+            ends += edge != "START"
+    return starts > 0 and ends > 0
+
+
+def rename_placeholders(plan: Plan, old: str, new: str) -> Plan:
+    """Placeholders moved from one stem to another: "@P1_" -> "@" makes a chart's own first period
+    follow the dashboard (@P1_START -> @START), "@" -> "@P1_" the other way round."""
+    pattern = re.compile(re.escape(old) + r"(START|LAST|END)\b" if old != "@" else r"@(START|LAST|END)\b")
+
+    def move(text: str) -> str:
+        return pattern.sub(lambda m: new + m.group(1), text)
+    return Plan([Step(s.name, s.cube, move(s.query)) for s in plan.steps], move(plan.combine_sql))
 
 
 def _validate_select(sql: str) -> None:

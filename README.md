@@ -65,22 +65,30 @@ Claude API. The model's table/measure names and the query results are sent to Cl
 You need a Claude API key from https://platform.claude.com/settings/keys (add billing, then
 create a key) and the server details you use in Power BI or Excel.
 
-1. **Download and unzip** the app somewhere simple, e.g. `C:\BookingsAssistant`
-   (on GitHub: **Code > Download ZIP**).
-2. **Double-click `setup.bat`.** No admin rights needed. It:
+1. **Download `install-bookings-assistant.cmd`** from the latest release on GitHub (**Releases**, under
+   **Assets**) and **double-click it**. Nothing to answer, no admin rights needed. (Windows may first ask
+   whether to run a downloaded file: click **More info › Run anyway** or **Run**.) It:
+   - downloads the app into `%LOCALAPPDATA%\Programs\Bookings Assistant`,
    - installs Python 3.13 if this computer doesn't have 64-bit Python 3.12/3.13
      (with winget, or from python.org after checking the installer's signature),
    - installs the app's libraries into a private `.venv` folder,
    - downloads ADOMD.NET (the connector for the live server, like Excel uses),
    - creates `.env` and a **Bookings Assistant** desktop shortcut,
-   - offers to start the app.
-3. **In the app, open Settings** (menu › Admin), create an admin password, then enter:
+   - starts the app in the background whenever you sign in to Windows, starts it now and opens
+     http://localhost:8600 in the browser.
+
+   Already have the app's folder (a release zip, unzipped)? Double-click **`setup.bat`** in it instead:
+   it does the same, in that folder. In a copy without the built web app (a `git clone`), setup also
+   builds it, downloading Node.js for this user first if the computer doesn't have it.
+2. **In the app**, create the admin password, then open **Settings** (menu › Admin) and enter:
    - the **Claude API key**, and click **Test Claude**,
    - the **server**, **username** and **password** you use in Power BI/Excel, and click **Test server**.
-4. **Open Cubes** (menu › Admin): tick the cubes people should use (or **Use all cubes**), then click
+3. **Open Cubes** (menu › Admin): tick the cubes people should use (or **Use all cubes**), then click
    **Build the data layer** (once; about a minute per cube). Or run `python build_layer.py --all`.
 
-Run `setup.bat` again at any time to repair the installation; your settings are kept.
+Run `setup.bat` (or the installer) again at any time to repair the installation; your settings are kept.
+Options, from a command prompt in the folder: `setup.bat -NoAutostart` (start it now but not with
+Windows), `setup.bat -NoStart`, and `setup.bat -Classic` for the previous app (Streamlit, port 8501).
 
 ### Updating to a new version
 
@@ -236,21 +244,22 @@ If something goes wrong, the app shows a plain-English message; the technical te
 
 ## Daily use
 
-Windows: double-click the **Bookings Assistant** desktop shortcut (or **`run_app.bat`**).
-Mac: run `bash run_app.sh` in Terminal. Your browser opens at http://localhost:8501.
+Windows: double-click the **Bookings Assistant** desktop shortcut. It opens http://localhost:8600 in the
+browser, starting the app first if it isn't running (**`run_app.bat`** does the same and keeps a window
+with the app's messages). Mac: run `bash run_app.sh` in Terminal; your browser opens at http://localhost:8501.
 
 ### Start automatically with Windows
 
-Double-click **`autostart.bat`** (setup offers it too). The app then starts in the background, without a
-window, whenever you sign in to Windows, and restarts by itself if it stops. Open http://localhost:8501 (the
-desktop shortcut just opens the browser when it's already running). Its messages go to `data\app.log`.
+Setup does this. The app then starts in the background, without a window, whenever you sign in to
+Windows, and restarts by itself if it stops. Its messages go to `data\api.log`. To change it, double-click
+**`autostart.bat`** or run it with an option:
 - **On a server nobody signs in to** (e.g. after Windows updates restart it): run
   `autostart.bat -AtStartup` instead. It starts when the computer starts, before anyone signs in;
   Windows asks for your account password once to store it with the task (the app needs your account
   because the keys and passwords are in your Credential Manager).
-- After updating the app's code, restart it: `autostart.bat` again (or Task Scheduler › Bookings
-  Assistant › End, then Run).
+- To restart it: `autostart.bat` again (or Task Scheduler › Bookings Assistant › End, then Run).
 - To stop starting automatically: `autostart.bat -Remove`.
+- The previous app (Streamlit, http://localhost:8501, messages in `data\app.log`): `autostart.bat -Classic`.
 
 ### Dashboards (open first)
 
@@ -265,8 +274,8 @@ and every chart follows what you pick:
   first Thursday): click it for that week, shift-click another to add weeks; or type a year and week
   numbers at the bottom (e.g. 2025, weeks 10 to 12);
 - **A month** - click the month's name.
-Then **Apply**. Every chart always follows the dashboard's dates (never the dates of the question it
-came from).
+Then **Apply**. Every chart follows these dates, unless it keeps a period of its own (see
+[Chart periods](#chart-periods)).
 
 A dashboard opens with the numbers each chart had the last time it ran (saved in `data/dashboard_results/`),
 so it doesn't wait for the cubes. A chart is run again only when one of its cubes has new data since (the
@@ -274,9 +283,9 @@ server's last update time, checked every 5 minutes) or its numbers are a day old
 the page updating itself when the new numbers are in. **↻** next to the period runs every chart again now.
 
 **Compare** (next to the period, e.g. *vs 1 Jan – 15 Oct 2025*) sets one comparison for the whole
-dashboard: **previous period** (the same days of the previous week, month, quarter or year - "this month"
-1-15 Oct is compared with 1-15 Sep - or the days just before), **same period last year** (the default;
-for weeks, the same week numbers), **other dates**, or **no comparison**. Each choice shows its dates.
+dashboard: **previous period** (the default; the same days of the previous week, month, quarter or year -
+"this month" 1-15 Oct is compared with 1-15 Sep - or the days just before), **same period last year** (for
+weeks, the same week numbers), **other dates**, or **no comparison**. Each choice shows its dates.
 Headline numbers show the change (*+12.3% vs last year*); columns, bars and lines of one measure show the
 other period in grey beside this one (both named by their dates in the legend, the change on hover);
 tables get a change column after each measure. Maps, donuts and charts of several measures show this
@@ -311,6 +320,61 @@ bookings in tens, sales in AED) get **one panel each**, sharing the categories; 
 chart** (*"6 bars for each customer, 3 for each day"*) and they stand side by side, up to three, each on
 its own axis in its own colour, the second breakdown in shades of that colour.
 
+### The dashboards the app comes with
+
+Five dashboards come with the app, written by hand on the Bookings, Hotel Sales (owned and third-party
+hotels), Searches (Statistics Zone), Client API requests (Statistics History Client), Supplier requests
+(Statistics History Supplier), Hotel-level client requests (Statistics Hotel Client) and Hotel Locks
+History cubes - no Claude key needed. Each appears, first in the list, as soon as the cubes it uses are
+connected (Cubes page), and the overview opens the app. Every chart follows the period and the comparison
+picked at the top; the test agencies' market is always left out. Read each one top to bottom: the
+headline numbers, the trend, who buys, where the guests go, what is bought, then demand and look-to-book.
+
+Three countries, three different things:
+- **market** - where the client (the agency) is based: 'Customers'[Customer Country];
+- **guest nationality** - the guests' nationality, as the agency sent it with the booking:
+  'Countries'[Country] in Bookings and Hotel Sales (a UAE agency booking Turkish guests counts under
+  Turkey). Always filled; about 15% of bookings come from agencies that send the same value for every
+  booking (usually their own country), which is a default rather than a nationality;
+- **destination** - where the guests stay: the hotel's country and city ('Hotels'[Hotel Country] and
+  [Hotel City] in Hotel Sales, which holds every hotel booking; Bookings has only 'Areas', which mixes cities,
+  regions and countries). Destinations are about hotel bookings.
+
+- **Business overview** - for the executives: sales, profit, margin, bookings, room nights, active
+  clients, searches and look-to-book (API requests per booking; lower is better, so a fall shows green);
+  sales, profit and bookings over time; the top client countries and clients; guest nationalities; sales by
+  channel; where the guests stay (map and top 10 destinations); the top suppliers with their margin; the
+  booking window; confirmed and cancelled bookings; searches and look-to-book over time; and the clients that
+  search most next to what they book.
+- **Market view** - pick a market (the agencies' country, e.g. Saudi Arabia): its headline numbers and
+  trend, the clients driving it (grey bars: the comparison period, so growing and shrinking clients stand
+  out), who travels (the guests' nationalities) and where they go (destinations), top hotels, its top clients' searches next to their
+  bookings, searches over time, channels, booking window and cancellations. With the comparison on, this
+  answers "why is this market up or down".
+- **Destination view** - pick a destination (the hotel's country, e.g. Turkey): its hotel sales, profit,
+  margin, bookings, room nights and clients; the hotel requests clients send for it and the share answered
+  with availability (how well it is supplied); its top cities, who travels there (the guests' nationalities)
+  and where they are booked from (the agencies' countries), the clients selling it, top hotels, the supplier connections behind it, hotel locks there by
+  reason, booking window, cancellations and channels.
+- **Client view** - pick a client (the clients with sales in the last year, biggest first; type to
+  search): its headline numbers (with the average booking value), sales, bookings and API requests over
+  time, where its guests stay and their nationalities, the suppliers that served it, its top hotels,
+  cancellations, booking window, how its API requests were answered, and the API's response time for it.
+- **Supplier view** - pick a supplier connection (the supplier connections with sales in the last year,
+  biggest first): the sales, profit, margin and bookings made through it next to what we ask of it - the
+  requests the engine sends it, their look-to-book, its response time and its hotel locks (options that
+  failed when rechecked: lost bookings; all three better lower); requests and response time over time, how
+  it answered (correct, no results, errors), why its hotels locked and where, the clients booking through it
+  and the clients whose searches cost the most requests, where its guests stay, top hotels, cancellations and
+  booking window. Suppliers are matched by their connection code, the same in Bookings ('Product
+  Type'[Module Code]), Hotel Sales ('Modules'[Module Code]) and the supplier-side cubes.
+
+The value picked is kept in the page address (`?f_market=…`, `?f_destination=…`, `?f_client=…`,
+`?f_supplier=…`), so a link opens the same view. A margin's change shows in percentage
+points (+3.2 pts). Their definitions are in `builtin_dashboards.py`; a new version of the app may bring a new
+version of them, which replaces their charts (a renamed dashboard keeps its name; one deleted is not added
+again). Admins can still add charts to them, or make their own dashboards.
+
 ### Chat
 
 **Data** in the sidebar is **All data** (Claude picks the cubes, and joins them when needed) or one cube.
@@ -332,10 +396,10 @@ filters) so you can check it. If the question is too unclear to answer, it asks 
 with one-click answers. **Add to dashboard** under any chart sends it to any dashboard, or a new one
 (admins only), and **Make a dashboard from this conversation** (under a conversation with two charts or
 more) puts its charts on a new dashboard of their own and opens it (Claude prepares them at the same
-time; one that can't be prepared is reported and the rest are added). On a dashboard a chart always
-follows the dashboard's dates, and its title drops the question's dates ("Sales by month, 2026" becomes
-"Sales by month"); to compare two periods, use **Compare** next to the period. A chart described in
-words keeps its look.
+time; one that can't be prepared is reported and the rest are added). On a dashboard a chart follows
+the dashboard's dates, keeps the question's own rolling dates, or keeps fixed dates (see
+[Chart periods](#chart-periods)); its title drops the question's dates ("Sales by month, 2026" becomes
+"Sales by month"). A chart described in words keeps its look.
 
 **What Claude costs** is on the **Settings** page: today, the last 7 days, this month and since
 measuring started, by activity (questions, dashboard charts, chart redraws, data layer builds, cube setup)
@@ -388,6 +452,69 @@ or green **Admin** (click it to sign out). Signing in is one box: the admin pass
 **Keep me signed in on this computer** (ticked by default) keeps that browser signed in for 30 days,
 until you sign out, or until the admin password is changed (which signs every computer out). Admin pages
 show a lock in the menu until you sign in.
+
+## The new app (React + FastAPI)
+
+A faster app is replacing the Streamlit one: a React front end (`web/`) served by a FastAPI back end
+(`server/`), on the same cubes, dashboards, settings and data. Setup installs and starts it (port 8600);
+an installation set up before keeps starting the previous app (port 8501) until `setup.bat` (or
+`autostart.bat`) is run again in its folder. Both can run side by side. Its API is described in
+`docs/api.md`.
+
+**Run it** (in the app folder, after `.venv\Scripts\activate`):
+```
+python start_api.py
+```
+and open http://localhost:8600. The server shows the built front end from `web/dist`; build it once, and
+again after each change to `web/` (needs Node.js):
+```
+cd web
+npm install
+npm run build
+```
+While working on the front end, `npm run dev` (in `web/`) serves it on http://localhost:5173 with live
+reload and sends `/api` to the server on 8600, which must be running.
+
+Environment variables (set before starting it):
+
+| Variable | Default | What it does |
+|---|---|---|
+| `API_PORT` | `8600` | The new app's port |
+| `API_WORKERS` | `6` | Cube worker processes (live mode): cube queries run in them, so pages and queries don't slow each other down. About 130 MB each |
+| `APP_DATA_DIR` / `APP_DASHBOARDS_FILE` | `data/`, `dashboards.json` | Another data folder and dashboards file, e.g. throwaway ones for tests (the real ones are never touched) |
+
+At start-up the server connects its workers and reads the data layer, meaning layer and value indexes
+into memory. At start-up and every day at 00:05 it runs the dashboard charts for the new day, so the
+first visit of the day opens with saved numbers.
+
+### Chart periods
+
+Each dashboard chart either:
+- **follows the dashboard's period** (the period button at the top),
+- **keeps its own rolling period**, e.g. *yesterday vs the day before*, worked out again every day
+  (yesterday stays yesterday), or
+- **keeps fixed dates**, which never move.
+
+Pick it when adding a chart, or under **⋯ › Edit**. Adding a chat answer to a dashboard is instant (no
+Claude call, no query): the chart is kept as it was seen in Chat - its look, its numbers and (unless it
+follows the dashboard) its dates. Only an answer whose query has to be rewritten to follow the dashboard's period waits for Claude (about half
+a minute). Both apps work this way.
+
+A dashboard opens on the **last 7 days compared with the 7 days before**. To change that, set
+`DEFAULT_PRESET` and `DEFAULT_COMPARE` in `periods.py` (a name from `PRESETS` and a key of
+`COMPARE_MODES`); both apps use them, and the nightly run prepares the charts for them.
+
+### Tests of the new app
+
+`python -m pytest` covers the back end too (`tests/test_api.py`). In `web/`:
+```
+npx vitest run
+npx playwright test e2e/app.spec.ts
+```
+`npx vitest run` tests the front end's own code in seconds. The Playwright test drives the whole app in a
+browser (the first time, run `npx playwright install chromium`): it starts its own server on port 8620
+from the app's `.venv`, with throwaway data (the real data and dashboards are never touched) and asks Claude nothing. Its test
+dashboard runs on the cubes, so it needs the live server.
 
 ## Scheduled pulls (optional, Windows live mode)
 
@@ -464,11 +591,16 @@ You can point Excel or Power BI at those CSVs, or ask the app new questions any 
 | `pull.py` | Re-runs saved queries for scheduled refreshes |
 | `get_adomd.py` | Backup way to get ADOMD.NET without the installer |
 | `set_password.py` | Saves your server password securely in Windows Credential Manager |
-| `setup.bat` / `run_app.bat` | Windows setup (runs `setup_windows.ps1`) and start |
+| `install-bookings-assistant.cmd` | The one-file installer (attached to every release): downloads the latest release and runs its setup |
+| `setup.bat` / `run_app.bat` | Windows setup (runs `setup_windows.ps1`; nothing to answer) and start (`run_app.bat classic`: the previous app) |
 | `autostart.bat` / `install_autostart.ps1` | Start the app automatically with Windows, in the background (Task Scheduler) |
 | `updates.py` | Updating from GitHub releases (Settings › App version), keeping all of the installation's data; also the helper that stops, updates and restarts the app |
 | `VERSION` | The app's version; each GitHub release is tagged with it (`v1.1.0`) |
-| `start_server.py` | Runs the app in the background without a window (what Windows starts); log in `data/app.log`. Limits numpy's maths library to one thread (it would reserve ~30 MB per CPU core) |
+| `start_server.py` | Runs the previous (Streamlit) app in the background without a window; log in `data/app.log`. Limits numpy's maths library to one thread (it would reserve ~30 MB per CPU core) |
+| `builtin_dashboards.py` | The dashboards the app comes with (business overview; market, destination, client and supplier views): their queries and filters |
+| `start_api.py` | Runs the new app (FastAPI + the React front end) on port 8600 (`API_PORT`); what Windows starts (log in `data/api.log`). `--open` opens it in the browser, starting it first if needed (the desktop shortcut) |
+| `server/` | The new app's back end: the API under `/api` (`docs/api.md`), sign-in, cube worker processes, the nightly chart runs |
+| `web/` | The new app's React front end (`npm run build` into `web/dist`, which the server shows) and its tests |
 | `setup.sh` / `run_app.sh` | Mac setup and start |
 | `.env` | Your settings and API key (keep private, don't share or email it; delete it before sending the folder to someone) |
 | `business_notes.example.md` | Template for each cube's notes (`models/<cube>/notes.md`) |
