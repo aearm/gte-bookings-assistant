@@ -91,13 +91,15 @@ create a key) and the server details you use in Power BI or Excel.
    should use. Click **Build the data layer** (once; about a minute per cube) so questions can be asked.
    Or run `python build_layer.py --all`.
 
-Run the installer again at any time to repair the installation; your settings are kept. Options, from a
+Run the installer again at any time: an installation older than the latest release is updated to it first
+(settings, keys, dashboards and data are kept), then repaired and started. Options, from a
 command prompt in the app folder: `install-bookings-assistant.cmd -NoAutostart` (start it now but not
 with Windows), `-NoStart`, and `-Classic` for the previous app (Streamlit, port 8501).
 
 ### Updating to a new version
 
-Admins update the app from inside it: **Settings › App version › Check for updates**. If GitHub has a
+Double-clicking the installer again updates an installation to the latest release (see above). Admins can
+also update the app from inside it: **Settings › App version › Check for updates**. If GitHub has a
 newer release you see its number, date and what's new, and **Update to …** does the rest: it downloads
 the release, the app stops, the new code is put in place (new libraries are installed if needed), and
 the app starts again by itself - about a minute; the page reconnects when it's back. Users don't
@@ -334,8 +336,9 @@ its own axis in its own colour, the second breakdown in shades of that colour.
 Five dashboards come with the app, written by hand on the Bookings, Hotel Sales (owned and third-party
 hotels), Searches (Statistics Zone), Client API requests (Statistics History Client), Supplier requests
 (Statistics History Supplier), Hotel-level client requests (Statistics Hotel Client) and Hotel Locks
-History cubes - no Claude key needed. They are there, first in the list, as soon as the app is installed,
-and the overview opens the app; until the server is entered in Settings one note at the top says so. Every chart follows the period and the comparison
+History cubes - no Claude key needed. Every installation has them, first in the list, as soon as the app is
+installed, and the overview opens the app; until the server is entered in Settings (or when the installation
+reads local files) one note at the top says so. Every chart follows the period and the comparison
 picked at the top; the test agencies' market is always left out. Read each one top to bottom: the
 headline numbers, the trend, who buys, where the guests go, what is bought, then demand and look-to-book.
 

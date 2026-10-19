@@ -17,6 +17,10 @@ $ProgressPreference = "SilentlyContinue"   # much faster downloads in Windows Po
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $App = Split-Path $PSScriptRoot -Parent  # the app folder (this file is in its install\)
 Set-Location $App
+# the setup files from before 2.0.1 next to the app (now in install\, setup.bat and autostart.bat gone)
+foreach ($old in "setup.bat", "autostart.bat", "setup_windows.ps1", "install_autostart.ps1", "run_app.bat", "setup.sh", "run_app.sh") {
+    Remove-Item (Join-Path $App $old) -Force -ErrorAction SilentlyContinue
+}
 
 $PythonVersion = "3.13.15"   # tested with this app; pythonnet needs 64-bit Python 3.12 or 3.13
 $NodeVersion = "22.23.3"     # only to build the web app in a copy without it (releases include it built)

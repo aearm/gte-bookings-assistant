@@ -223,9 +223,13 @@ def _plan_of(chart: dict) -> plans.Plan:
 _builtin_checked = {"time": 0.0}
 
 
-def setup_problem() -> str:
-    """Why a dashboard can't show its numbers yet (live mode without the cube server set up), else ""."""
+def setup_problem(board: dict | None = None) -> str:
+    """Why a dashboard can't show its numbers yet, else "": the cube server isn't set up (live mode), or it is
+    a built-in dashboard in an installation that reads local files."""
     if config.resolve_source() != "ssas":
+        if board and board.get("builtin"):
+            return ("This dashboard reads the live bookings cubes, and this installation reads local files instead "
+                    "(DATA_SOURCE in .env). Set DATA_SOURCE=ssas and the cube server, then the numbers appear.")
         return ""
     if not config.SSAS_SERVER:
         return "The cube server isn't set up yet: an admin enters it on the Settings page, then the numbers appear."
@@ -241,9 +245,7 @@ def ensure_builtin(force: bool = False) -> None:
     if not config.BUILTIN_DASHBOARDS or (not force and time.time() - _builtin_checked["time"] < 60):
         return
     _builtin_checked["time"] = time.time()
-    if config.resolve_source() != "ssas":  # they are built on the live cubes: not for local files
-        return
-    import builtin_dashboards
+    import builtin_dashboards  # every installation has them at once, whatever is set up (setup_problem says what's missing)
     shipped = builtin_dashboards.all_dashboards()
     seen = _read().get("builtin") or {}
     if all(seen.get(b["id"]) == b["builtin"] for b in shipped):

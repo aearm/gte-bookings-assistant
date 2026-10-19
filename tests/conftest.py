@@ -83,5 +83,6 @@ def app_dirs(tmp_path, monkeypatch):
     monkeypatch.setattr(data_layer, "LAYER_FILE", models / "data_layer" / "layer.json")
     monkeypatch.setattr(data_layer, "CATALOG_FILE", models / "data_layer" / "catalog.md")
     monkeypatch.setattr(app_config, "ANTHROPIC_API_KEY", "sk-ant-test")
+    monkeypatch.setattr(app_config, "BUILTIN_DASHBOARDS", False)  # tests that want them switch them on
     data_layer._cache.update(mtime=None, data={})
     return tmp_path

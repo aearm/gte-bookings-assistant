@@ -328,7 +328,7 @@ def results(request: Request, dashboard_id: str, start: date | None = None, end:
     board = board_or_404(dashboard_id)
     start, end, preset = pick(start, end, preset)
     against = versus(compare or DEFAULTS["compare"], start, end, preset, cstart, cend)
-    problem = dashboards.setup_problem()
+    problem = dashboards.setup_problem(board)
     if problem:  # nothing to ask yet: one note for the page, not an error on every chart
         return {"period": period_json(start, end, preset), "compare": against, "charts": {}, "updating": False,
                 "data_as_of": {"text": "", "per_cube": {}}, "filters": {}, "setup": problem}
@@ -353,7 +353,7 @@ def filter_choices(dashboard_id: str) -> list[dict]:
     """The values each filter of the dashboard can take (the clients or markets with sales in the last year,
     biggest first) and its default (the first)."""
     board = board_or_404(dashboard_id)
-    if dashboards.setup_problem():
+    if dashboards.setup_problem(board):
         return [{"key": f["key"], "label": f.get("label") or f["key"], "options": [], "default": "", "error": ""}
                 for f in board.get("filters") or []]
     return dashboards.filter_options(board)

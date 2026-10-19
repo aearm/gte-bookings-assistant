@@ -424,6 +424,11 @@ def render(dashboard_id: str) -> None:
             if not is_admin:
                 st.caption("Renaming and deleting need the admin sign-in (top of the page).")
 
+    problem = dashboards.setup_problem(board)
+    if problem:  # nothing can be asked yet: one note, not an error on every chart
+        st.info(problem, icon=":material/settings:")
+        return
+
     # one row of filters above the charts: the period, refresh, and when the data was updated
     with st.container(horizontal=True, vertical_alignment="center", key="dash_filters"):
         start, end, _ = period_picker.picker()

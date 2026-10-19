@@ -3,6 +3,15 @@
 Each version's notes are what admins see in the app (Settings › App version) and on its GitHub release.
 To release: raise VERSION, add its section here, commit and push to main. GitHub publishes it by itself.
 
+## 2.0.2 - 2026-10-19
+
+- Double-clicking the installer on a computer that already has the app now brings it up to the latest
+  version (settings, keys, dashboards and data are kept), then repairs and starts it. Before, it only
+  repaired the version that was there, so an older installation never got the built-in dashboards.
+- Every installation has the five built-in dashboards, also one that reads local files (each says it
+  needs the cube server). The previous app (Streamlit) shows the same note instead of errors.
+- Setup removes the setup files from before 2.0.1 left next to the app.
+
 ## 2.0.1 - 2026-10-19
 
 - The built-in dashboards are there as soon as the app is installed, without connecting cubes first. Until

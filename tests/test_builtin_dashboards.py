@@ -201,7 +201,7 @@ def test_a_cube_server_not_set_up_is_one_note_for_the_page(gte_cubes, monkeypatc
     assert dashboards.setup_problem() == ""
     monkeypatch.setattr(config, "DATA_SOURCE", "local")
     monkeypatch.setattr(config, "SSAS_SERVER", "")
-    assert dashboards.setup_problem() == ""  # local files need no server
+    assert dashboards.setup_problem({"id": "mine", "charts": []}) == ""  # local files need no server
 
 
 def test_every_cube_on_the_server_is_connected_until_an_admin_picks(app_dirs, monkeypatch):
@@ -271,11 +271,19 @@ def test_the_supplier_list_holds_supplier_connections_only():
     assert "'Suppliers'[Supplier Code] = @F_SUPPLIER" in steps[bd.LOCKS]
 
 
-def test_left_out_on_local_files_or_when_switched_off(app_dirs, monkeypatch):
+def test_every_installation_has_them_even_on_local_files(app_dirs, monkeypatch):
+    """Reading local files (a Mac, or DATA_SOURCE=local) the five are there too, each with a note that it reads the
+    live cubes; the installation's own dashboards show their numbers as before."""
     dashboards._builtin_checked["time"] = 0.0
     monkeypatch.setattr(config, "BUILTIN_DASHBOARDS", True)
-    dashboards.ensure_builtin(force=True)  # local mode: they are built on the live cubes
-    assert [d["name"] for d in dashboards.list_dashboards()] == ["Main dashboard"]
+    assert [d["id"] for d in dashboards.list_dashboards()] == IDS
+    assert "reads the live bookings cubes" in dashboards.setup_problem(dashboards.get_dashboard("overview"))
+    mine = dashboards.get_dashboard(dashboards.create_dashboard("Mine"))
+    assert dashboards.setup_problem(mine) == ""
+
+
+def test_left_out_only_when_switched_off(app_dirs, monkeypatch):
+    dashboards._builtin_checked["time"] = 0.0
     monkeypatch.setattr(config, "BUILTIN_DASHBOARDS", False)
     monkeypatch.setattr(config, "DATA_SOURCE", "ssas")
     dashboards.ensure_builtin(force=True)
