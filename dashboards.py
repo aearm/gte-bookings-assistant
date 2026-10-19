@@ -3,11 +3,13 @@ A dashboard can mix charts from different cubes, and a chart can combine several
 plans.py). Saved in dashboards.json; only admins change them (see dashboard_view.py). Claude is
 only used when a chart is created or its question changes - refreshing just re-runs the saved plans."""
 import json
+import os
 import re
 import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextlib import contextmanager
 from datetime import date, datetime, timedelta
 
 import pandas as pd
@@ -217,8 +219,10 @@ def _plan_of(chart: dict) -> plans.Plan:
 
 # ---------------------------------------------------------------- dashboards the app ships with --
 # builtin_dashboards.py: added to dashboards.json as soon as the app runs on the live cubes, first in the list
-# (the overview then opens the app); until the cube server is set up they say so (setup_problem). "builtin" in dashboards.json notes the version added; a newer version
-# replaces the dashboard's charts and filters (its name stays), and one deleted is not added again.
+# (the overview then opens the app); until the cube server is set up they say so (setup_problem). "builtin" in
+# dashboards.json notes the version added; a newer version replaces the dashboard's charts and filters (its name
+# stays), and one deleted is not added again. One whose charts or filters someone changed ("customized": in the app
+# or from Claude) is theirs: new versions leave it as it is.
 
 _builtin_checked = {"time": 0.0}
 
@@ -258,7 +262,7 @@ def ensure_builtin(force: bool = False) -> None:
         for b in shipped:
             if noted.get(b["id"]) == b["builtin"]:
                 continue
-            if b["id"] in have:
+            if b["id"] in have and not have[b["id"]].get("customized"):
                 have[b["id"]].update(charts=b["charts"], filters=b["filters"], builtin=b["builtin"])
             elif b["id"] not in noted:
                 added.append(b)
@@ -278,6 +282,39 @@ def ensure_builtin(force: bool = False) -> None:
 # them follows the dashboard's period, like every chart from before).
 
 _lock = threading.Lock()
+
+
+@contextmanager
+def _file_lock():
+    """dashboards.json changed by one process at a time: the web app, the previous app and Claude's connector
+    (mcp_server.py) may each change it. A lock file next to it, locked by the operating system (released if a
+    process dies)."""
+    path = config.DASHBOARDS_FILE.with_suffix(".lock")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "a+b") as handle:
+        if os.name == "nt":
+            import msvcrt
+            handle.seek(0)
+            for _ in range(600):  # up to a minute
+                try:
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+                    break
+                except OSError:
+                    time.sleep(0.1)
+            else:
+                raise RuntimeError("The dashboards are being changed by another program; try again in a minute.")
+            try:
+                yield
+            finally:
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(handle, fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(handle, fcntl.LOCK_UN)
 
 
 def _read() -> dict:
@@ -304,8 +341,8 @@ def _write(data: dict) -> None:
 
 
 def _change(fn) -> None:
-    """Apply fn(data) to dashboards.json under a lock (several people may edit at once)."""
-    with _lock:
+    """Apply fn(data) to dashboards.json under a lock (several people and programs may edit at once)."""
+    with _lock, _file_lock():
         data = _read()
         fn(data)
         _write(data)
@@ -349,7 +386,37 @@ def _charts_fn(dashboard_id: str, fn):
         for d in data["dashboards"]:
             if d["id"] == dashboard_id:
                 d["charts"] = fn(d["charts"])
+                if d.get("builtin"):
+                    d["customized"] = True  # changed by someone: new versions of it leave it alone
     _change(apply)
+
+
+def copy_dashboard(dashboard_id: str, name: str) -> str:
+    """A copy of a dashboard (its charts and filters) under a new name, after it in the list; returns its id."""
+    new_id = uuid.uuid4().hex[:8]
+
+    def fn(data):
+        i = next(i for i, d in enumerate(data["dashboards"]) if d["id"] == dashboard_id)
+        source = data["dashboards"][i]
+        charts_ = [{**json.loads(json.dumps(c)), "id": uuid.uuid4().hex[:8]} for c in source["charts"]]
+        for c in charts_:
+            c.pop("builtin", None)
+        data["dashboards"].insert(i + 1, {"id": new_id, "name": name.strip() or f"{source['name']} (copy)",
+                                          "charts": charts_, "filters": json.loads(json.dumps(source.get("filters") or []))})
+    _change(fn)
+    return new_id
+
+
+def set_filters(dashboard_id: str, filters: list[dict]) -> None:
+    """A dashboard's filters (see "dashboard filters" above); [] removes them."""
+    def fn(data):
+        for d in data["dashboards"]:
+            if d["id"] == dashboard_id:
+                d["filters"] = filters
+                if d.get("builtin"):
+                    d["customized"] = True
+    _change(fn)
+    _options_cache.clear()
 
 
 def get_chart(dashboard_id: str, chart_id: str) -> dict | None:
@@ -367,6 +434,16 @@ def update_chart(dashboard_id: str, chart: dict) -> None:
 
 def delete_chart(dashboard_id: str, chart_id: str) -> None:
     _charts_fn(dashboard_id, lambda charts: [c for c in charts if c["id"] != chart_id])
+
+
+def place_chart(dashboard_id: str, chart_id: str, position: int) -> None:
+    """Put a chart at a place in its dashboard (0 = first; past the end = last)."""
+    def fn(charts_):
+        chart = next(c for c in charts_ if c["id"] == chart_id)
+        rest = [c for c in charts_ if c["id"] != chart_id]
+        rest.insert(min(max(position, 0), len(rest)), chart)
+        return rest
+    _charts_fn(dashboard_id, fn)
 
 
 def move_chart(dashboard_id: str, chart_id: str, step: int) -> None:

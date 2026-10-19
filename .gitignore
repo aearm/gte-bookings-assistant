@@ -25,6 +25,8 @@ dashboard.json.bak
 data/app*.log
 data/api*.log
 data/autostart.json
+data/*-skill.zip
+dashboards.lock
 data/usage.jsonl
 data/answers.db
 data/bench/

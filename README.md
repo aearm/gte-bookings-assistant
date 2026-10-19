@@ -465,6 +465,38 @@ or green **Admin** (click it to sign out). Signing in is one box: the admin pass
 until you sign out, or until the admin password is changed (which signs every computer out). Admin pages
 show a lock in the menu until you sign in.
 
+## Use it from Claude (no API key needed)
+
+Any Claude conversation on the computer where the app is installed - **Claude Desktop** chats and **Claude
+Code** - can use the cubes and the dashboards: ask a question about the data, or say "add a chart of the top 10
+destinations by sales to the Market view", and Claude does it with your own Claude, not the app's Claude key.
+
+- **The knowledge is the context.** Claude reads what the app's own Claude reads: the data layer (every cube in
+  a card, which cube for what, how the cubes join), each cube's measures, columns and values, the meaning layer
+  and glossary, the rules for writing queries, and how the built-in dashboards filter each cube.
+- **Drawing is a skill.** The `bookings-dashboards` skill (`skills/bookings-dashboards`) teaches Claude how to
+  describe a chart for the app (types, formats, filters, the order of a dashboard). The app then runs the chart
+  for whatever period people pick and draws it, like any other.
+- **Nothing broken is saved.** Every chart is run on the cubes before it goes on a dashboard; one that fails or
+  can't be drawn is refused with the reason, and Claude fixes it. Claude deletes charts or dashboards only when
+  asked.
+- A built-in dashboard that is changed (from Claude or in the app) becomes yours: new versions of the app no
+  longer replace it. To experiment, ask Claude to copy it first.
+
+**Connecting.** Setup does it when Claude Desktop or Claude Code is installed (step 7). By hand, in the app
+folder: `.venv\Scripts\python.exe install\connect_claude.py` (`--remove` disconnects). Then quit Claude Desktop
+(also from the tray) and open it again. It adds the **bookings-assistant** connector (`mcp_server.py`, which
+Claude starts by itself) to Claude Desktop's settings and to Claude Code for every project, and the skill to
+Claude Code. Claude Desktop chats get the skill's guide from the connector; to add the skill itself there,
+Settings › Capabilities › Skills › upload `data\bookings-dashboards-skill.zip`.
+
+**What Claude can do** (the connector's tools): read the knowledge (`get_knowledge`, `get_cube_details`,
+`find_values`, `get_join_path`), run queries (`run_query`), and work on dashboards (`list_dashboards`,
+`get_dashboard`, `preview_chart`, `add_chart`, `update_chart`, `move_chart`, `copy_chart`, `delete_chart`,
+`create_dashboard`, `copy_dashboard`, `rename_dashboard`, `set_dashboard_filters`, `delete_dashboard`).
+It works where the app is installed (the connector runs next to it); Claude on the web (claude.ai in a browser)
+can't reach it.
+
 ## The new app (React + FastAPI)
 
 A faster app is replacing the Streamlit one: a React front end (`web/`) served by a FastAPI back end
@@ -606,6 +638,9 @@ You can point Excel or Power BI at those CSVs, or ask the app new questions any 
 | `install-bookings-assistant.cmd` | The one installer (also attached to every release): on its own it downloads the latest release; in an app folder it sets up that folder (nothing to answer) |
 | `install/setup_windows.ps1` / `install/run_app.bat` | Windows setup (what the installer runs) and start (`install\run_app.bat classic`: the previous app) |
 | `install/install_autostart.ps1` | Start the app automatically with Windows, in the background (Task Scheduler) |
+| `mcp_server.py` / `assistant_tools.py` | Claude's connector (MCP): the cubes' knowledge and the dashboards from any Claude conversation, no Claude key of the app's; the work behind each tool |
+| `skills/bookings-dashboards/` | The skill Claude follows to describe and arrange dashboard charts |
+| `install/connect_claude.py` | Connects the connector and the skill to Claude Desktop and Claude Code (`--remove` disconnects) |
 | `updates.py` | Updating from GitHub releases (Settings › App version), keeping all of the installation's data; also the helper that stops, updates and restarts the app |
 | `VERSION` / `CHANGELOG.md` | The app's version and what changed in each; raising VERSION on main publishes release `v<VERSION>` |
 | `start_server.py` | Runs the previous (Streamlit) app in the background without a window; log in `data/app.log`. Limits numpy's maths library to one thread (it would reserve ~30 MB per CPU core) |

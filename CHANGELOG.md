@@ -3,6 +3,18 @@
 Each version's notes are what admins see in the app (Settings › App version) and on its GitHub release.
 To release: raise VERSION, add its section here, commit and push to main. GitHub publishes it by itself.
 
+## 2.1.0 - 2026-10-19
+
+- Use the app from any Claude conversation (Claude Desktop, Claude Code) with no Claude key of the app's: a
+  connector gives Claude the cubes' knowledge (the data layer, each cube's details and values, the rules for
+  writing queries) and the dashboards, and the bookings-dashboards skill teaches it to draw charts for them.
+  Ask for a chart and Claude adds it; every chart is run on the cubes before it is saved. Setup connects it
+  when Claude is installed (restart Claude Desktop afterwards); run the installer again on an installed
+  computer to connect it there.
+- A built-in dashboard whose charts or filters are changed is kept as it is by new versions of the app.
+- Changes to dashboards from several programs at once (the app, the previous app, Claude) can no longer
+  overwrite each other.
+
 ## 2.0.2 - 2026-10-19
 
 - Double-clicking the installer on a computer that already has the app now brings it up to the latest

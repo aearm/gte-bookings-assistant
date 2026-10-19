@@ -419,7 +419,21 @@ def run_update(new_root: Path, version: str, app_pid: int, restart: bool = True,
         lock_file().unlink(missing_ok=True)
         if restart:
             start_app(server)
+    if status["ok"] and restart:
+        connect_claude()
     return status
+
+
+def connect_claude() -> None:
+    """After an update of the main copy, Claude's connector and skill are brought up to date (install/connect_claude.py,
+    as setup does: the skill Claude Code keeps is a copy). Never fails an update."""
+    if task_name() != TASK:
+        return
+    try:
+        subprocess.run([sys.executable, str(BASE / "install" / "connect_claude.py")], capture_output=True,
+                       timeout=300, stdin=subprocess.DEVNULL)
+    except (OSError, subprocess.SubprocessError):
+        pass
 
 
 if __name__ == "__main__":

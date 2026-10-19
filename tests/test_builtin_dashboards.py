@@ -167,15 +167,17 @@ def test_not_added_again_once_deleted_and_renaming_stays(gte_cubes):
     assert dashboards.get_dashboard("overview")["name"] == "Our business"
 
 
-def test_a_newer_version_replaces_the_charts(gte_cubes, monkeypatch):
+def test_a_newer_version_replaces_the_charts_unless_someone_changed_them(gte_cubes, monkeypatch):
     dashboards.ensure_builtin(force=True)
-    dashboards.rename_dashboard("client", "Clients")
-    dashboards.delete_chart("client", "cl-sales")
+    dashboards.rename_dashboard("client", "Clients")  # a new name only: still updated
+    dashboards.delete_chart("market", "mk-sales-trend")  # its charts changed: the market view is theirs now
     monkeypatch.setattr(bd, "VERSION", bd.VERSION + 1)
     dashboards.ensure_builtin(force=True)
     board = dashboards.get_dashboard("client")
     assert board["name"] == "Clients" and board["builtin"] == bd.VERSION
-    assert "cl-sales" in [c["id"] for c in board["charts"]]
+    market = dashboards.get_dashboard("market")
+    assert market["customized"] and "mk-sales-trend" not in [c["id"] for c in market["charts"]]
+    assert market["builtin"] == bd.VERSION - 1  # left as it was
 
 
 def test_new_built_in_dashboards_take_their_place_among_the_others(gte_cubes, monkeypatch):

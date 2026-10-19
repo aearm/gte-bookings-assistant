@@ -11,6 +11,8 @@ pycountry>=24.6
 fastapi>=0.115
 uvicorn>=0.30
 pyarrow>=17.0
+# Claude's connector (mcp_server.py): the cubes and dashboards from any Claude conversation
+mcp>=1.12,<2
 # Live Analysis Services connection - Windows only
 pyadomd; sys_platform == "win32"
 pythonnet>=3.0; sys_platform == "win32"

@@ -134,7 +134,7 @@ function Test-WebNeedsBuild {
 
 Write-Host "Bookings Assistant - Windows setup" -ForegroundColor White
 Write-Host "Folder: $App"
-$steps = 6
+$steps = 7
 
 # ---------------------------------------------------------------- 1. Python --
 Step "1/$steps  Python"
@@ -228,6 +228,16 @@ $shortcut.WorkingDirectory = $App
 $shortcut.Description = "Ask questions about bookings data"
 $shortcut.Save()
 Ok "Created '$TaskName' on the desktop"
+
+# ---------------------------------------------------------------- 7. Claude --
+Step "7/$steps  Claude (use the cubes and dashboards from any Claude conversation)"
+if ($TaskName -ne "Bookings Assistant") {
+    Ok "A second copy ('$TaskName'): not connected to Claude (the main copy is)"
+} else {
+    $lines = & $venvPython (Join-Path $PSScriptRoot "connect_claude.py") 2>&1
+    if ($LASTEXITCODE -eq 0) { $lines | ForEach-Object { Ok $_ } }
+    else { Write-Warning "Claude could not be connected (the app works without it): $($lines -join ' ')" }
+}
 
 # ---------------------------------------------------------------- start --
 $url = "http://localhost:" + $(if ($Port) { $Port } elseif ($Classic) { 8501 } else { 8600 })
