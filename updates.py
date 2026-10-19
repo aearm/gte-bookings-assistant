@@ -11,8 +11,8 @@ saved in data/backup/; if a step fails, the previous version is put back and sta
 
 A developer copy (a git clone) is updated with git pull instead.
 
-Releasing a version: put the number in VERSION (e.g. 1.1.0), commit and push, then on GitHub
-Releases › Draft a new release, tag it v1.1.0 and describe what changed (admins see that text).
+Releasing a version: put the number in VERSION (e.g. 2.0.1) and what changed in CHANGELOG.md (admins see
+that text), commit and push to main. GitHub then publishes the release by itself (.github/workflows/release.yml).
 
 Helper:  python updates.py apply <unpacked release folder> <version> <app process id> [start_api.py]"""
 import ctypes
@@ -34,11 +34,11 @@ from packaging.version import InvalidVersion, Version
 
 BASE = Path(__file__).resolve().parent
 REPO = os.getenv("UPDATE_REPO", "aearm/gte-bookings-assistant")  # owner/name on GitHub
-TASK = "Bookings Assistant"  # the Windows task that starts the app (install_autostart.ps1)
+TASK = "Bookings Assistant"  # the Windows task that starts the app (install/install_autostart.ps1)
 
 
 def task_name() -> str:
-    """The Windows task that starts this copy of the app: install_autostart.ps1 notes it in
+    """The Windows task that starts this copy of the app: install/install_autostart.ps1 notes it in
     data/autostart.json (another copy on the same computer has a task of its own)."""
     try:
         return json.loads((BASE / "data" / "autostart.json").read_text(encoding="utf-8-sig"))["task"] or TASK
@@ -51,6 +51,10 @@ KEEP_FILES = {".env", "dashboards.json", "dashboard.json", "dashboard.json.bak",
               "business_notes.md", "glossary.json"}
 KEEP_DIRS = {".venv", ".git", "adomd", "models", ".claude", "__pycache__"}
 ADD_ONLY = {"data", "queries"}
+# Files that were in the app folder before and are gone from the releases (removed by an update even
+# when the installation has no list of the files the last update put there, e.g. installed from a zip)
+RETIRED = {"setup.bat", "autostart.bat", "setup_windows.ps1", "install_autostart.ps1", "run_app.bat", "setup.sh",
+           "run_app.sh"}
 
 
 def _data() -> Path:
@@ -199,7 +203,8 @@ def plan(new_root: Path) -> dict:
         before = json.loads(manifest_file().read_text(encoding="utf-8")).get("files", [])
     except (OSError, ValueError):
         before = []
-    remove = [rel for rel in before if rel not in new and _kind(rel) == "code" and (BASE / rel).exists()]
+    remove = [rel for rel in sorted(set(before) | RETIRED)
+              if rel not in new and _kind(rel) == "code" and (BASE / rel).exists()]
     return {"write": write, "remove": remove, "code": [rel for rel in new if _kind(rel) == "code"]}
 
 

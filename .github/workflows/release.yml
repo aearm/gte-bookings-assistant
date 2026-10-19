@@ -1,45 +1,69 @@
-# When a release is published: build the React app (web/dist) and attach the full app as
-# bookings-assistant-<version>.zip to the release. The in-app updater (updates.py) installs that zip,
-# so installations never need Node.js.
-name: Release package
+# main always carries the latest release: when VERSION changes on main, this publishes it on GitHub as
+# release v<VERSION> (the latest), with what changed from CHANGELOG.md, the full app with its web app built
+# (bookings-assistant-<version>.zip: the installer and the in-app updater install it, so no installation
+# needs Node.js) and install-bookings-assistant.cmd (the one-click installer). A version already released
+# is left alone. "Run workflow" on the Actions page does the same for the VERSION on main.
+name: Release
 
 on:
-  release:
-    types: [published]
+  push:
+    branches: [main]
+    paths: [VERSION]
+  workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
-  package:
+  release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.release.tag_name }}
+      - name: Version
+        id: version
+        run: |
+          version="$(tr -d '\r\n' < VERSION)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version" > /dev/null; then
+            echo "v$version is released already: nothing to do."
+            echo "released=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-node@v4
+        if: steps.version.outputs.released != 'true'
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: web/package-lock.json
       - name: Build the web app
+        if: steps.version.outputs.released != 'true'
         working-directory: web
         run: |
           npm ci
           npm run build
-      - name: Check the version
-        run: |
-          tag="${{ github.event.release.tag_name }}"
-          test "$(cat VERSION | tr -d '\r\n')" = "${tag#v}" || { echo "VERSION does not match the tag"; exit 1; }
       - name: Zip the app
+        if: steps.version.outputs.released != 'true'
         run: |
-          version="$(cat VERSION | tr -d '\r\n')"
+          version="${{ steps.version.outputs.version }}"
           mkdir -p "pkg/bookings-assistant-$version"
           git archive HEAD | tar -x -C "pkg/bookings-assistant-$version"
           cp -r web/dist "pkg/bookings-assistant-$version/web/dist"
           (cd pkg && zip -qr "bookings-assistant-$version.zip" "bookings-assistant-$version")
-          echo "ZIP=pkg/bookings-assistant-$version.zip" >> "$GITHUB_ENV"
-      - name: Attach to the release
+      - name: What changed (CHANGELOG.md)
+        if: steps.version.outputs.released != 'true'
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          awk -v v="$version" '/^## /{p = ($2 == v); next} p' CHANGELOG.md > notes.md
+          test -s notes.md || echo "Version $version." > notes.md
+          cat notes.md
+      - name: Publish the release
+        if: steps.version.outputs.released != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ github.event.release.tag_name }}" "$ZIP" install-bookings-assistant.cmd --clobber
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          gh release create "v$version" --target "$GITHUB_SHA" --title "v$version" --notes-file notes.md --latest \
+            "pkg/bookings-assistant-$version.zip" install-bookings-assistant.cmd

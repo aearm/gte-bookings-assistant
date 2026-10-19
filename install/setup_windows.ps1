@@ -1,4 +1,5 @@
-# Windows installer for Bookings Assistant. Double-click setup.bat to run it - nothing to answer.
+# Windows setup for Bookings Assistant: install-bookings-assistant.cmd (in the app folder) runs it - nothing to
+# answer. Options, from PowerShell: install\setup_windows.ps1 -NoAutostart (or -NoStart, -Classic).
 # Installs Python 3.13 if needed (for this user only, no admin rights), the app's libraries, ADOMD.NET and
 # the web app; creates .env and a desktop shortcut; then starts the app in the background whenever you sign
 # in to Windows, starts it now and opens it in the browser.
@@ -14,7 +15,8 @@ param(
 $ErrorActionPreference = "Continue"
 $ProgressPreference = "SilentlyContinue"   # much faster downloads in Windows PowerShell
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-Set-Location $PSScriptRoot
+$App = Split-Path $PSScriptRoot -Parent  # the app folder (this file is in its install\)
+Set-Location $App
 
 $PythonVersion = "3.13.15"   # tested with this app; pythonnet needs 64-bit Python 3.12 or 3.13
 $NodeVersion = "22.23.3"     # only to build the web app in a copy without it (releases include it built)
@@ -24,7 +26,7 @@ function Step($text) { Write-Host "`n==> $text" -ForegroundColor Cyan }
 function Ok($text) { Write-Host "    $text" -ForegroundColor Green }
 function Fail($text) {
     Write-Host "`nSetup stopped: $text" -ForegroundColor Red
-    Write-Host "Fix the problem above, then double-click setup.bat again."
+    Write-Host "Fix the problem above, then double-click install-bookings-assistant.cmd again."
     exit 1
 }
 
@@ -118,16 +120,16 @@ function Install-Node {
 
 # The built web app is missing, or (in a developer copy) older than its sources.
 function Test-WebNeedsBuild {
-    $index = Join-Path $PSScriptRoot "web\dist\index.html"
+    $index = Join-Path $App "web\dist\index.html"
     if (-not (Test-Path $index)) { return $true }
-    if (-not (Test-Path (Join-Path $PSScriptRoot ".git"))) { return $false }  # a release: built with it
+    if (-not (Test-Path (Join-Path $App ".git"))) { return $false }  # a release: built with it
     $built = (Get-Item $index).LastWriteTime
     $sources = @(Get-ChildItem "web\src" -Recurse -File) + @(Get-Item "web\index.html", "web\package.json", "web\vite.config.ts")
     return [bool]($sources | Where-Object { $_.LastWriteTime -gt $built } | Select-Object -First 1)
 }
 
 Write-Host "Bookings Assistant - Windows setup" -ForegroundColor White
-Write-Host "Folder: $PSScriptRoot"
+Write-Host "Folder: $App"
 $steps = 6
 
 # ---------------------------------------------------------------- 1. Python --
@@ -138,14 +140,14 @@ if ($python) {
 } else {
     Write-Host "    Python 3.12/3.13 (64-bit) not found."
     $python = Install-Python
-    if (-not $python) { Fail "Python could not be installed. Install Python 3.13 (64-bit) from https://www.python.org/downloads/windows/ and run setup.bat again." }
+    if (-not $python) { Fail "Python could not be installed. Install Python 3.13 (64-bit) from https://www.python.org/downloads/windows/ and run install-bookings-assistant.cmd again." }
     Ok "Installed $(& $python --version)"
 }
 
 # ---------------------------------------------------------------- 2. libraries --
 Step "2/$steps  App libraries (pandas, FastAPI, Claude SDK, ...)"
-$venvPython = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
-$venvPythonw = Join-Path $PSScriptRoot ".venv\Scripts\pythonw.exe"
+$venvPython = Join-Path $App ".venv\Scripts\python.exe"
+$venvPythonw = Join-Path $App ".venv\Scripts\pythonw.exe"
 if ((Test-Path ".venv") -and -not (Test-GoodPython $venvPython)) {
     Write-Host "    The existing .venv is broken or uses another Python version; rebuilding it."
     Remove-Item ".venv" -Recurse -Force
@@ -216,9 +218,9 @@ if ($Classic) {
     $shortcut.Arguments = "classic"
 } else {  # opens the app in the browser, starting it first if it isn't running
     $shortcut.TargetPath = $venvPythonw
-    $shortcut.Arguments = "`"$(Join-Path $PSScriptRoot 'start_api.py')`" --open --task `"$TaskName`"$portArg"
+    $shortcut.Arguments = "`"$(Join-Path $App 'start_api.py')`" --open --task `"$TaskName`"$portArg"
 }
-$shortcut.WorkingDirectory = $PSScriptRoot
+$shortcut.WorkingDirectory = $App
 $shortcut.Description = "Ask questions about bookings data"
 $shortcut.Save()
 Ok "Created '$TaskName' on the desktop"
@@ -232,8 +234,8 @@ if (-not $Classic -and -not $Port -and (Test-Path ".env")) {
 if (-not $NoStart) {
     if ($NoAutostart) {
         Step "Starting the app"
-        if ($Classic) { Start-Process (Join-Path $PSScriptRoot "run_app.bat") -ArgumentList "classic" -WorkingDirectory $PSScriptRoot }
-        else { Start-Process $venvPythonw -ArgumentList "`"$(Join-Path $PSScriptRoot 'start_api.py')`" --open --task `"$TaskName`"$portArg" -WorkingDirectory $PSScriptRoot }
+        if ($Classic) { Start-Process (Join-Path $PSScriptRoot "run_app.bat") -ArgumentList "classic" -WorkingDirectory $App }
+        else { Start-Process $venvPythonw -ArgumentList "`"$(Join-Path $App 'start_api.py')`" --open --task `"$TaskName`"$portArg" -WorkingDirectory $App }
     } else {
         Step "Starting the app with Windows (in the background)"
         $auto = @{ TaskName = $TaskName; Port = $Port }
@@ -246,6 +248,7 @@ if (-not $NoStart) {
 
 Write-Host "`nSetup complete: $url" -ForegroundColor Green
 Write-Host "In the app: create the admin password, then under Settings enter the Claude API key and the bookings"
-Write-Host "server details. On the Cubes page, tick the cubes and build the data layer (once)."
+Write-Host "server details. The built-in dashboards then show their numbers; every cube on the server is connected"
+Write-Host "until you pick some on the Cubes page, where you also build the data layer (once, for questions)."
 Write-Host "Later, open the app with the '$TaskName' shortcut on the desktop."
 exit 0

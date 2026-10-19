@@ -75,6 +75,8 @@ h1, h2, h3, h4 { letter-spacing: -0.022em; }
 .dash-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
 .dash-caption { font-size: 13px; color: var(--app-muted); margin-left: 4px; }
 .dash-updating { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--app-muted); margin: -8px 0 14px 4px; }
+.dash-setup { margin-bottom: 16px; padding: 14px 18px; font-size: 14px; border-left: 4px solid var(--mantine-color-yellow-6); }
+.kpi-value--waiting { color: var(--app-muted); }
 .spin { animation: app-spin 1s linear infinite; }
 @keyframes app-spin { to { transform: rotate(360deg); } }
 

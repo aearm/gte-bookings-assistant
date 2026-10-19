@@ -50,6 +50,8 @@ export type DashboardResults = {
   charts: Record<string, ChartResult>; updating: boolean
   /** The value each filter had (its default when none was picked). */
   filters?: Record<string, string>
+  /** Why there are no numbers yet (the cube server isn't set up): shown once on the page. */
+  setup?: string
 }
 export type Periods = {
   presets: { name: string; start: string; end: string; label: string }[]

@@ -1,6 +1,6 @@
 """Ask questions about your cubes in plain English, and keep the useful answers on dashboards.
 
-Run:  streamlit run app.py   (or run_app.bat on Windows, ./run_app.sh on Mac)
+Run:  streamlit run app.py   (or install\run_app.bat classic on Windows, bash install/run_app.sh on Mac)
 Pages: dashboards (dashboard_view.py) and views/ (Chat, Glossary, Cubes, Settings). The menu is
 drawn here (not Streamlit's own) so "Dashboards" can have a + for a new dashboard.
 """

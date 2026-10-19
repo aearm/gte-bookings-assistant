@@ -43,12 +43,12 @@ Claude API. Table/column names and query results are sent to Claude.
 4. Open **Terminal** (Cmd+Space, type Terminal), type `cd ` (with a space), drag the
    `bookings-assistant` folder into the Terminal window, and press Enter. Then run:
    ```
-   bash setup.sh
+   bash install/setup.sh
    ```
 5. **Add your API key:** run `open -e .env`, paste the key after `ANTHROPIC_API_KEY=`, save.
 6. **Start the app:**
    ```
-   bash run_app.sh
+   bash install/run_app.sh
    ```
    Your browser opens at http://localhost:8501. Press Ctrl+C in Terminal to stop it.
 
@@ -77,18 +77,23 @@ create a key) and the server details you use in Power BI or Excel.
    - starts the app in the background whenever you sign in to Windows, starts it now and opens
      http://localhost:8600 in the browser.
 
-   Already have the app's folder (a release zip, unzipped)? Double-click **`setup.bat`** in it instead:
-   it does the same, in that folder. In a copy without the built web app (a `git clone`), setup also
-   builds it, downloading Node.js for this user first if the computer doesn't have it.
+   Already have the app's folder (a release zip, unzipped, or a `git clone`)? Double-click the
+   **`install-bookings-assistant.cmd`** in it instead: it does the same, in that folder. In a copy without
+   the built web app (a clone), setup also builds it, downloading Node.js for this user first if the
+   computer doesn't have it. The rest of the setup scripts are in the folder's `install\`.
+
+   The five built-in dashboards are there at once; their numbers appear as soon as the server is entered
+   in Settings (step 2).
 2. **In the app**, create the admin password, then open **Settings** (menu › Admin) and enter:
    - the **Claude API key**, and click **Test Claude**,
    - the **server**, **username** and **password** you use in Power BI/Excel, and click **Test server**.
-3. **Open Cubes** (menu › Admin): tick the cubes people should use (or **Use all cubes**), then click
-   **Build the data layer** (once; about a minute per cube). Or run `python build_layer.py --all`.
+3. **Open Cubes** (menu › Admin): every cube on the server is connected until you tick the ones people
+   should use. Click **Build the data layer** (once; about a minute per cube) so questions can be asked.
+   Or run `python build_layer.py --all`.
 
-Run `setup.bat` (or the installer) again at any time to repair the installation; your settings are kept.
-Options, from a command prompt in the folder: `setup.bat -NoAutostart` (start it now but not with
-Windows), `setup.bat -NoStart`, and `setup.bat -Classic` for the previous app (Streamlit, port 8501).
+Run the installer again at any time to repair the installation; your settings are kept. Options, from a
+command prompt in the app folder: `install-bookings-assistant.cmd -NoAutostart` (start it now but not
+with Windows), `-NoStart`, and `-Classic` for the previous app (Streamlit, port 8501).
 
 ### Updating to a new version
 
@@ -105,9 +110,11 @@ environment (`.venv`). The current version is saved in `data/backup/` first; if 
 previous version is put back and started, and Settings says what went wrong. A copy made with
 `git clone` (a developer copy) is updated with `git pull` instead, then a restart of the app.
 
-**Releasing a version** (for the maintainer): put the new number in `VERSION` (e.g. `1.1.0`), commit
-and push; then on GitHub open **Releases › Draft a new release**, create the tag `v1.1.0`, write what
-changed (admins read this before updating), and **Publish release**. The tag must match `VERSION`.
+**Releasing a version** (for the maintainer): `main` always carries the latest release. Put the new
+number in `VERSION` (e.g. `2.0.1`), add its section to `CHANGELOG.md` (what changed: admins read it before
+updating), commit and push to `main`. GitHub then publishes release `v2.0.1` by itself
+(`.github/workflows/release.yml`): it builds the web app and attaches the full app
+(`bookings-assistant-2.0.1.zip`) and the one-click installer, which from then on installs that version.
 If the connection test fails with every setting, `python test_connection.py` (in the folder,
 after `.venv\Scripts\activate`) tries other connection options.
 
@@ -245,21 +252,23 @@ If something goes wrong, the app shows a plain-English message; the technical te
 ## Daily use
 
 Windows: double-click the **Bookings Assistant** desktop shortcut. It opens http://localhost:8600 in the
-browser, starting the app first if it isn't running (**`run_app.bat`** does the same and keeps a window
-with the app's messages). Mac: run `bash run_app.sh` in Terminal; your browser opens at http://localhost:8501.
+browser, starting the app first if it isn't running (**`install\run_app.bat`** does the same and keeps a
+window with the app's messages). Mac: run `bash install/run_app.sh` in Terminal; your browser opens at
+http://localhost:8501.
 
 ### Start automatically with Windows
 
 Setup does this. The app then starts in the background, without a window, whenever you sign in to
-Windows, and restarts by itself if it stops. Its messages go to `data\api.log`. To change it, double-click
-**`autostart.bat`** or run it with an option:
+Windows, and restarts by itself if it stops. Its messages go to `data\api.log`. To change it, run
+**`install\install_autostart.ps1`** in PowerShell, in the app folder, with an option:
 - **On a server nobody signs in to** (e.g. after Windows updates restart it): run
-  `autostart.bat -AtStartup` instead. It starts when the computer starts, before anyone signs in;
+  `install\install_autostart.ps1 -AtStartup`. It starts when the computer starts, before anyone signs in;
   Windows asks for your account password once to store it with the task (the app needs your account
   because the keys and passwords are in your Credential Manager).
-- To restart it: `autostart.bat` again (or Task Scheduler › Bookings Assistant › End, then Run).
-- To stop starting automatically: `autostart.bat -Remove`.
-- The previous app (Streamlit, http://localhost:8501, messages in `data\app.log`): `autostart.bat -Classic`.
+- To restart it: `install\install_autostart.ps1` again (or Task Scheduler › Bookings Assistant › End, then Run).
+- To stop starting automatically: `install\install_autostart.ps1 -Remove`.
+- The previous app (Streamlit, http://localhost:8501, messages in `data\app.log`):
+  `install\install_autostart.ps1 -Classic`.
 
 ### Dashboards (open first)
 
@@ -325,8 +334,8 @@ its own axis in its own colour, the second breakdown in shades of that colour.
 Five dashboards come with the app, written by hand on the Bookings, Hotel Sales (owned and third-party
 hotels), Searches (Statistics Zone), Client API requests (Statistics History Client), Supplier requests
 (Statistics History Supplier), Hotel-level client requests (Statistics Hotel Client) and Hotel Locks
-History cubes - no Claude key needed. Each appears, first in the list, as soon as the cubes it uses are
-connected (Cubes page), and the overview opens the app. Every chart follows the period and the comparison
+History cubes - no Claude key needed. They are there, first in the list, as soon as the app is installed,
+and the overview opens the app; until the server is entered in Settings one note at the top says so. Every chart follows the period and the comparison
 picked at the top; the test agencies' market is always left out. Read each one top to bottom: the
 headline numbers, the trend, who buys, where the guests go, what is bought, then demand and look-to-book.
 
@@ -457,8 +466,8 @@ show a lock in the menu until you sign in.
 
 A faster app is replacing the Streamlit one: a React front end (`web/`) served by a FastAPI back end
 (`server/`), on the same cubes, dashboards, settings and data. Setup installs and starts it (port 8600);
-an installation set up before keeps starting the previous app (port 8501) until `setup.bat` (or
-`autostart.bat`) is run again in its folder. Both can run side by side. Its API is described in
+an installation set up before keeps starting the previous app (port 8501) until
+`install-bookings-assistant.cmd` is run again in its folder. Both can run side by side. Its API is described in
 `docs/api.md`.
 
 **Run it** (in the app folder, after `.venv\Scripts\activate`):
@@ -531,11 +540,11 @@ You can point Excel or Power BI at those CSVs, or ask the app new questions any 
 
 | Problem | Fix |
 |---|---|
-| `ADOMD.NET was not found` | Run `setup.bat` again (it downloads ADOMD.NET), or install the ADOMD MSI from https://learn.microsoft.com/analysis-services/client-libraries. If installed somewhere unusual, set `ADOMD_PATH` in `.env` to the folder containing `Microsoft.AnalysisServices.AdomdClient.dll`. |
+| `ADOMD.NET was not found` | Run `install-bookings-assistant.cmd` again (it downloads ADOMD.NET), or install the ADOMD MSI from https://learn.microsoft.com/analysis-services/client-libraries. If installed somewhere unusual, set `ADOMD_PATH` in `.env` to the folder containing `Microsoft.AnalysisServices.AdomdClient.dll`. |
 | Connection refused / timeout | Connect to the company network or VPN. Check Excel can still refresh from the same server. |
 | Access denied / login failed | On ⚙️ Settings, check the username matches what you type in Excel (including the `DOMAIN\` part) and re-enter the password. Your account needs read permission on the model. |
 | `No password saved for ...` | Enter the password on ⚙️ Settings. |
-| `pythonnet` / `clr` errors | Delete the `.venv` folder and run `setup.bat` again (it uses 64-bit Python 3.12 or 3.13). |
+| `pythonnet` / `clr` errors | Delete the `.venv` folder and run `install-bookings-assistant.cmd` again (it uses 64-bit Python 3.12 or 3.13). |
 | Wrong measure or column picked | Add a line to `business_notes.md` explaining what you meant. |
 | Cube changed (new measures, columns or values) | Cubes page › select the cube › **Read again**. |
 | Mac: `python3: command not found` or a prompt to install developer tools | Install Python from python.org (Mac setup step 1), then open a new Terminal window. |
@@ -591,17 +600,17 @@ You can point Excel or Power BI at those CSVs, or ask the app new questions any 
 | `pull.py` | Re-runs saved queries for scheduled refreshes |
 | `get_adomd.py` | Backup way to get ADOMD.NET without the installer |
 | `set_password.py` | Saves your server password securely in Windows Credential Manager |
-| `install-bookings-assistant.cmd` | The one-file installer (attached to every release): downloads the latest release and runs its setup |
-| `setup.bat` / `run_app.bat` | Windows setup (runs `setup_windows.ps1`; nothing to answer) and start (`run_app.bat classic`: the previous app) |
-| `autostart.bat` / `install_autostart.ps1` | Start the app automatically with Windows, in the background (Task Scheduler) |
+| `install-bookings-assistant.cmd` | The one installer (also attached to every release): on its own it downloads the latest release; in an app folder it sets up that folder (nothing to answer) |
+| `install/setup_windows.ps1` / `install/run_app.bat` | Windows setup (what the installer runs) and start (`install\run_app.bat classic`: the previous app) |
+| `install/install_autostart.ps1` | Start the app automatically with Windows, in the background (Task Scheduler) |
 | `updates.py` | Updating from GitHub releases (Settings › App version), keeping all of the installation's data; also the helper that stops, updates and restarts the app |
-| `VERSION` | The app's version; each GitHub release is tagged with it (`v1.1.0`) |
+| `VERSION` / `CHANGELOG.md` | The app's version and what changed in each; raising VERSION on main publishes release `v<VERSION>` |
 | `start_server.py` | Runs the previous (Streamlit) app in the background without a window; log in `data/app.log`. Limits numpy's maths library to one thread (it would reserve ~30 MB per CPU core) |
 | `builtin_dashboards.py` | The dashboards the app comes with (business overview; market, destination, client and supplier views): their queries and filters |
 | `start_api.py` | Runs the new app (FastAPI + the React front end) on port 8600 (`API_PORT`); what Windows starts (log in `data/api.log`). `--open` opens it in the browser, starting it first if needed (the desktop shortcut) |
 | `server/` | The new app's back end: the API under `/api` (`docs/api.md`), sign-in, cube worker processes, the nightly chart runs |
 | `web/` | The new app's React front end (`npm run build` into `web/dist`, which the server shows) and its tests |
-| `setup.sh` / `run_app.sh` | Mac setup and start |
+| `install/setup.sh` / `install/run_app.sh` | Mac setup and start |
 | `.env` | Your settings and API key (keep private, don't share or email it; delete it before sending the folder to someone) |
 | `business_notes.example.md` | Template for each cube's notes (`models/<cube>/notes.md`) |
 | `requirements-dev.txt` | Libraries for running the tests |

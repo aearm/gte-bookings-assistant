@@ -9,9 +9,10 @@ import { headlineText } from './cardText'
 type Props = {
   chart: ChartMeta; result: ChartResult | undefined; source: string; isAdmin: boolean
   onAction: (action: CardAction) => void
+  waiting?: boolean // no numbers can come yet (the cube server isn't set up)
 }
 
-function KpiCard({ chart, result, source, isAdmin, onAction }: Props) {
+function KpiCard({ chart, result, source, isAdmin, onAction, waiting }: Props) {
   const own = chart.period?.mode !== 'dashboard' ? result?.period_label || chart.period?.label : ''
   const change = result?.kpi?.change
   const good = typeof change === 'number' && (chart.lower_is_better ? change < 0 : change > 0)
@@ -23,7 +24,9 @@ function KpiCard({ chart, result, source, isAdmin, onAction }: Props) {
       <Tooltip label={help} disabled={!help} position="top-start">
         <div className="kpi-title">{chart.title}</div>
       </Tooltip>
-      {!result ? (
+      {waiting ? (
+        <div className="kpi-value kpi-value--waiting">–</div>
+      ) : !result ? (
         <Skeleton height={36} width="60%" mt={8} radius="md" />
       ) : result.error ? (
         <div style={{ marginTop: 8 }}><ErrorNote message={result.error} details={result.details} /></div>

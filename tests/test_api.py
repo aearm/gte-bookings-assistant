@@ -493,6 +493,15 @@ def test_a_dashboard_filter_lists_its_values_and_its_charts_follow_the_one_picke
     assert unknown["filters"] == {"agency": "Lotus Travel House"}  # not in the list: the default
     assert api.get("/api/dashboards/nope/filters").status_code == 404
 
+    # live mode before the cube server is set up: one note for the page, nothing run, no errors
+    monkeypatch.setattr(dashboards.config, "DATA_SOURCE", "ssas")
+    monkeypatch.setattr(dashboards.config, "SSAS_SERVER", "")
+    monkeypatch.setattr(dashboards.plans, "run", lambda *a, **k: pytest.fail("a query was run"))
+    waiting = api.get(f"/api/dashboards/{board}/results", params=span).json()
+    assert "isn't set up yet" in waiting["setup"] and waiting["charts"] == {} and not waiting["updating"]
+    assert api.get(f"/api/dashboards/{board}/filters").json() == [
+        {"key": "agency", "label": "Agency", "options": [], "default": "", "error": ""}]
+
 
 def test_people_opening_the_same_dashboard_at_once_run_its_charts_once(api, monkeypatch):
     board = dashboards.create_dashboard("Busy")

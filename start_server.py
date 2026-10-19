@@ -1,5 +1,5 @@
 """Runs the app in the background (no window) - what Windows starts automatically, see
-install_autostart.ps1. Output goes to data/app.log. Open the app at http://localhost:8501.
+install/install_autostart.ps1. Output goes to data/app.log. Open the app at http://localhost:8501.
 
 Run:  .venv\\Scripts\\pythonw.exe start_server.py
 """

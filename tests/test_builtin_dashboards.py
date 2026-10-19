@@ -136,19 +136,19 @@ def test_a_chart_away_from_its_filter_says_so(app_dirs, options, monkeypatch):
 
 # ---------------------------------------------------------------- reaching every installation --
 
-ALL_CUBES = [bd.BOOKINGS, bd.REQUESTS, bd.SEARCHES, bd.SUPPLIER_REQUESTS, bd.HOTEL_REQUESTS, bd.LOCKS, bd.HOTEL_SALES]
-
 
 @pytest.fixture
 def gte_cubes(app_dirs, monkeypatch):
+    """Live mode on a fresh install: no cube picked, no cube server asked (the dashboards don't wait for either)."""
     monkeypatch.setattr(config, "BUILTIN_DASHBOARDS", True)
-    monkeypatch.setattr(dashboards.cubes, "enabled", lambda: ALL_CUBES + [cubes.LOCAL])
+    monkeypatch.setattr(config, "DATA_SOURCE", "ssas")
+    monkeypatch.setattr(cubes, "server_names", lambda wait=0: pytest.fail("the server was asked"))
     dashboards._builtin_checked["time"] = 0.0
     yield
     dashboards._builtin_checked["time"] = 0.0
 
 
-def test_added_first_once_their_cubes_are_connected(gte_cubes):
+def test_added_first_at_once_on_a_new_install(gte_cubes):
     mine = dashboards.create_dashboard("My numbers")
     dashboards.ensure_builtin(force=True)
     names = [d["name"] for d in dashboards.list_dashboards()]
@@ -189,12 +189,50 @@ def test_new_built_in_dashboards_take_their_place_among_the_others(gte_cubes, mo
     assert [d["id"] for d in dashboards.list_dashboards()] == IDS + ["mine"]
 
 
-def test_some_built_in_dashboards_wait_for_their_cubes(app_dirs, monkeypatch):
-    monkeypatch.setattr(config, "BUILTIN_DASHBOARDS", True)
-    monkeypatch.setattr(dashboards.cubes, "enabled", lambda: [bd.BOOKINGS, bd.REQUESTS, bd.SEARCHES, bd.HOTEL_SALES])
-    dashboards._builtin_checked["time"] = 0.0
-    dashboards.ensure_builtin(force=True)  # no supplier, hotel-request or lock cube yet
-    assert [d["id"] for d in dashboards.list_dashboards()] == ["overview", "market", "client"]
+def test_a_cube_server_not_set_up_is_one_note_for_the_page(gte_cubes, monkeypatch):
+    import ssas
+    monkeypatch.setattr(config, "SSAS_SERVER", "")
+    assert "isn't set up yet" in dashboards.setup_problem()
+    monkeypatch.setattr(config, "SSAS_SERVER", "cubes.example.test")
+    monkeypatch.setattr(config, "SSAS_USERNAME", "reader")
+    monkeypatch.setattr(ssas, "get_password", lambda: "")
+    assert "password isn't saved yet" in dashboards.setup_problem()
+    monkeypatch.setattr(ssas, "get_password", lambda: "secret")
+    assert dashboards.setup_problem() == ""
+    monkeypatch.setattr(config, "DATA_SOURCE", "local")
+    monkeypatch.setattr(config, "SSAS_SERVER", "")
+    assert dashboards.setup_problem() == ""  # local files need no server
+
+
+def test_every_cube_on_the_server_is_connected_until_an_admin_picks(app_dirs, monkeypatch):
+    import semantic
+    monkeypatch.setattr(config, "DATA_SOURCE", "ssas")
+    monkeypatch.setattr(config, "SSAS_SERVER", "cubes.example.test")
+    monkeypatch.setattr(cubes, "server_names", lambda wait=5.0: ["A - Bookings", "A - Empty", "A - Sales"])
+    monkeypatch.setattr(semantic, "usable", lambda c: c != "A - Empty")  # a cube without data is left out
+    assert cubes.enabled() == ["A - Bookings", "A - Sales"]
+    cubes.set_enabled(["A - Sales"])
+    assert cubes.enabled() == ["A - Sales"]
+    monkeypatch.setattr(config, "DATA_SOURCE", "local")
+    assert cubes.enabled() == [cubes.LOCAL]
+
+
+def test_the_server_is_asked_in_the_background_and_not_waited_for(monkeypatch):
+    import threading
+    import ssas
+    asked, release = threading.Event(), threading.Event()
+
+    def slow():
+        asked.set()
+        release.wait(5)
+        return pd.DataFrame({"CATALOG_NAME": ["A - Sales", "A - Bookings"]})
+    monkeypatch.setattr(config, "SSAS_SERVER", "cubes.example.test")
+    monkeypatch.setattr(ssas, "list_databases", slow)
+    monkeypatch.setattr(cubes, "_server", {"time": 0.0, "names": None, "thread": None})
+    assert cubes.server_names(wait=0) == [] and asked.wait(5)  # still asking: nothing yet, nobody waits
+    release.set()
+    cubes._server["thread"].join(5)
+    assert cubes.server_names(wait=0) == ["A - Bookings", "A - Sales"]
 
 
 def test_destination_is_the_hotels_country_and_countries_the_guests_nationality():
@@ -233,13 +271,13 @@ def test_the_supplier_list_holds_supplier_connections_only():
     assert "'Suppliers'[Supplier Code] = @F_SUPPLIER" in steps[bd.LOCKS]
 
 
-def test_left_out_without_their_cubes_or_when_switched_off(app_dirs, monkeypatch):
+def test_left_out_on_local_files_or_when_switched_off(app_dirs, monkeypatch):
     dashboards._builtin_checked["time"] = 0.0
     monkeypatch.setattr(config, "BUILTIN_DASHBOARDS", True)
-    dashboards.ensure_builtin(force=True)  # local mode: none of their cubes
+    dashboards.ensure_builtin(force=True)  # local mode: they are built on the live cubes
     assert [d["name"] for d in dashboards.list_dashboards()] == ["Main dashboard"]
     monkeypatch.setattr(config, "BUILTIN_DASHBOARDS", False)
-    monkeypatch.setattr(dashboards.cubes, "enabled", lambda: ALL_CUBES)
+    monkeypatch.setattr(config, "DATA_SOURCE", "ssas")
     dashboards.ensure_builtin(force=True)
     assert [d["name"] for d in dashboards.list_dashboards()] == ["Main dashboard"]
 

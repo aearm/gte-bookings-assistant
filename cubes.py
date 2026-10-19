@@ -7,6 +7,8 @@ is not in git."""
 import json
 import re
 import shutil
+import threading
+import time
 from pathlib import Path
 
 import config
@@ -58,14 +60,50 @@ def label(cube: str) -> str:
 def _load() -> dict:
     if CUBES_FILE.exists():
         return json.loads(CUBES_FILE.read_text(encoding="utf-8"))
-    return {"enabled": [config.SSAS_DATABASE] if config.SSAS_DATABASE else []}
+    return {}
+
+
+# Until an admin picks the cubes, all of them are connected: every cube on the server with data. The
+# server's list is asked in a thread of its own at most every 10 minutes, and a page waits for it a few
+# seconds at most (while the server refreshes a cube it can hold new queries for minutes).
+SERVER_SECONDS, SERVER_WAIT = 600, 5.0
+_server: dict = {"time": 0.0, "names": None, "thread": None}
+_server_lock = threading.Lock()
+
+
+def _read_server() -> None:
+    try:
+        import ssas
+        _server.update(names=sorted(str(n) for n in ssas.list_databases()["CATALOG_NAME"]), time=time.time())
+    except Exception:
+        _server["time"] = time.time() - SERVER_SECONDS + 60  # unreachable: ask again in a minute
+
+
+def server_names(wait: float = SERVER_WAIT) -> list[str]:
+    """Every cube on the server this login can open ([] when no server is set or it can't be reached)."""
+    if not config.SSAS_SERVER:
+        return []
+    if time.time() - _server["time"] > SERVER_SECONDS:
+        with _server_lock:
+            asking = _server["thread"]
+            if asking is None or not asking.is_alive():
+                asking = _server["thread"] = threading.Thread(target=_read_server, name="server-cubes", daemon=True)
+                asking.start()
+        asking.join(wait)
+    return list(_server["names"] or [])
 
 
 def enabled() -> list[str]:
-    """The cubes people can use, in the admin's order. In local mode: just the local files."""
+    """The cubes people can use, in the admin's order: all the server's cubes with data until an admin picks
+    them on the Cubes page. In local mode: just the local files."""
     if config.resolve_source() == "local":
         return [LOCAL]
-    return _load().get("enabled", [])
+    picked = _load().get("enabled")
+    if picked is not None:
+        return picked
+    import semantic
+    everything = [c for c in server_names() if semantic.usable(c)]
+    return everything or ([config.SSAS_DATABASE] if config.SSAS_DATABASE else [])
 
 
 def set_enabled(names: list[str]) -> None:
@@ -97,7 +135,7 @@ def migrate() -> None:
         moves += [(config.SCHEMA_FILE, schema_file(cube)), (config.VALUE_INDEX_FILE, index_file(cube)),
                   (config.GLOSSARY_FILE, glossary_file(cube)),
                   (config.NOTES_FILE, folder(cube) / "notes.md")]
-        if not CUBES_FILE.exists():
+        if not CUBES_FILE.exists() and config.SCHEMA_FILE.exists():  # a one-cube install from before
             set_enabled([cube])
     for old, new in moves:
         if old.exists() and not new.exists():

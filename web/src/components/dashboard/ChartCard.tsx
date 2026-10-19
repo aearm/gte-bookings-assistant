@@ -15,9 +15,10 @@ type Props = {
   chart: ChartMeta; result: ChartResult | undefined; source: string; isAdmin: boolean; span: 1 | 2
   compareDates: string // the comparison's dates, for tables that show the change
   onAction: (action: CardAction) => void
+  waiting?: boolean // no numbers can come yet (the cube server isn't set up): a quiet card, not a skeleton
 }
 
-function ChartCard({ chart, result, source, isAdmin, span, compareDates, onAction }: Props) {
+function ChartCard({ chart, result, source, isAdmin, span, compareDates, onAction, waiting }: Props) {
   return (
     <div className={`card chart-card${span === 2 ? ' span-2' : ''}`} data-testid={`chart-${chart.id}`}>
       <div className="chart-card__head">
@@ -29,7 +30,8 @@ function ChartCard({ chart, result, source, isAdmin, span, compareDates, onActio
         </div>
         {isAdmin && <ChartMenu chart={chart} onAction={onAction} />}
       </div>
-      <ChartBody result={result} compareDates={compareDates} />
+      {waiting ? <div className="chart-empty">Numbers appear once the cube server is set up.</div>
+        : <ChartBody result={result} compareDates={compareDates} />}
     </div>
   )
 }

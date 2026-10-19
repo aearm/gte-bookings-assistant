@@ -56,10 +56,12 @@ def warm() -> None:
         waiting = threading.Thread(target=workers.warm_up, daemon=True) if workers else None
         if waiting:
             waiting.start()
+        import cubes
         import data_layer
         import routing
         import semantic
         import value_index
+        cubes.server_names(wait=0)  # the server's cubes (connected by default), asked in the background
         data_layer.load()
         semantic.decisions()
         for cube in data_layer.layer_cubes():

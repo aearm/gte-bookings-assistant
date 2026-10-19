@@ -1,10 +1,11 @@
 # Starts Bookings Assistant automatically, in the background (no window), with Windows Task Scheduler.
 #
-#   install_autostart.ps1              start when you sign in to Windows (no password needed)
-#   install_autostart.ps1 -AtStartup   start when the computer starts, before anyone signs in
-#                                      (Windows asks for your account password once, to store it with the task)
-#   install_autostart.ps1 -Remove      stop starting automatically
-#   install_autostart.ps1 -Classic     the previous app (Streamlit, port 8501) instead of the new one
+# From PowerShell in the app folder (install-bookings-assistant.cmd sets it up for you):
+#   install\install_autostart.ps1              start when you sign in to Windows (no password needed)
+#   install\install_autostart.ps1 -AtStartup   start when the computer starts, before anyone signs in
+#                                              (Windows asks for your account password once, to store it with the task)
+#   install\install_autostart.ps1 -Remove      stop starting automatically
+#   install\install_autostart.ps1 -Classic     the previous app (Streamlit, port 8501) instead of the new one
 #
 # The app runs as your Windows account, because the Claude API key and the server password are kept in
 # your Credential Manager. It restarts by itself if it stops. Output: data\api.log (data\app.log for the
@@ -13,11 +14,11 @@ param([switch]$AtStartup, [switch]$Remove, [switch]$Classic,
       [string]$TaskName = "Bookings Assistant",  # another name and port: a second copy (e.g. to test an install)
       [int]$Port = 0)
 $ErrorActionPreference = "Stop"
-$App = $PSScriptRoot
+$App = Split-Path $PSScriptRoot -Parent  # the app folder (this file is in its install\)
 $Pythonw = Join-Path $App ".venv\Scripts\pythonw.exe"
 $User = "$env:USERDOMAIN\$env:USERNAME"
 
-# This folder's running copies of the app (started by the task, the desktop shortcut or run_app.bat) with
+# This folder's running copies of the app (started by the task, the desktop shortcut or install\run_app.bat) with
 # every process they started (the cube workers), so nothing keeps the app's files open. Copies of the app
 # in other folders are left alone.
 function Stop-App {
@@ -51,7 +52,7 @@ if ($Remove) {
     }
     exit 0
 }
-if (-not (Test-Path $Pythonw)) { throw "The app is not installed yet. Run setup.bat first." }
+if (-not (Test-Path $Pythonw)) { throw "The app is not installed yet. Double-click install-bookings-assistant.cmd first." }
 
 if ($Classic) {
     if (-not $Port) { $Port = 8501 }

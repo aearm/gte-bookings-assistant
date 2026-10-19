@@ -216,25 +216,35 @@ def _plan_of(chart: dict) -> plans.Plan:
 
 
 # ---------------------------------------------------------------- dashboards the app ships with --
-# builtin_dashboards.py: added to dashboards.json once their cubes are connected, first in the list (the
-# overview then opens the app). "builtin" in dashboards.json notes the version added; a newer version
+# builtin_dashboards.py: added to dashboards.json as soon as the app runs on the live cubes, first in the list
+# (the overview then opens the app); until the cube server is set up they say so (setup_problem). "builtin" in dashboards.json notes the version added; a newer version
 # replaces the dashboard's charts and filters (its name stays), and one deleted is not added again.
 
 _builtin_checked = {"time": 0.0}
 
 
-def _cubes_of(board: dict) -> set[str]:
-    used = {s["cube"] for c in board["charts"] for s in (c.get("plan") or {}).get("steps", [])}
-    return used | {f["options"]["cube"] for f in board.get("filters") or [] if f.get("options")}
+def setup_problem() -> str:
+    """Why a dashboard can't show its numbers yet (live mode without the cube server set up), else ""."""
+    if config.resolve_source() != "ssas":
+        return ""
+    if not config.SSAS_SERVER:
+        return "The cube server isn't set up yet: an admin enters it on the Settings page, then the numbers appear."
+    if config.SSAS_USERNAME:
+        import ssas
+        if not ssas.get_password():
+            return ("The cube server's password isn't saved yet: an admin enters it on the Settings page, then the "
+                    "numbers appear.")
+    return ""
 
 
 def ensure_builtin(force: bool = False) -> None:
     if not config.BUILTIN_DASHBOARDS or (not force and time.time() - _builtin_checked["time"] < 60):
         return
     _builtin_checked["time"] = time.time()
+    if config.resolve_source() != "ssas":  # they are built on the live cubes: not for local files
+        return
     import builtin_dashboards
-    enabled = set(cubes.enabled())
-    shipped = [b for b in builtin_dashboards.all_dashboards() if _cubes_of(b) <= enabled]
+    shipped = builtin_dashboards.all_dashboards()
     seen = _read().get("builtin") or {}
     if all(seen.get(b["id"]) == b["builtin"] for b in shipped):
         return

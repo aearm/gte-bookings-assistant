@@ -1,11 +1,14 @@
 <# : Windows part, hidden from PowerShell
 @echo off
-rem Bookings Assistant installer - download this one file and double-click it. Nothing to answer, no admin
-rem rights: it downloads the latest version from GitHub into "%LOCALAPPDATA%\Programs\Bookings Assistant",
-rem installs everything it needs (setup_windows.ps1), starts it with Windows and opens it in the browser.
-rem Run it again to repair an installation (new versions come from the app, on its Settings page).
+rem Bookings Assistant installer - double-click it. Nothing to answer, no admin rights.
+rem Downloaded on its own: it fetches the latest version from GitHub into
+rem "%LOCALAPPDATA%\Programs\Bookings Assistant". In an app folder (a release zip, unzipped, or a clone):
+rem it sets up that folder. Either way it installs everything the app needs (install\setup_windows.ps1),
+rem starts it with Windows and opens it in the browser. Run it again to repair an installation (new
+rem versions come from the app, on its Settings page). Options: -NoAutostart, -NoStart, -Classic.
 rem For a second copy (e.g. to test): set BA_DIR, BA_TASK and BA_PORT; BA_ZIP installs a package on disk.
 set "BA_SELF=%~f0"
+set "BA_ARGS=%*"
 powershell -NoProfile -ExecutionPolicy Bypass -Command "iex ((Get-Content -LiteralPath $env:BA_SELF -Raw) -replace '(?s)^.*?\n#\x3E', '')"
 if errorlevel 1 (
     pause
@@ -20,15 +23,28 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'   # much faster downloads in Windows PowerShell
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $Repo = 'aearm/gte-bookings-assistant'
-$Target = if ($env:BA_DIR) { $env:BA_DIR } else { Join-Path $env:LOCALAPPDATA 'Programs\Bookings Assistant' }
+$Here = Split-Path $env:BA_SELF -Parent
+$Target = if ($env:BA_DIR) { $env:BA_DIR }
+          elseif (Test-Path (Join-Path $Here 'install\setup_windows.ps1')) { $Here }   # in an app folder: that one
+          else { Join-Path $env:LOCALAPPDATA 'Programs\Bookings Assistant' }
 $setup = @{}
+foreach ($option in "$env:BA_ARGS" -split '\s+') {
+    if ($option -in '-NoStart', '-NoAutostart', '-Classic') { $setup[$option.TrimStart('-')] = $true }
+}
+# the setup script of an app folder (in install\ since 2.0.1, before that next to the app)
+function Find-Setup($folder) {
+    foreach ($rel in 'install\setup_windows.ps1', 'setup_windows.ps1') {
+        $path = Join-Path $folder $rel
+        if (Test-Path $path) { return $path }
+    }
+}
 if ($env:BA_TASK) { $setup.TaskName = $env:BA_TASK }
 if ($env:BA_PORT) { $setup.Port = [int]$env:BA_PORT }
 
 Write-Host 'Bookings Assistant - installer' -ForegroundColor White
 try {
-    if (Test-Path (Join-Path $Target 'setup_windows.ps1')) {
-        Write-Host "Already installed in $Target - repairing it and starting it."
+    if (Find-Setup $Target) {
+        Write-Host "Already installed in $Target - setting it up again and starting it."
     } else {
         if (Test-Path $Target) { throw "The folder $Target exists but holds no Bookings Assistant. Move it away, then run this again." }
         if ($env:BA_ZIP) {
@@ -48,8 +64,8 @@ try {
         Remove-Item $unpacked -Recurse -Force -ErrorAction SilentlyContinue
         Write-Host 'Unpacking...'
         Expand-Archive $zip -DestinationPath $unpacked
-        $root = Get-ChildItem $unpacked -Directory | Where-Object { Test-Path (Join-Path $_.FullName 'setup_windows.ps1') } | Select-Object -First 1
-        if (-not $root) { throw 'The package holds no app (setup_windows.ps1 is missing).' }
+        $root = Get-ChildItem $unpacked -Directory | Where-Object { Find-Setup $_.FullName } | Select-Object -First 1
+        if (-not $root) { throw 'The package holds no app (its setup script is missing).' }
         Move-Item $root.FullName $Target
         Remove-Item $unpacked -Recurse -Force -ErrorAction SilentlyContinue
         if (-not $env:BA_ZIP) { Remove-Item $zip -Force }
@@ -60,5 +76,5 @@ try {
     Write-Host 'Check the internet connection, then double-click the installer again.'
     exit 1
 }
-& (Join-Path $Target 'setup_windows.ps1') @setup
+& (Find-Setup $Target) @setup
 exit $LASTEXITCODE

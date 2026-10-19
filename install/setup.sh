@@ -1,6 +1,6 @@
 #!/bin/bash
-# Mac / Linux setup. Run in Terminal:  bash setup.sh
-cd "$(dirname "$0")" || exit 1
+# Mac / Linux setup. Run in Terminal, in the app folder:  bash install/setup.sh
+cd "$(dirname "$0")/.." || exit 1
 
 if ! command -v python3 >/dev/null 2>&1; then
   echo "Python 3 not found. Install it from https://www.python.org/downloads/macos/ first."
@@ -14,8 +14,8 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt || exit 1
 [ -f .env ] || cp .env.example .env
 [ -f business_notes.md ] || cp business_notes.example.md business_notes.md
-chmod +x run_app.sh 2>/dev/null
+chmod +x install/run_app.sh 2>/dev/null
 
 echo ""
 echo "Done. Now add your Claude API key:  open -e .env"
-echo "Then start the app:                  bash run_app.sh"
+echo "Then start the app:                  bash install/run_app.sh"

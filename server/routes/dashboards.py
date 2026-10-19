@@ -326,11 +326,15 @@ def results(request: Request, dashboard_id: str, start: date | None = None, end:
     are being brought up to date in the background (their cube has new data): ask again in 3 s.
     f_<key>=<value> (extra): the value of the dashboard's filter <key> (else its default)."""
     board = board_or_404(dashboard_id)
+    start, end, preset = pick(start, end, preset)
+    against = versus(compare or DEFAULTS["compare"], start, end, preset, cstart, cend)
+    problem = dashboards.setup_problem()
+    if problem:  # nothing to ask yet: one note for the page, not an error on every chart
+        return {"period": period_json(start, end, preset), "compare": against, "charts": {}, "updating": False,
+                "data_as_of": {"text": "", "per_cube": {}}, "filters": {}, "setup": problem}
     asked = {k[2:]: v for k, v in request.query_params.items() if k.startswith("f_") and v}
     chosen = dashboards.filter_values(board, asked) if board.get("filters") else {}
     running = dashboards.apply_filters(board, board["charts"], chosen)
-    start, end, preset = pick(start, end, preset)
-    against = versus(compare or DEFAULTS["compare"], start, end, preset, cstart, cend)
     board_cubes = list(dict.fromkeys(x for c in board["charts"] for x in chart_cubes(c) if x))
     if force:
         for cb in board_cubes:
@@ -348,7 +352,11 @@ def results(request: Request, dashboard_id: str, start: date | None = None, end:
 def filter_choices(dashboard_id: str) -> list[dict]:
     """The values each filter of the dashboard can take (the clients or markets with sales in the last year,
     biggest first) and its default (the first)."""
-    return dashboards.filter_options(board_or_404(dashboard_id))
+    board = board_or_404(dashboard_id)
+    if dashboards.setup_problem():
+        return [{"key": f["key"], "label": f.get("label") or f["key"], "options": [], "default": "", "error": ""}
+                for f in board.get("filters") or []]
+    return dashboards.filter_options(board)
 
 
 # ---------------------------------------------------------------- adding charts --

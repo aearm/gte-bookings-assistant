@@ -25,10 +25,12 @@ def install(tmp_path, monkeypatch):
     """An installation of 1.0.0 with its users' data, and the 1.1.0 release next to it."""
     here, release = tmp_path / "app", tmp_path / "release"
     write(here, {"app.py": "old app", "VERSION": "1.0.0", "charts.py": "same", "old_module.py": "dropped later",
-                 "requirements.txt": "streamlit", **USER_DATA})
+                 "requirements.txt": "streamlit", "setup.bat": "moved to install/", "run_app.bat": "moved",
+                 **USER_DATA})
     write(here, {"data/installed_files.json": json.dumps({"files": ["app.py", "VERSION", "charts.py", "old_module.py",
                                                                     "requirements.txt"]})})
     write(release, {"app.py": "new app", "VERSION": "1.1.0", "charts.py": "same", "new_module.py": "new",
+                    "install/run_app.bat": "new place",
                     "requirements.txt": "streamlit", "data/local/README.txt": "release notes",
                     "data/local/sample.csv": "a,b", "models/should_not_arrive.json": "x"})
     monkeypatch.setattr(updates, "BASE", here)
@@ -44,6 +46,8 @@ def test_an_update_changes_the_code_and_keeps_every_users_data(install):
     done = updates.apply(release, "1.1.0")
     assert text(here, "app.py") == "new app" and updates.current_version() == "1.1.0"
     assert text(here, "new_module.py") == "new" and not (here / "old_module.py").exists()  # dropped by the release
+    assert not (here / "setup.bat").exists() and not (here / "run_app.bat").exists()  # the old install files too
+    assert text(here, "install/run_app.bat") == "new place"
     assert "charts.py" not in done["written"]  # unchanged files aren't rewritten
     for rel, content in USER_DATA.items():
         assert text(here, rel) == content, rel  # settings, dashboards, data layer, history, environment

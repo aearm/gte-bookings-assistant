@@ -1,10 +1,11 @@
 @echo off
 rem Opens Bookings Assistant in the browser, starting it first if it isn't running.
-rem   run_app.bat           the app (http://localhost:8600)
-rem   run_app.bat classic   the previous app (Streamlit, http://localhost:8501)
-cd /d "%~dp0"
+rem   install\run_app.bat           the app (http://localhost:8600)
+rem   install\run_app.bat classic   the previous app (Streamlit, http://localhost:8501)
+rem (the desktop shortcut opens the app without it)
+cd /d "%~dp0.."
 if not exist .venv\Scripts\python.exe (
-    echo The app is not installed yet. Double-click setup.bat first.
+    echo The app is not installed yet. Double-click install-bookings-assistant.cmd first.
     pause
     exit /b 1
 )

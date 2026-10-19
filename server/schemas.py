@@ -312,6 +312,7 @@ class Results(BaseModel):
     charts: dict[str, ChartResult]
     updating: bool
     filters: dict[str, str] = {}  # the value each filter had (the default when none was asked for)
+    setup: str = ""  # why there are no numbers yet (the cube server isn't set up): shown once on the page
 
 
 class FilterOption(BaseModel):

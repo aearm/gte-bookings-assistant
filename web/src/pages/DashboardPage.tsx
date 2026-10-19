@@ -137,6 +137,7 @@ function DashboardView({ id }: { id: string }) {
   const shownCompare = compareDates(compare.mode, period, customRange(compare))
   const compareText = shownCompare ? datesText(...shownCompare) : ''
   const data = results.data
+  const setup = data?.setup ?? ''
   const loadingNewPeriod = results.isFetching && results.isPlaceholderData
   const openAdd = () => setDialog({ kind: 'add' })
 
@@ -174,6 +175,12 @@ function DashboardView({ id }: { id: string }) {
           <IconRefresh size={14} className="spin" /> Showing the last numbers while the latest load…
         </div>
       )}
+      {setup && (
+        <div className="panel dash-setup" data-testid="setup-note">
+          {setup}{' '}
+          {isAdmin ? <Link to="/settings">Open Settings</Link> : 'Ask an admin to set it up.'}
+        </div>
+      )}
       {results.isError && !data && (
         <div style={{ marginBottom: 16 }}>
           <ErrorNote title="The numbers could not be loaded" message={errorText(results.error)} details={errorDetails(results.error)} />
@@ -188,14 +195,15 @@ function DashboardView({ id }: { id: string }) {
             <div className={`kpi-row${kpis.length % 4 === 0 ? ' kpi-row--fours' : ''}`}>
               {kpis.map((c) => (
                 <KpiCard key={c.id} chart={c} result={data?.charts[c.id]} isAdmin={isAdmin} onAction={onAction}
-                         source={chartSource(c, several, cubeLabel)} />
+                         source={chartSource(c, several, cubeLabel)} waiting={!!setup} />
               ))}
             </div>
           )}
           <div className="chart-grid">
             {cards.map(({ chart, span }) => (
               <ChartCard key={chart.id} chart={chart} result={data?.charts[chart.id]} span={span} isAdmin={isAdmin}
-                         source={chartSource(chart, several, cubeLabel)} compareDates={compareText} onAction={onAction} />
+                         source={chartSource(chart, several, cubeLabel)} compareDates={compareText} onAction={onAction}
+                         waiting={!!setup} />
             ))}
             {board.data && (
               <button type="button" className={`add-tile${tileSpan === 2 ? ' span-2' : ''}`} onClick={openAdd}

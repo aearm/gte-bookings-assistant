@@ -2,7 +2,7 @@ r"""Runs the web server (FastAPI + the React app) on port 8600 (API_PORT in .env
 
 Run:  .venv\Scripts\python.exe start_api.py           in this window (Ctrl+C stops it)
       .venv\Scripts\pythonw.exe start_api.py          in the background (output in data/api.log) - what
-                                                      Windows starts automatically, see install_autostart.ps1
+                                                      Windows starts automatically, see install/install_autostart.ps1
       start_api.py --open                             open the app in the browser: when it isn't running
                                                       yet, start it first (the Windows task if there is one)
 """
@@ -21,12 +21,12 @@ os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")  # see start_server.py
 BASE = Path(__file__).resolve().parent
 LOG = BASE / "data" / "api.log"
 MAX_LOG_BYTES = 5_000_000
-TASK = "Bookings Assistant"  # the Windows task that starts the app (install_autostart.ps1)
+TASK = "Bookings Assistant"  # the Windows task that starts the app (install/install_autostart.ps1)
 
 
 def task_from_settings() -> str:
     """The Windows task that starts this copy's web app (data/autostart.json, written by
-    install_autostart.ps1); "" when none does - no task, or a task set up for the previous app."""
+    install/install_autostart.ps1); "" when none does - no task, or a task set up for the previous app."""
     try:
         import json
         saved = json.loads((BASE / "data" / "autostart.json").read_text(encoding="utf-8-sig"))
